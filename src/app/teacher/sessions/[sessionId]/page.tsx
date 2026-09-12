@@ -14,7 +14,10 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     where: { id: sessionId },
     include: {
       course: {
-        include: {
+        select: {
+          id: true,
+          name: true,
+          defaultStatus: true,
           enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
         },
       },
@@ -31,7 +34,7 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     id: student.id,
     rollNumber: student.rollNumber,
     name: student.name,
-    status: recordByStudent.get(student.id)?.status ?? ("PRESENT" as const),
+    status: recordByStudent.get(student.id)?.status ?? classSession.course.defaultStatus,
   }));
 
   const lastSaved = classSession.records.reduce<(typeof classSession.records)[number] | null>(
