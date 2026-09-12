@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac";
+import { PERMISSIONS } from "@/lib/permissions";
 import { FlashBanner } from "@/components/flash-banner";
 import { createCourse } from "./actions";
 
 export default async function CoursesPage() {
+  await requirePermission(PERMISSIONS.COURSES_MANAGE);
   const courses = await prisma.course.findMany({
     include: { batches: { include: { enrollments: true } } },
     orderBy: { createdAt: "asc" },
@@ -52,7 +55,7 @@ export default async function CoursesPage() {
                     <td className="px-4 py-3">{course.batches.length}</td>
                     <td className="px-4 py-3">{studentCount}</td>
                     <td className="px-4 py-3">
-                      <span className={course.isActive ? "text-emerald-700" : "text-muted"}>
+                      <span className={course.isActive ? "text-ink" : "text-muted"}>
                         {course.isActive ? "Active" : "Archived"}
                       </span>
                     </td>
