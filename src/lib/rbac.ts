@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { flashUrl } from "@/lib/flash";
+import { courseHref, deniedCourseHref, type CoursePortal } from "@/lib/course-workspace";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 
 export const ARCHIVED_COURSE_MESSAGE = "This course is archived. An admin can restore it to make changes.";
@@ -78,13 +79,34 @@ export async function canManageBatch(session: Session, batchId: string) {
   return Boolean(assignment);
 }
 
-export async function requireBatchAccess(batchId: string) {
+export async function canAccessBatch(session: Session, batchId: string) {
+  if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) {
+    const batch = await prisma.courseBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true },
+    });
+    return Boolean(batch);
+  }
+  return canManageBatch(session, batchId);
+}
+
+export async function requireBatchAccess(batchId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission([
     PERMISSIONS.SESSIONS_MANAGE,
     PERMISSIONS.ATTENDANCE_MARK,
     PERMISSIONS.ATTENDANCE_VIEW,
   ]);
-  if (!(await canManageBatch(session, batchId))) redirect("/teacher");
+  if (!(await canManageBatch(session, batchId))) redirect(deniedCourseHref(portal));
+  return session;
+}
+
+export async function requireBatchView(batchId: string, portal: CoursePortal = "teacher") {
+  const session = await requireAnyPermission([
+    PERMISSIONS.SESSIONS_MANAGE,
+    PERMISSIONS.ATTENDANCE_MARK,
+    PERMISSIONS.ATTENDANCE_VIEW,
+  ]);
+  if (!(await canAccessBatch(session, batchId))) redirect(deniedCourseHref(portal));
   return session;
 }
 
@@ -106,13 +128,13 @@ export async function canConfigureBatch(session: Session, batchId: string) {
   return Boolean(assignment);
 }
 
-export async function requireBatchConfigure(batchId: string) {
+export async function requireBatchConfigure(batchId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission([
     PERMISSIONS.COURSES_CONFIGURE,
     PERMISSIONS.COURSES_MANAGE,
   ]);
   if (!(await canConfigureBatch(session, batchId))) {
-    redirect(`/teacher`); // Part 2: redirect to batch sessions URL
+    redirect(deniedCourseHref(portal));
   }
   return session;
 }
@@ -134,16 +156,27 @@ export async function canManageCourse(session: Session, courseId: string) {
   return Boolean(assignment);
 }
 
-// Server-action guard: redirects away if the signed-in user may not manage
-// (create sessions / mark attendance for) this course.
-export async function requireCourseAccess(courseId: string) {
+export async function canAccessCourse(session: Session, courseId: string) {
+  if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true },
+    });
+    return Boolean(course);
+  }
+  return canManageCourse(session, courseId);
+}
+
+// Server-action guard: redirects away if the signed-in user may not open
+// this course. Admins can open any course; teachers need an assignment.
+export async function requireCourseAccess(courseId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission([
     PERMISSIONS.SESSIONS_MANAGE,
     PERMISSIONS.ATTENDANCE_MARK,
     PERMISSIONS.ATTENDANCE_VIEW,
   ]);
 
-  if (!(await canManageCourse(session, courseId))) redirect("/teacher");
+  if (!(await canAccessCourse(session, courseId))) redirect(deniedCourseHref(portal));
 
   return session;
 }
@@ -169,13 +202,13 @@ export async function canConfigureCourse(session: Session, courseId: string) {
 
 // Server-action / page guard: redirects back to the course when the
 // signed-in user may not configure it.
-export async function requireCourseConfigure(courseId: string) {
+export async function requireCourseConfigure(courseId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission([
     PERMISSIONS.COURSES_CONFIGURE,
     PERMISSIONS.COURSES_MANAGE,
   ]);
 
-  if (!(await canConfigureCourse(session, courseId))) redirect(`/teacher/courses/${courseId}`);
+  if (!(await canConfigureCourse(session, courseId))) redirect(courseHref(portal, courseId));
 
   return session;
 }

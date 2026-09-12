@@ -83,10 +83,17 @@ export async function resolveTeacherBatchForCourse(teacherId: string, courseId: 
   return row?.batchId ?? null;
 }
 
-export async function resolveBatchForCourse(courseId: string, teacherId: string, canManage: boolean) {
+export async function resolveWritableBatch(courseId: string, teacherId: string, requestedBatchId?: string | null) {
   const assignedBatchId = await resolveTeacherBatchForCourse(teacherId, courseId);
   if (assignedBatchId) return assignedBatchId;
-  if (!canManage) return null;
+
+  if (requestedBatchId) {
+    const requested = await prisma.courseBatch.findFirst({
+      where: { id: requestedBatchId, courseId, isActive: true },
+      select: { id: true },
+    });
+    return requested?.id ?? null;
+  }
 
   const batch = await prisma.courseBatch.findFirst({
     where: { courseId, isActive: true },

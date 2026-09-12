@@ -11,6 +11,7 @@ export function AddPersonDialog({
   placeholder,
   emptyLabel,
   action,
+  children,
 }: {
   people: PersonOption[];
   fieldName: string;
@@ -18,6 +19,7 @@ export function AddPersonDialog({
   placeholder: string;
   emptyLabel: string;
   action: (formData: FormData) => void;
+  children?: React.ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const listId = useId();
@@ -62,6 +64,7 @@ export function AddPersonDialog({
               Cancel
             </button>
           </div>
+          {children}
           <input type="hidden" name={fieldName} value={personId} />
           <label className="flex flex-col gap-1 text-sm text-ink">
             Search

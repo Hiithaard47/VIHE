@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminSubTabs } from "@/components/admin-sub-tabs";
+import { FlashBanner } from "@/components/flash-banner";
 import { findStudentCourseEnrollment } from "@/lib/enrollment";
 import { requireStudent } from "@/lib/rbac";
 
@@ -20,6 +21,7 @@ export default async function StudentCourseLayout({
 
   return (
     <div className="flex flex-col gap-5">
+      <FlashBanner />
       <div>
         <Link href="/student" className="text-sm text-muted">
           &larr; My courses
@@ -36,6 +38,7 @@ export default async function StudentCourseLayout({
         tabs={[
           { slug: "", label: "Sessions" },
           { slug: "documents", label: "Documents" },
+          { slug: "assignments", label: "Assignments" },
         ]}
       />
       {children}

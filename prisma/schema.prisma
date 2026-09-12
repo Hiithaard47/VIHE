@@ -30,6 +30,8 @@ model User {
   markedRecords        AttendanceRecord[]    @relation("AttendanceMarkedBy")
   reviewedApplications StudentApplication[]  @relation("ApplicationReviewedBy")
   uploadedResources    SessionResource[]     @relation("SessionResourceUploadedBy")
+  createdAssignments   Assignment[]          @relation("AssignmentCreatedBy")
+  gradedSubmissions    AssignmentSubmission[] @relation("AssignmentGradedBy")
 
   @@map("users")
 }
@@ -178,6 +180,7 @@ model CourseBatch {
   enrollments   BatchEnrollment[]
   scheduleSlots CourseScheduleSlot[]
   sessions      ClassSession[]
+  assignments   Assignment[]
 
   @@unique([courseId, name])
   @@map("course_batches")
@@ -208,6 +211,7 @@ model Student {
 
   enrollments BatchEnrollment[]
   attendance  AttendanceRecord[]
+  submissions AssignmentSubmission[]
 
   @@map("students")
 }
@@ -261,6 +265,49 @@ model SessionResource {
   uploadedBy User         @relation("SessionResourceUploadedBy", fields: [uploadedById], references: [id])
 
   @@map("session_resources")
+}
+
+model Assignment {
+  id           String    @id @default(cuid())
+  batchId      String
+  title        String
+  instructions String?
+  dueDate      DateTime?
+  maxMarks     Int
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String    @unique
+  createdById  String
+  createdAt    DateTime  @default(now())
+
+  batch       CourseBatch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdBy   User                     @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  submissions AssignmentSubmission[]
+
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id           String    @id @default(cuid())
+  assignmentId String
+  studentId    String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String    @unique
+  submittedAt  DateTime  @default(now())
+  marks        Int?
+  feedback     String?
+  gradedById   String?
+  gradedAt     DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradedBy   User?      @relation("AssignmentGradedBy", fields: [gradedById], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@map("assignment_submissions")
 }
 
 enum AttendanceStatus {

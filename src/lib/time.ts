@@ -36,6 +36,11 @@ export function sessionTiming(date: Date, now = new Date()): "past" | "today" | 
   return "today";
 }
 
+export function isPastDueDate(dueDate: Date | null | undefined, now = new Date()): boolean {
+  if (!dueDate) return false;
+  return sessionDateUtc(dueDate).getTime() < startOfTodayUtc(now).getTime();
+}
+
 const DISPLAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
 
 export function formatDisplayDate(date: Date): string {

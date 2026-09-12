@@ -1,18 +1,21 @@
 import { updateSessionDate } from "@/app/teacher/sessions/[sessionId]/actions";
 import { startOfTodayUtc, toDateInputValue } from "@/lib/time";
+import type { CoursePortal } from "@/lib/course-workspace";
 
 export function ChangeSessionDateForm({
   sessionId,
   date,
   returnTo,
+  portal,
 }: {
   sessionId: string;
   date: Date;
   returnTo: string;
+  portal: CoursePortal;
 }) {
   return (
     <form
-      action={updateSessionDate.bind(null, sessionId)}
+      action={updateSessionDate.bind(null, sessionId, portal)}
       aria-label="Change session date"
       className="flex flex-col gap-2 sm:flex-row sm:items-end"
     >

@@ -1,20 +1,23 @@
 import { deleteSessionResource, uploadSessionResource } from "@/app/teacher/sessions/[sessionId]/actions";
+import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 export function SessionResources({
   sessionId,
   resources,
   canManage,
+  portal = "teacher",
 }: {
   sessionId: string;
   resources: { id: string; fileName: string; contentType: string; sizeBytes: number }[];
   canManage: boolean;
+  portal?: CoursePortal;
 }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Resources</h2>
       {canManage && (
         <form
-          action={uploadSessionResource.bind(null, sessionId)}
+          action={uploadSessionResource.bind(null, sessionId, portal)}
           className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:items-end"
         >
           <label className="flex flex-1 flex-col gap-1 text-sm text-ink">
@@ -53,7 +56,8 @@ export function SessionResources({
                 <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
                 {canManage && (
                   <td className="px-4 py-3 text-right">
-                    <form action={deleteSessionResource.bind(null, sessionId, resource.id)}>
+                    <form action={deleteSessionResource.bind(null, sessionId, resource.id, portal)}>
+                      <input type="hidden" name="returnTo" value={sessionHref(portal, sessionId)} />
                       <button type="submit" className="text-xs text-muted underline hover:text-ink">
                         Remove
                       </button>

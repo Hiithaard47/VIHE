@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { canConfigureCourse, canManageCourse, requireCourseAccess } from "@/lib/rbac";
+import { canConfigureCourse, requireCourseAccess } from "@/lib/rbac";
 import { CourseTabs } from "@/components/course-tabs";
 import { FlashBanner } from "@/components/flash-banner";
-import { resolveBatchForCourse } from "@/lib/enrollment";
+import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
 
 export default async function CourseLayout({
   children,
@@ -25,11 +25,8 @@ export default async function CourseLayout({
   });
   if (!course) notFound();
 
-  const [canConfigure, canManage] = await Promise.all([
-    canConfigureCourse(session, courseId),
-    canManageCourse(session, courseId),
-  ]);
-  const batchId = await resolveBatchForCourse(courseId, session.user.id, canManage);
+  const canConfigure = await canConfigureCourse(session, courseId);
+  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
   const enrolledCount = batchId
     ? course.batches.find((batch) => batch.id === batchId)?._count.enrollments ?? 0
     : course.batches.reduce((total, batch) => total + batch._count.enrollments, 0);

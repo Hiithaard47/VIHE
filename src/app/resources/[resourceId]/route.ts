@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { canManageBatch } from "@/lib/rbac";
+import { canAccessBatch } from "@/lib/rbac";
+import { deniedCourseHref } from "@/lib/course-workspace";
+import { PERMISSIONS } from "@/lib/permissions";
 import { isStorageConfigured, presignedDownloadUrl } from "@/lib/storage";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ resourceId: string }> }) {
@@ -20,8 +22,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ res
       where: { batchId_studentId: { batchId: resource.session.batchId, studentId: session.user.id } },
     });
     if (!enrolled) notFound();
-  } else if (!(await canManageBatch(session, resource.session.batchId))) {
-    redirect("/teacher");
+  } else if (!(await canAccessBatch(session, resource.session.batchId))) {
+    redirect(deniedCourseHref(session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE) ? "admin" : "teacher"));
   }
 
   if (!isStorageConfigured()) notFound();

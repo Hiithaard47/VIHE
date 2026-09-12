@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDisplayDate, isFutureSessionDate, parseDateInput, sessionTiming, startOfTodayUtc, toDateInputValue } from "@/lib/time";
+import { formatDisplayDate, isFutureSessionDate, isPastDueDate, parseDateInput, sessionTiming, startOfTodayUtc, toDateInputValue } from "@/lib/time";
 
 // TZ is pinned to America/New_York in vitest.config.mts. This ensures the tests
 // remain hermetic and discriminate between local and UTC getters, catching a
@@ -23,6 +23,16 @@ describe("sessionTiming", () => {
     expect(sessionTiming(new Date("2026-09-11T00:00:00.000Z"), now)).toBe("past");
     expect(sessionTiming(new Date("2026-09-12T00:00:00.000Z"), now)).toBe("today");
     expect(sessionTiming(new Date("2026-09-13T00:00:00.000Z"), now)).toBe("upcoming");
+  });
+});
+
+describe("isPastDueDate", () => {
+  const now = new Date(2026, 8, 12, 15, 0);
+
+  it("treats yesterday as past due and today as still open", () => {
+    expect(isPastDueDate(new Date("2026-09-11T00:00:00.000Z"), now)).toBe(true);
+    expect(isPastDueDate(new Date("2026-09-12T00:00:00.000Z"), now)).toBe(false);
+    expect(isPastDueDate(null, now)).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ const BASE_TABS = [
   { slug: "roster", label: "Roster" },
   { slug: "attendance", label: "Attendance" },
   { slug: "uploads", label: "Uploads" },
+  { slug: "assignments", label: "Assignments" },
 ];
 const CONFIG_TABS = [{ slug: "settings", label: "Settings" }];
 

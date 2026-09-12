@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChangeSessionDateForm } from "@/components/change-session-date-form";
+import type { CoursePortal } from "@/lib/course-workspace";
 
 export function SessionActionsMenu({
   sessionId,
@@ -10,12 +11,14 @@ export function SessionActionsMenu({
   returnTo,
   attendanceHref,
   canChangeDate,
+  portal,
 }: {
   sessionId: string;
   date: string;
   returnTo: string;
   attendanceHref?: string;
   canChangeDate: boolean;
+  portal: CoursePortal;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -106,7 +109,7 @@ export function SessionActionsMenu({
                 Cancel
               </button>
             </div>
-            <ChangeSessionDateForm sessionId={sessionId} date={new Date(date)} returnTo={returnTo} />
+            <ChangeSessionDateForm sessionId={sessionId} date={new Date(date)} returnTo={returnTo} portal={portal} />
           </div>
         </dialog>
       )}

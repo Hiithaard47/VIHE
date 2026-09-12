@@ -2,41 +2,31 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireCourseAccess, requireAnyPermission } from "@/lib/rbac";
+import { requireActiveCourse, requireCourseAccess, requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
-import { resolveBatchForCourse } from "@/lib/enrollment";
+import { resolveWritableBatch } from "@/lib/enrollment";
+import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
+import { parseDateInput } from "@/lib/time";
 
-const createSessionSchema = z.object({
-  date: z.string().min(1),
-  topic: z.string().optional(),
-});
-
-export async function createSession(courseId: string, formData: FormData) {
+export async function createSession(courseId: string, portalArg: CoursePortal, formData: FormData) {
   const session = await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
-  await requireCourseAccess(courseId);
-
-  const path = `/teacher/courses/${courseId}`;
-
-  const parsed = createSessionSchema.safeParse({
-    date: formData.get("date"),
-    topic: formData.get("topic") || undefined,
-  });
-  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
-  const batchId = await resolveBatchForCourse(
-    courseId,
-    session.user.id,
-    session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE),
-  );
+  const portal = parseCoursePortal(portalArg);
+  await requireCourseAccess(courseId, portal);
+  const path = courseHref(portal, courseId);
+  await requireActiveCourse(courseId, path);
+  const date = parseDateInput(String(formData.get("date") ?? ""));
+  if (!date) redirect(flashUrl(path, "error", "Pick a valid date."));
+  const topic = String(formData.get("topic") ?? "").trim() || undefined;
+  const batchId = await resolveWritableBatch(courseId, session.user.id, String(formData.get("batchId") ?? "") || null);
   if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to a batch."));
 
   await prisma.classSession.create({
     data: {
       batchId,
-      date: new Date(parsed.data.date),
-      topic: parsed.data.topic,
+      date,
+      topic,
       createdById: session.user.id,
     },
   });
