@@ -132,12 +132,38 @@ model Course {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  teachers     CourseTeacher[]
-  enrollments  CourseEnrollment[]
-  sessions     ClassSession[]
-  applications StudentApplication[]
+  // Schedule. Null bounds mean the course is unscheduled: manual sessions
+  // only, which is exactly the behaviour of every pre-existing row.
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Attendance policy.
+  defaultStatus           AttendanceStatus @default(PRESENT)
+  minAttendancePercent    Int?             // null = no at-risk flag
+  lateCountsAsAttended    Boolean          @default(true)
+  excusedCountsAsAttended Boolean          @default(true)
+  lockAfterDays           Int?             // null = never locks
+
+  teachers      CourseTeacher[]
+  enrollments   CourseEnrollment[]
+  sessions      ClassSession[]
+  applications  StudentApplication[]
+  scheduleSlots CourseScheduleSlot[]
 
   @@map("courses")
+}
+
+model CourseScheduleSlot {
+  id          String @id @default(cuid())
+  courseId    String
+  weekday     Int    // 0 = Sunday … 6 = Saturday
+  startMinute Int    // wall-clock minutes from midnight, e.g. 1080 = 18:00
+  endMinute   Int
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, weekday, startMinute])
+  @@map("course_schedule_slots")
 }
 
 model CourseTeacher {
@@ -185,6 +211,13 @@ model ClassSession {
   topic     String?
   createdById String
   createdAt DateTime @default(now())
+
+  startMinute Int?    // copied from the slot at generation time
+  endMinute   Int?
+  // Provenance, deliberately NOT a foreign key: a slot can be deleted while
+  // its already-marked sessions must survive. Null = hand-created and never
+  // auto-removed; set = generated and eligible for regeneration.
+  slotId      String?
 
   course    Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
