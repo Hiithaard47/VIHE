@@ -4,7 +4,7 @@ import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
 import { ListSearch } from "@/components/list-search";
-import { ADMIN_PAGE_SIZE, adminListHref, parseAdminListPage, parseAdminListSearch, parseAdminListTab } from "@/lib/admin-list";
+import { ADMIN_PAGE_SIZE, adminListHref, containsInsensitive, parseAdminListPage, parseAdminListSearch, parseAdminListTab } from "@/lib/admin-list";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
@@ -23,14 +23,7 @@ export default async function TeachersPage({
   const isActive = tab === "active";
   const where = {
     isActive,
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { email: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
+    ...(q ? containsInsensitive(q, ["name", "email", "phone"]) : {}),
   };
 
   const [total, roles] = await Promise.all([
@@ -56,13 +49,14 @@ export default async function TeachersPage({
           {isActive && <AddTeacherDialog roles={roles} />}
         </div>
         <AdminStatusTabs tab={tab} hrefForTab={(nextTab) => adminListHref(PATH, nextTab, 1, q)} />
-        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or email" />
+        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name, email, or mobile" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Teacher</th>
                 <th className="px-4 py-2 font-medium">Email</th>
+                <th className="px-4 py-2 font-medium">Mobile</th>
                 <th className="px-4 py-2 font-medium">Roles</th>
               </tr>
             </thead>
@@ -75,6 +69,7 @@ export default async function TeachersPage({
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-muted">{user.email}</td>
+                  <td className="px-4 py-3 text-muted">{user.phone || "—"}</td>
                   <td className="px-4 py-3">
                     {user.roles.map(({ role }) => role.name).join(", ") || <span className="text-muted">None</span>}
                   </td>
@@ -82,7 +77,7 @@ export default async function TeachersPage({
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                  <td colSpan={4} className="px-4 py-3 text-sm text-muted">
                     {q ? "No matching teachers." : isActive ? "No active teachers yet." : "No archived teachers."}
                   </td>
                 </tr>

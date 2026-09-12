@@ -56,6 +56,14 @@ export function AddStudentDialog({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">Mobile (optional)</span>
+            <input
+              name="phone"
+              type="tel"
+              className="rounded-md border border-hairline bg-input px-3 py-2 text-ink placeholder:text-muted"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted">Portal password (optional)</span>
             <input
               name="password"

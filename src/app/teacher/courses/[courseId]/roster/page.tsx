@@ -14,6 +14,7 @@ import {
 import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { enrollStudent, unenrollStudent } from "./actions";
 import { resolveBatchForCourse } from "@/lib/enrollment";
+import { contactKeywords } from "@/lib/admin-list";
 
 export default async function CourseRosterPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
@@ -82,10 +83,11 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
               id: student.id,
               title: student.name,
               subtitle: student.rollNumber,
+              keywords: contactKeywords(student.email, student.phone),
             }))}
             fieldName="studentId"
             buttonLabel="Add student"
-            placeholder="Search by name or roll number"
+            placeholder="Search by name, roll number, email, or mobile"
             emptyLabel="No matching students."
             action={enrollStudent.bind(null, courseId)}
           />

@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { addBatchTeacher, removeBatchTeacher } from "../actions";
+import { contactKeywords } from "@/lib/admin-list";
 
 export default async function AdminBatchTeachersPage({
   params,
@@ -18,7 +19,7 @@ export default async function AdminBatchTeachersPage({
       courseId: true,
       course: { select: { isActive: true } },
       teachers: {
-        include: { teacher: { select: { id: true, name: true, email: true } } },
+        include: { teacher: { select: { id: true, name: true, email: true, phone: true } } },
         orderBy: { teacher: { name: "asc" } },
       },
     },
@@ -29,7 +30,7 @@ export default async function AdminBatchTeachersPage({
   const available = await prisma.user.findMany({
     where: { isActive: true, id: { notIn: assignedIds } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, phone: true },
   });
 
   return (
@@ -44,10 +45,11 @@ export default async function AdminBatchTeachersPage({
               id: teacher.id,
               title: teacher.name,
               subtitle: teacher.email,
+              keywords: contactKeywords(teacher.phone),
             }))}
             fieldName="teacherId"
             buttonLabel="Add teacher"
-            placeholder="Search by name or email"
+            placeholder="Search by name, email, or mobile"
             emptyLabel="No matching teachers."
             action={addBatchTeacher.bind(null, courseId, batchId)}
           />
@@ -58,7 +60,8 @@ export default async function AdminBatchTeachersPage({
           <thead className="border-b border-hairline bg-canvas text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Teacher</th>
-              <th className="px-4 py-2 font-medium">Email</th>
+                <th className="px-4 py-2 font-medium">Email</th>
+                <th className="px-4 py-2 font-medium">Mobile</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -67,6 +70,7 @@ export default async function AdminBatchTeachersPage({
               <tr key={teacher.id} className="border-b border-hairline text-ink last:border-0">
                 <td className="px-4 py-3">{teacher.name}</td>
                 <td className="px-4 py-3 text-muted">{teacher.email}</td>
+                <td className="px-4 py-3 text-muted">{teacher.phone || "—"}</td>
                 <td className="px-4 py-3">
                   {batch.course.isActive && (
                     <form action={removeBatchTeacher.bind(null, courseId, batchId)}>
@@ -81,7 +85,7 @@ export default async function AdminBatchTeachersPage({
             ))}
             {batch.teachers.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                  <td colSpan={4} className="px-4 py-3 text-sm text-muted">
                   No teachers assigned yet.
                 </td>
               </tr>

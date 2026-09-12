@@ -39,6 +39,8 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     id: student.id,
     rollNumber: student.rollNumber,
     name: student.name,
+    email: student.email,
+    phone: student.phone,
     status: recordByStudent.get(student.id)?.status ?? classSession.batch.course.defaultStatus,
   }));
 

@@ -13,7 +13,7 @@ export default async function AdminTeacherDetailsPage({
   await requirePermission(PERMISSIONS.USERS_MANAGE);
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true, isActive: true },
+    select: { name: true, email: true, phone: true, isActive: true },
   });
   if (!user) notFound();
 
@@ -29,6 +29,10 @@ export default async function AdminTeacherDetailsPage({
           <label className="flex flex-col gap-1 text-sm text-ink">
             Email
             <input name="email" type="email" required defaultValue={user.email} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            Mobile (optional)
+            <input name="phone" type="tel" defaultValue={user.phone ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
           {user.isActive && (
             <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">

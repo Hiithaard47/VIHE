@@ -6,11 +6,11 @@ import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
 // to TEST_DATABASE_URL in playwright.config.ts before this module loads.
 export const prisma = new PrismaClient();
 
-export async function createTeacher(name: string, email: string, password: string) {
+export async function createTeacher(name: string, email: string, password: string, phone?: string) {
   const role = await prisma.role.findUniqueOrThrow({ where: { name: "Teacher" } });
   const passwordHash = await bcrypt.hash(password, 10);
   return prisma.user.create({
-    data: { name, email, passwordHash, roles: { create: [{ roleId: role.id }] } },
+    data: { name, email, phone, passwordHash, roles: { create: [{ roleId: role.id }] } },
   });
 }
 
@@ -30,11 +30,18 @@ export async function createCourse(name: string, code: string, teacherId?: strin
   });
 }
 
-export async function createStudent(name: string, rollNumber: string, batchId?: string) {
+export async function createStudent(
+  name: string,
+  rollNumber: string,
+  batchId?: string,
+  contact?: { email?: string; phone?: string },
+) {
   return prisma.student.create({
     data: {
       name,
       rollNumber,
+      email: contact?.email,
+      phone: contact?.phone,
       enrollments: batchId ? { create: [{ batchId }] } : undefined,
     },
   });

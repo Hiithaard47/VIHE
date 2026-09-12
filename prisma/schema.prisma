@@ -14,6 +14,7 @@ model User {
   name          String
   email         String    @unique
   emailVerified DateTime?
+  phone         String?
   passwordHash  String?
   image         String?
   isActive      Boolean   @default(true)
@@ -197,6 +198,7 @@ model Student {
   id         String   @id @default(cuid())
   name       String
   email      String?  @unique
+  phone      String?
   rollNumber String   @unique
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())

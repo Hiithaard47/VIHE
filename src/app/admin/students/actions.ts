@@ -20,6 +20,7 @@ const createStudentSchema = z.object({
   name: z.string().min(1),
   rollNumber: z.string().min(1),
   email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional().default(""),
   password: z.string().optional().default(""),
 });
 
@@ -27,6 +28,7 @@ const detailsSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   rollNumber: z.string().trim().min(1, "Roll number is required."),
   email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional().default(""),
   password: z.string().optional().default(""),
 });
 
@@ -76,10 +78,11 @@ export async function createStudent(formData: FormData) {
     name: formData.get("name"),
     rollNumber: formData.get("rollNumber"),
     email: formData.get("email") || "",
+    phone: formData.get("phone") || "",
     password: formData.get("password") || "",
   });
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
-  const { name, rollNumber, email, password } = parsed.data;
+  const { name, rollNumber, email, phone, password } = parsed.data;
   if (password && password.length < 8) redirect(flashUrl(PATH, "error", "Portal password must be at least 8 characters."));
   const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
   const batchSelections = getBatchSelections(formData);
@@ -91,6 +94,7 @@ export async function createStudent(formData: FormData) {
           name,
           rollNumber,
           email: email || undefined,
+          phone: phone.trim() || undefined,
           passwordHash,
         },
       });
@@ -127,6 +131,7 @@ export async function updateStudentDetails(studentId: string, formData: FormData
     name: formData.get("name"),
     rollNumber: formData.get("rollNumber"),
     email: formData.get("email") || "",
+    phone: formData.get("phone") || "",
     password: formData.get("password") || "",
   });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
@@ -141,6 +146,7 @@ export async function updateStudentDetails(studentId: string, formData: FormData
         name: parsed.data.name,
         rollNumber: parsed.data.rollNumber,
         email: parsed.data.email || null,
+        phone: parsed.data.phone.trim() || null,
         ...(parsed.data.password ? { passwordHash: await bcrypt.hash(parsed.data.password, 10) } : {}),
       },
     });
@@ -221,7 +227,7 @@ export async function approveApplication(applicationId: string, formData: FormDa
   try {
     await prisma.$transaction(async (tx) => {
       const student = await tx.student.create({
-        data: { name: application.name, email: application.email, rollNumber },
+        data: { name: application.name, email: application.email, phone: application.phone, rollNumber },
       });
       if (application.desiredCourseId) {
         const batch = await tx.courseBatch.upsert({

@@ -14,6 +14,7 @@ const PATH = "/admin/teachers";
 const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  phone: z.string().optional().default(""),
   password: z.string().min(8),
   roleIds: z.array(z.string()).default([]),
 });
@@ -21,6 +22,7 @@ const createUserSchema = z.object({
 const detailsSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   email: z.string().trim().email("A valid email is required."),
+  phone: z.string().optional().default(""),
 });
 
 async function requireActiveUser(userId: string, path: string) {
@@ -35,11 +37,12 @@ export async function createUser(formData: FormData) {
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
+    phone: formData.get("phone") || "",
     password: formData.get("password"),
     roleIds: formData.getAll("roleIds"),
   });
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
-  const { name, email, password, roleIds } = parsed.data;
+  const { name, email, phone, password, roleIds } = parsed.data;
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -48,6 +51,7 @@ export async function createUser(formData: FormData) {
       data: {
         name,
         email,
+        phone: phone.trim() || null,
         passwordHash,
         roles: { create: roleIds.map((roleId) => ({ roleId })) },
       },
@@ -65,13 +69,17 @@ export async function updateUserDetails(userId: string, formData: FormData) {
   await requirePermission(PERMISSIONS.USERS_MANAGE);
   const path = `/admin/teachers/${userId}/details`;
   await requireActiveUser(userId, path);
-  const parsed = detailsSchema.safeParse({ name: formData.get("name"), email: formData.get("email") });
+  const parsed = detailsSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone") || "",
+  });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
 
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: { name: parsed.data.name, email: parsed.data.email },
+      data: { name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone.trim() || null },
     });
   } catch (err) {
     if (isUniqueConstraintError(err)) redirect(flashUrl(path, "error", "A user with that email already exists."));

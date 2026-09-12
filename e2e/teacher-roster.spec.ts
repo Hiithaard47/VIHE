@@ -90,7 +90,7 @@ test.describe("teacher: roster", () => {
 
     await page.getByRole("button", { name: "Add student" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByPlaceholder("Search by name or roll number").fill(student.name);
+    await dialog.getByPlaceholder(/Search by name/).fill(student.name);
     await dialog.getByRole("option", { name: new RegExp(student.name) }).click();
     const added = await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Add student" }).click());
     expect(added).toBe("success");

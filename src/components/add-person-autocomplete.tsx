@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 
-export type PersonOption = { id: string; title: string; subtitle: string };
+export type PersonOption = { id: string; title: string; subtitle: string; keywords?: string };
 
 export function AddPersonDialog({
   people,
@@ -28,7 +28,9 @@ export function AddPersonDialog({
     const q = query.trim().toLowerCase();
     if (!q) return people.slice(0, 8);
     return people
-      .filter((person) => person.title.toLowerCase().includes(q) || person.subtitle.toLowerCase().includes(q))
+      .filter((person) =>
+        [person.title, person.subtitle, person.keywords ?? ""].some((value) => value.toLowerCase().includes(q)),
+      )
       .slice(0, 8);
   }, [query, people]);
 

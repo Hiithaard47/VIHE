@@ -16,6 +16,16 @@ export function parseAdminListSearch(value: string | undefined): string {
   return value?.trim() ?? "";
 }
 
+export function containsInsensitive(q: string, fields: string[]) {
+  return {
+    OR: fields.map((field) => ({ [field]: { contains: q, mode: "insensitive" as const } })),
+  };
+}
+
+export function contactKeywords(...values: Array<string | null | undefined>) {
+  return values.filter((value): value is string => Boolean(value)).join(" ");
+}
+
 export function adminListHref(basePath: string, tab: AdminListTab, page = 1, q = ""): string {
   const params = new URLSearchParams();
   if (tab === "archived") params.set("tab", "archived");

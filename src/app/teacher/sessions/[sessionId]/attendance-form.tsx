@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STATUS_OPTIONS, type StatusValue } from "@/lib/attendance";
 
-type StudentRow = { id: string; rollNumber: string; name: string; status: StatusValue };
+type StudentRow = {
+  id: string;
+  rollNumber: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: StatusValue;
+};
 
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -51,7 +58,9 @@ export function AttendanceForm({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return students;
-    return students.filter((s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q));
+    return students.filter((s) =>
+      [s.name, s.rollNumber, s.email ?? "", s.phone ?? ""].some((value) => value.toLowerCase().includes(q)),
+    );
   }, [students, query]);
   const visibleIds = useMemo(() => new Set(filtered.map((s) => s.id)), [filtered]);
 
@@ -68,7 +77,7 @@ export function AttendanceForm({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <input
           type="text"
-          placeholder="Search by name or roll no."
+          placeholder="Search by name, roll no., email, or mobile"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-56 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted"

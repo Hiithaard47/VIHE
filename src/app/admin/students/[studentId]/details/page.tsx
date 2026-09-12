@@ -13,7 +13,7 @@ export default async function AdminStudentDetailsPage({
   await requireAnyPermission([PERMISSIONS.STUDENTS_MANAGE, PERMISSIONS.COURSES_MANAGE]);
   const student = await prisma.student.findUnique({
     where: { id: studentId },
-    select: { name: true, rollNumber: true, email: true, isActive: true },
+    select: { name: true, rollNumber: true, email: true, phone: true, isActive: true },
   });
   if (!student) notFound();
 
@@ -33,6 +33,10 @@ export default async function AdminStudentDetailsPage({
           <label className="flex flex-col gap-1 text-sm text-ink">
             Email
             <input name="email" type="email" defaultValue={student.email ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            Mobile (optional)
+            <input name="phone" type="tel" defaultValue={student.phone ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
           <label className="flex flex-col gap-1 text-sm text-ink">
             Portal password

@@ -3,7 +3,7 @@ import { AddStudentDialog } from "@/components/add-student-dialog";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
 import { ListSearch } from "@/components/list-search";
-import { ADMIN_PAGE_SIZE, parseAdminListPage, parseAdminListSearch } from "@/lib/admin-list";
+import { ADMIN_PAGE_SIZE, containsInsensitive, parseAdminListPage, parseAdminListSearch } from "@/lib/admin-list";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
@@ -50,13 +50,7 @@ export default async function StudentsPage({
 
   if (isApplications) {
     const applicationWhere = q
-      ? {
-          status: "PENDING" as const,
-          OR: [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { email: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
+      ? { status: "PENDING" as const, ...containsInsensitive(q, ["name", "email", "phone"]) }
       : { status: "PENDING" as const };
     const total = await prisma.studentApplication.count({ where: applicationWhere });
     const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
@@ -77,7 +71,7 @@ export default async function StudentsPage({
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
           </div>
           <StudentTabs tab={tab} />
-          <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or email" />
+          <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name, email, or mobile" />
           <ApplicationCards
             applications={applications}
             empty={q ? "No matching applications." : "No pending applications."}
@@ -94,15 +88,7 @@ export default async function StudentsPage({
 
   const where = {
     isActive,
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { rollNumber: { contains: q, mode: "insensitive" as const } },
-            { email: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
+    ...(q ? containsInsensitive(q, ["name", "rollNumber", "email", "phone"]) : {}),
   };
 
   const [total, courses] = await Promise.all([
@@ -132,7 +118,7 @@ export default async function StudentsPage({
           {isActive && <AddStudentDialog courses={courses} />}
         </div>
         <StudentTabs tab={tab} />
-        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or roll number" />
+        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name, roll number, email, or mobile" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
@@ -150,6 +136,9 @@ export default async function StudentsPage({
                       {student.name}
                     </Link>
                     <p className="text-xs text-muted">{student.rollNumber}</p>
+                    {(student.email || student.phone) && (
+                      <p className="text-xs text-muted">{[student.email, student.phone].filter(Boolean).join(" · ")}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {student.enrollments.length > 0 ? (

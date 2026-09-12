@@ -49,7 +49,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await page.getByRole("main").getByRole("link", { name: "Teachers" }).click();
   await page.getByRole("button", { name: "Add teacher" }).click();
   const teacherDialog = page.getByRole("dialog");
-  await teacherDialog.getByPlaceholder("Search by name or email").fill(teacherOne);
+  await teacherDialog.getByPlaceholder(/Search by name/).fill(teacherOne);
   await teacherDialog.getByRole("option", { name: new RegExp(teacherOne) }).click();
   expect(await waitForFlashAfter(page, () => teacherDialog.getByRole("button", { name: "Add teacher" }).click())).toBe("success");
   await expect(page.getByRole("cell", { name: teacherOne })).toBeVisible();
@@ -59,7 +59,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await page.getByRole("main").getByRole("link", { name: "Teachers" }).click();
   await page.getByRole("button", { name: "Add teacher" }).click();
   const eveningTeacherDialog = page.getByRole("dialog");
-  await eveningTeacherDialog.getByPlaceholder("Search by name or email").fill(teacherTwo);
+  await eveningTeacherDialog.getByPlaceholder(/Search by name/).fill(teacherTwo);
   await eveningTeacherDialog.getByRole("option", { name: new RegExp(teacherTwo) }).click();
   expect(await waitForFlashAfter(page, () => eveningTeacherDialog.getByRole("button", { name: "Add teacher" }).click())).toBe("success");
   await expect(page.getByRole("cell", { name: teacherTwo })).toBeVisible();
@@ -69,7 +69,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await page.getByRole("main").getByRole("link", { name: "Students" }).click();
   await page.getByRole("button", { name: "Add student" }).click();
   const rosterStudentDialog = page.getByRole("dialog");
-  await rosterStudentDialog.getByPlaceholder("Search by name or roll number").fill(studentName);
+  await rosterStudentDialog.getByPlaceholder(/Search by name/).fill(studentName);
   await rosterStudentDialog.getByRole("option", { name: new RegExp(studentName) }).click();
   expect(await waitForFlashAfter(page, () => rosterStudentDialog.getByRole("button", { name: "Add student" }).click())).toBe("success");
   await page.getByRole("link", { name: studentName }).click();

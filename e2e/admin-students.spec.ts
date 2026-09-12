@@ -54,4 +54,25 @@ test.describe("admin: students", () => {
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Restore" }).click())).toBe("success");
     await expect(page.getByRole("button", { name: "Archive" })).toBeVisible();
   });
+
+  test("finds a student by email or mobile", async ({ page }) => {
+    const token = unique("searchstudent");
+    const studentName = `Search Student ${token}`;
+    const email = `${token}@example.com`;
+    const phone = `555${Date.now().toString().slice(-7)}`;
+    await page.getByRole("button", { name: "Add student" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Full name").fill(studentName);
+    await dialog.getByLabel("Roll number").fill(unique("R"));
+    await dialog.getByLabel("Email (optional)").fill(email);
+    await dialog.getByLabel("Mobile (optional)").fill(phone);
+    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create student" }).click())).toBe("success");
+
+    await page.getByRole("searchbox", { name: "Search" }).fill(email);
+    await expect(page.locator("tr", { hasText: studentName })).toBeVisible();
+
+    await page.getByRole("searchbox", { name: "Search" }).fill(phone);
+    await expect(page.locator("tr", { hasText: studentName })).toBeVisible();
+    await expect(page.getByText(phone)).toBeVisible();
+  });
 });

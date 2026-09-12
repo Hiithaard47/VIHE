@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { enrollBatchStudent, unenrollBatchStudent } from "../actions";
+import { contactKeywords } from "@/lib/admin-list";
 
 export default async function AdminBatchStudentsPage({
   params,
@@ -29,7 +30,7 @@ export default async function AdminBatchStudentsPage({
   const available = await prisma.student.findMany({
     where: { isActive: true, id: { notIn: enrolledIds } },
     orderBy: { rollNumber: "asc" },
-    select: { id: true, name: true, rollNumber: true },
+    select: { id: true, name: true, rollNumber: true, email: true, phone: true },
   });
 
   return (
@@ -44,10 +45,11 @@ export default async function AdminBatchStudentsPage({
               id: student.id,
               title: student.name,
               subtitle: student.rollNumber,
+              keywords: contactKeywords(student.email, student.phone),
             }))}
             fieldName="studentId"
             buttonLabel="Add student"
-            placeholder="Search by name or roll number"
+            placeholder="Search by name, roll number, email, or mobile"
             emptyLabel="No matching students."
             action={enrollBatchStudent.bind(null, courseId, batchId)}
           />
