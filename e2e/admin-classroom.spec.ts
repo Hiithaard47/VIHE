@@ -22,7 +22,7 @@ test.describe("admin: classroom", () => {
 
     await page.getByRole("link", { name: "Sessions", exact: true }).click();
     await page.locator('input[type="date"]').fill("2026-03-15");
-    await page.locator('input[name="topic"]').fill("Admin overview");
+    await page.locator('input[name="name"]').fill("Admin overview");
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
       "success",
     );

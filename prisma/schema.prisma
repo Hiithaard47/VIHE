@@ -141,9 +141,9 @@ model Course {
   startDate DateTime?
   endDate   DateTime?
 
-  // Attendance policy.
+  // Attendance policy. Late/Excused apply to every category on the course.
+  // Per-category min % lives on SessionCategory.
   defaultStatus           AttendanceStatus @default(PRESENT)
-  minAttendancePercent    Int?             // null = no at-risk flag
   lateCountsAsAttended    Boolean          @default(true)
   excusedCountsAsAttended Boolean          @default(true)
   lockAfterDays           Int?             // null = never locks
@@ -235,13 +235,28 @@ model BatchEnrollment {
   @@map("batch_enrollments")
 }
 
+model SessionCategory {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  minAttendancePercent  Int?
+  isActive              Boolean  @default(true)
+  isSystem              Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  sessions ClassSession[]
+
+  @@map("session_categories")
+}
+
 model ClassSession {
-  id        String   @id @default(cuid())
-  batchId   String
-  date      DateTime
-  topic     String?
+  id          String   @id @default(cuid())
+  batchId     String
+  categoryId  String
+  date        DateTime
+  name        String
   createdById String
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   startMinute Int?    // copied from the slot at generation time
   endMinute   Int?
@@ -251,6 +266,7 @@ model ClassSession {
   slotId      String?
 
   batch      CourseBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  category  SessionCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
   records   AttendanceRecord[]
   resources SessionResource[]

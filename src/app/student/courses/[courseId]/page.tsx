@@ -19,7 +19,7 @@ export default async function StudentCourseSessionsPage({
   const sessions = await prisma.classSession.findMany({
     where: { batchId: enrollment.batch.id },
     orderBy: { date: "asc" },
-    select: { id: true, date: true, topic: true },
+    select: { id: true, date: true, name: true, category: { select: { name: true } } },
   });
   const upcoming = sessions.filter((item) => sessionTiming(item.date) !== "past");
   const previous = sessions.filter((item) => sessionTiming(item.date) === "past").reverse();
@@ -38,7 +38,7 @@ function SessionGroup({
   empty,
 }: {
   title: string;
-  sessions: Array<{ id: string; date: Date; topic: string | null }>;
+  sessions: Array<{ id: string; date: Date; name: string; category: { name: string } }>;
   empty: string;
 }) {
   return (
@@ -52,8 +52,10 @@ function SessionGroup({
           <div key={item.id} className="rounded-lg border border-hairline bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-medium text-ink">{formatDisplayDate(item.date)}</p>
-                {item.topic && <p className="text-xs text-muted">{item.topic}</p>}
+                <p className="font-medium text-ink">{item.name}</p>
+                <p className="text-xs text-muted">
+                  {item.category.name} · {formatDisplayDate(item.date)}
+                </p>
               </div>
               <span className="text-xs text-muted">{TIMING_LABEL[sessionTiming(item.date)]}</span>
             </div>

@@ -51,6 +51,17 @@ export function attendancePercent(tally: StatusTally, policy: AttendancePolicy):
   return Math.round((attended / total) * 100);
 }
 
+export function categoryAttendancePolicy(
+  course: { lateCountsAsAttended: boolean; excusedCountsAsAttended: boolean },
+  category: { minAttendancePercent: number | null },
+): AttendancePolicy {
+  return {
+    minAttendancePercent: category.minAttendancePercent,
+    lateCountsAsAttended: course.lateCountsAsAttended,
+    excusedCountsAsAttended: course.excusedCountsAsAttended,
+  };
+}
+
 export function isAtRisk(percent: number | null, policy: AttendancePolicy): boolean {
   if (percent === null || policy.minAttendancePercent === null) return false;
   return percent < policy.minAttendancePercent;

@@ -26,7 +26,7 @@ export async function CourseUploadsView({
 
   const resources = await prisma.sessionResource.findMany({
     where: { session: batchId ? { batchId } : { batch: { courseId } } },
-    include: { session: { select: { id: true, date: true, topic: true } } },
+    include: { session: { select: { id: true, date: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -58,7 +58,7 @@ export async function CourseUploadsView({
                   <Link href={sessionHref(portal, resource.session.id)} className="hover:text-accent-dark">
                     {formatDisplayDate(resource.session.date)}
                   </Link>
-                  {resource.session.topic && <p className="text-xs text-muted">{resource.session.topic}</p>}
+                  <p className="text-xs text-muted">{resource.session.name}</p>
                 </td>
                 <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
                 {canManage && (

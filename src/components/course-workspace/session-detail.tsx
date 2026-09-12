@@ -22,6 +22,7 @@ export async function SessionDetailView({
   const classSession = await prisma.classSession.findUnique({
     where: { id: sessionId },
     include: {
+      category: { select: { name: true } },
       batch: {
         select: {
           id: true,
@@ -64,8 +65,10 @@ export async function SessionDetailView({
         </Link>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="font-heading text-lg font-semibold text-ink">{formatDisplayDate(classSession.date)}</h1>
-            {classSession.topic && <p className="text-sm text-muted">{classSession.topic}</p>}
+            <h1 className="font-heading text-lg font-semibold text-ink">{classSession.name}</h1>
+            <p className="text-sm text-muted">
+              {classSession.category.name} · {formatDisplayDate(classSession.date)}
+            </p>
           </div>
           {canChangeDate && (
             <SessionActionsMenu

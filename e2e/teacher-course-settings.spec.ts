@@ -87,7 +87,6 @@ test.describe("teacher: course settings", () => {
     await page.goto(`/teacher/courses/${course.id}/settings`);
 
     await page.selectOption('select[name="defaultStatus"]', "ABSENT");
-    await page.fill('input[name="minAttendancePercent"]', "75");
     await page.uncheck('input[name="excusedCountsAsAttended"]');
     await page.fill('input[name="lockAfterDays"]', "7");
 
@@ -96,13 +95,7 @@ test.describe("teacher: course settings", () => {
 
     await page.reload();
     await expect(page.locator('select[name="defaultStatus"]')).toHaveValue("ABSENT");
-    await expect(page.locator('input[name="minAttendancePercent"]')).toHaveValue("75");
     await expect(page.locator('input[name="excusedCountsAsAttended"]')).not.toBeChecked();
-
-    // Bypass the browser's own number-input clamping to reach server validation.
-    await page.locator('input[name="minAttendancePercent"]').evaluate((el) => el.removeAttribute("max"));
-    await page.fill('input[name="minAttendancePercent"]', "101");
-    const bad = await waitForFlashAfter(page, () => page.click('button:has-text("Save policy")'));
-    expect(bad).toBe("error");
+    await expect(page.locator('input[name="lockAfterDays"]')).toHaveValue("7");
   });
 });

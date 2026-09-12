@@ -8,7 +8,6 @@ export default async function AdminCoursePolicyPage({ params }: { params: Promis
     where: { id: courseId },
     select: {
       defaultStatus: true,
-      minAttendancePercent: true,
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       lockAfterDays: true,
@@ -27,10 +26,6 @@ export default async function AdminCoursePolicyPage({ params }: { params: Promis
           <select name="defaultStatus" defaultValue={course.defaultStatus} className="w-fit rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink">
             {STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-ink">
-          Minimum attendance %
-          <input type="number" name="minAttendancePercent" min={0} max={100} defaultValue={course.minAttendancePercent ?? ""} className="w-28 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
         </label>
         <fieldset className="flex flex-col gap-2 text-sm text-ink">
           <legend className="text-muted">Counts as attended</legend>

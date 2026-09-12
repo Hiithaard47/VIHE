@@ -12,7 +12,6 @@ describe("parsePolicyForm", () => {
     const result = parsePolicyForm(
       form({
         defaultStatus: "ABSENT",
-        minAttendancePercent: "75",
         lateCountsAsAttended: "on",
         lockAfterDays: "7",
       }),
@@ -20,7 +19,6 @@ describe("parsePolicyForm", () => {
     expect(result.success).toBe(true);
     expect(result.success && result.data).toEqual({
       defaultStatus: "ABSENT",
-      minAttendancePercent: 75,
       lateCountsAsAttended: true,
       excusedCountsAsAttended: false,
       lockAfterDays: 7,
@@ -28,17 +26,9 @@ describe("parsePolicyForm", () => {
   });
 
   it("treats blank optional numbers as null, not zero", () => {
-    const result = parsePolicyForm(
-      form({ defaultStatus: "PRESENT", minAttendancePercent: "", lockAfterDays: "" }),
-    );
+    const result = parsePolicyForm(form({ defaultStatus: "PRESENT", lockAfterDays: "" }));
     expect(result.success).toBe(true);
-    expect(result.success && result.data.minAttendancePercent).toBeNull();
     expect(result.success && result.data.lockAfterDays).toBeNull();
-  });
-
-  it("rejects a percentage above 100", () => {
-    const result = parsePolicyForm(form({ defaultStatus: "PRESENT", minAttendancePercent: "101" }));
-    expect(result.success).toBe(false);
   });
 
   it("rejects a negative lock window", () => {

@@ -17,7 +17,6 @@ export default async function CourseSettingsPage({ params }: { params: Promise<{
       description: true,
       loginMonths: true,
       defaultStatus: true,
-      minAttendancePercent: true,
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       lockAfterDays: true,
@@ -89,19 +88,6 @@ export default async function CourseSettingsPage({ params }: { params: Promise<{
             <span className="text-xs text-muted">
               Every unmarked student starts here, so you only tap the exceptions.
             </span>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm text-ink">
-            Minimum attendance %
-            <input
-              type="number"
-              name="minAttendancePercent"
-              min={0}
-              max={100}
-              defaultValue={course.minAttendancePercent ?? ""}
-              className="w-28 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
-            />
-            <span className="text-xs text-muted">Leave blank for no at-risk flag.</span>
           </label>
 
           <fieldset className="flex flex-col gap-2 text-sm text-ink">

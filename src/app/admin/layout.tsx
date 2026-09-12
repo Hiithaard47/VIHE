@@ -8,6 +8,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/teachers", label: "Teachers" },
   { href: "/admin/courses", label: "Courses" },
+  { href: "/admin/session-categories", label: "Session categories" },
   { href: "/admin/students", label: "Students" },
   { href: "/admin/roles", label: "Roles & permissions" },
 ];

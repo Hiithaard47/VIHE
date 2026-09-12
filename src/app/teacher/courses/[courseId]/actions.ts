@@ -7,7 +7,7 @@ import { requireActiveCourse, requireCourseAccess, requireAnyPermission } from "
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
 import { resolveWritableBatch } from "@/lib/enrollment";
-import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
+import { courseHref, parseCoursePortal, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
 import { parseDateInput } from "@/lib/time";
 
 export async function createSession(courseId: string, portalArg: CoursePortal, formData: FormData) {
@@ -18,19 +18,26 @@ export async function createSession(courseId: string, portalArg: CoursePortal, f
   await requireActiveCourse(courseId, path);
   const date = parseDateInput(String(formData.get("date") ?? ""));
   if (!date) redirect(flashUrl(path, "error", "Pick a valid date."));
-  const topic = String(formData.get("topic") ?? "").trim() || undefined;
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) redirect(flashUrl(path, "error", "Enter a session name."));
+  const categoryId = String(formData.get("categoryId") ?? "").trim();
+  const category = categoryId
+    ? await prisma.sessionCategory.findFirst({ where: { id: categoryId, isActive: true }, select: { id: true } })
+    : null;
+  if (!category) redirect(flashUrl(path, "error", "Pick a session category."));
   const batchId = await resolveWritableBatch(courseId, session.user.id, String(formData.get("batchId") ?? "") || null);
   if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to a batch."));
 
   await prisma.classSession.create({
     data: {
       batchId,
+      categoryId: category.id,
       date,
-      topic,
+      name,
       createdById: session.user.id,
     },
   });
 
   revalidatePath(path);
-  redirect(flashUrl(path, "success", "Session created."));
+  redirect(flashUrl(sessionListHref(portal, courseId, category.id), "success", "Session created."));
 }

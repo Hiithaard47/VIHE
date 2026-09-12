@@ -22,7 +22,7 @@ export default async function StudentCourseDocumentsPage({
 
   const resources = await prisma.sessionResource.findMany({
     where: { session: { batchId: enrollment.batch.id } },
-    include: { session: { select: { date: true, topic: true } } },
+    include: { session: { select: { date: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -51,7 +51,7 @@ export default async function StudentCourseDocumentsPage({
                 </td>
                 <td className="px-4 py-3">
                   {formatDisplayDate(resource.session.date)}
-                  {resource.session.topic && <p className="text-xs text-muted">{resource.session.topic}</p>}
+                  <p className="text-xs text-muted">{resource.session.name}</p>
                 </td>
                 <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
               </tr>

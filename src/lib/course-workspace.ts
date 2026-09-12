@@ -10,6 +10,11 @@ export function courseHref(portal: CoursePortal, courseId: string, suffix = "") 
   return `${root}/${suffix}`;
 }
 
+export function sessionListHref(portal: CoursePortal, courseId: string, categoryId?: string) {
+  const path = courseHref(portal, courseId);
+  return categoryId ? `${path}?category=${categoryId}` : path;
+}
+
 export function sessionHref(portal: CoursePortal, sessionId: string) {
   return portal === "admin" ? `/admin/sessions/${sessionId}` : `/teacher/sessions/${sessionId}`;
 }

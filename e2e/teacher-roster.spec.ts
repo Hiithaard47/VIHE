@@ -11,7 +11,10 @@ test.describe("teacher: roster", () => {
       password,
     );
     const course = await createCourse(`Roster Course ${unique("c")}`, unique("ROS").toUpperCase(), teacher.id);
-    await prisma.course.update({ where: { id: course.id }, data: { minAttendancePercent: 75 } });
+    await prisma.sessionCategory.update({
+      where: { name: "Class" },
+      data: { minAttendancePercent: 75 },
+    });
 
     const good = await createStudent(`Good Student ${unique("s")}`, unique("RG").toUpperCase(), course.batches[0].id);
     const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.batches[0].id);

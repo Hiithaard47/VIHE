@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { PERMISSION_DEFINITIONS, DEFAULT_ROLES } from "../src/lib/permissions";
+import {
+  DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
+  DEFAULT_SESSION_CATEGORY_NAME,
+} from "../src/lib/session-categories";
 
 const prisma = new PrismaClient();
 
@@ -27,6 +31,16 @@ async function main() {
       data: permissions.map((p) => ({ roleId: role.id, permissionId: p.id })),
     });
   }
+
+  await prisma.sessionCategory.upsert({
+    where: { name: DEFAULT_SESSION_CATEGORY_NAME },
+    update: { isSystem: true, isActive: true },
+    create: {
+      name: DEFAULT_SESSION_CATEGORY_NAME,
+      minAttendancePercent: DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
+      isSystem: true,
+    },
+  });
 
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;

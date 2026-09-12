@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { canConfigureCourse, requireCourseAccess } from "@/lib/rbac";
 import {
   attendancePercent,
-  emptyTally,
+  categoryAttendancePolicy,
   isAtRisk,
-  type AttendancePolicy,
 } from "@/lib/attendance";
-import { loadAttendanceTallies } from "@/lib/course-attendance";
+import { loadAttendanceTallies, loadCourseAttendanceCategories, tallyFor } from "@/lib/course-attendance";
 import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { BatchField } from "@/components/course-workspace-fields";
 import { enrollStudent, unenrollStudent } from "@/app/teacher/courses/[courseId]/roster/actions";
@@ -29,7 +28,6 @@ export async function CourseRosterView({
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: {
-      minAttendancePercent: true,
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       batches: {
@@ -44,13 +42,10 @@ export async function CourseRosterView({
   });
   if (!course) notFound();
 
-  const policy: AttendancePolicy = {
-    minAttendancePercent: course.minAttendancePercent,
-    lateCountsAsAttended: course.lateCountsAsAttended,
-    excusedCountsAsAttended: course.excusedCountsAsAttended,
-  };
-
-  const tallies = await loadAttendanceTallies(courseId, batchId);
+  const [categories, tallies] = await Promise.all([
+    loadCourseAttendanceCategories(courseId, batchId),
+    loadAttendanceTallies(courseId, batchId),
+  ]);
 
   const rows = course.batches.flatMap((batch) =>
     batch.enrollments.map((enrollment) => ({
@@ -68,6 +63,10 @@ export async function CourseRosterView({
     : [];
   const writableBatches = course.batches.map((batch) => ({ id: batch.id, name: batch.name }));
   const showBatchName = course.batches.length > 1;
+  const thresholdNote = categories
+    .filter((category) => category.minAttendancePercent !== null)
+    .map((category) => `${category.name} ${category.minAttendancePercent}%`)
+    .join(" · ");
 
   return (
     <section className="flex flex-col gap-3">
@@ -93,11 +92,12 @@ export async function CourseRosterView({
           </AddPersonDialog>
         )}
       </div>
-      {policy.minAttendancePercent !== null && (
+      {thresholdNote ? (
         <p className="text-xs text-muted">
-          Threshold {policy.minAttendancePercent}% &mdash;{" "}
-          {portal === "admin" ? "set in Policy." : "set in Settings › Attendance policy."}
+          Threshold {thresholdNote} &mdash; set in Admin › Session categories.
         </p>
+      ) : (
+        <p className="text-xs text-muted">No minimum attendance is set on any session category used here.</p>
       )}
       <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
         <table className="w-full text-left text-sm">
@@ -106,23 +106,44 @@ export async function CourseRosterView({
               <th className="px-4 py-2 font-medium">Roll no.</th>
               <th className="px-4 py-2 font-medium">Student</th>
               {showBatchName && <th className="px-4 py-2 font-medium">Batch</th>}
-              <th className="px-4 py-2 font-medium">Attendance</th>
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <th key={category.id} className="px-4 py-2 font-medium">
+                    {category.name}
+                  </th>
+                ))
+              ) : (
+                <th className="px-4 py-2 font-medium">Attendance</th>
+              )}
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {rows.map(({ student, batchId: studentBatchId, batchName }) => {
-              const percent = attendancePercent(tallies.get(student.id) ?? emptyTally(), policy);
-              const atRisk = isAtRisk(percent, policy);
+              const percents = categories.map((category) => {
+                const policy = categoryAttendancePolicy(course, category);
+                const percent = attendancePercent(tallyFor(tallies, student.id, category.id), policy);
+                return { category, percent, atRisk: isAtRisk(percent, policy) };
+              });
+              const atRisk = percents.some((item) => item.atRisk);
               return (
                 <tr key={`${studentBatchId}-${student.id}`} className="border-b border-hairline text-ink last:border-0">
                   <td className="px-4 py-3">{student.rollNumber}</td>
                   <td className="px-4 py-3">{student.name}</td>
                   {showBatchName && <td className="px-4 py-3 text-muted">{batchName}</td>}
-                  <td className={`px-4 py-3 ${atRisk ? "font-semibold text-red-700" : ""}`}>
-                    {percent === null ? "—" : `${percent}%`}
-                  </td>
+                  {categories.length > 0 ? (
+                    percents.map(({ category, percent, atRisk: cellAtRisk }) => (
+                      <td
+                        key={category.id}
+                        className={`px-4 py-3 ${cellAtRisk ? "font-semibold text-red-700" : ""}`}
+                      >
+                        {percent === null ? "—" : `${percent}%`}
+                      </td>
+                    ))
+                  ) : (
+                    <td className="px-4 py-3">—</td>
+                  )}
                   <td className="px-4 py-3">
                     {atRisk ? (
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
@@ -148,7 +169,7 @@ export async function CourseRosterView({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={showBatchName ? 6 : 5} className="px-4 py-3 text-sm text-muted">
+                <td colSpan={(showBatchName ? 5 : 4) + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
                   No students enrolled in this course yet.
                 </td>
               </tr>

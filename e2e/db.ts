@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
+import {
+  DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
+  DEFAULT_SESSION_CATEGORY_NAME,
+} from "../src/lib/session-categories";
 
 // Separate client for fixture setup/assertions. Playwright sets DATABASE_URL
 // to TEST_DATABASE_URL in playwright.config.ts before this module loads.
@@ -57,6 +61,21 @@ export async function createStudent(
   });
 }
 
-export async function createSession(batchId: string, createdById: string, date = new Date()) {
-  return prisma.classSession.create({ data: { batchId, date, createdById } });
+export async function defaultSessionCategory() {
+  return prisma.sessionCategory.upsert({
+    where: { name: DEFAULT_SESSION_CATEGORY_NAME },
+    create: {
+      name: DEFAULT_SESSION_CATEGORY_NAME,
+      minAttendancePercent: DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
+      isSystem: true,
+    },
+    update: {},
+  });
+}
+
+export async function createSession(batchId: string, createdById: string, date = new Date(), name = DEFAULT_SESSION_CATEGORY_NAME) {
+  const category = await defaultSessionCategory();
+  return prisma.classSession.create({
+    data: { batchId, date, createdById, name, categoryId: category.id },
+  });
 }

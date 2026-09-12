@@ -1,6 +1,13 @@
 import { CourseSessionsView } from "@/components/course-workspace/sessions";
 
-export default async function AdminCourseSessionsPage({ params }: { params: Promise<{ courseId: string }> }) {
+export default async function AdminCourseSessionsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ category?: string }>;
+}) {
   const { courseId } = await params;
-  return <CourseSessionsView courseId={courseId} portal="admin" />;
+  const { category } = await searchParams;
+  return <CourseSessionsView courseId={courseId} portal="admin" categoryId={category} />;
 }
