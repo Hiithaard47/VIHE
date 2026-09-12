@@ -115,4 +115,44 @@ test.describe("teacher: roster", () => {
     await expect(page.locator('select[name="studentId"]')).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
   });
+
+  test("removing an already-removed student is a graceful no-op", async ({ page, context }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(
+      `Racer Teacher ${unique("t")}`,
+      `${unique("racerteacher")}@example.com`,
+      password,
+    );
+    const course = await createCourse(`Racer Course ${unique("c")}`, unique("RCE").toUpperCase(), teacher.id);
+    const student = await createStudent(`Racer Student ${unique("s")}`, unique("RR").toUpperCase(), course.id);
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}/roster`);
+    await expect(page.locator("tr", { hasText: student.name })).toBeVisible();
+
+    // A second tab, signed in as the same teacher and viewing the same
+    // roster, stands in for a second person racing to remove the same
+    // student — or equally, a stale reload of this same tab.
+    const page2 = await context.newPage();
+    await page2.goto(`/teacher/courses/${course.id}/roster`);
+    await expect(page2.locator("tr", { hasText: student.name })).toBeVisible();
+
+    // First removal succeeds and the row disappears.
+    const firstRemoved = await waitForFlashAfter(page, () =>
+      page.locator("tr", { hasText: student.name }).getByRole("button", { name: "Remove" }).click(),
+    );
+    expect(firstRemoved).toBe("success");
+    await expect(page.locator("tr", { hasText: student.name })).toHaveCount(0);
+
+    // The second tab's DOM is now stale — it still shows the (already
+    // removed) student's Remove button. Clicking it resubmits the exact
+    // same courseId+studentId delete a second time. That must be a graceful
+    // no-op (a success flash), not an unhandled P2025 surfacing as a 500.
+    const secondRemoved = await waitForFlashAfter(page2, () =>
+      page2.locator("tr", { hasText: student.name }).getByRole("button", { name: "Remove" }).click(),
+    );
+    expect(secondRemoved).toBe("success");
+
+    await page2.close();
+  });
 });

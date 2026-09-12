@@ -10,3 +10,7 @@ export function flashUrl(path: string, kind: "success" | "error", message: strin
 export function isUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
+
+export function isForeignKeyError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
+}
