@@ -45,13 +45,3 @@ export async function createCourse(formData: FormData) {
   revalidatePath(PATH);
   redirect(flashUrl(PATH, "success", `${name} was created.`));
 }
-
-export async function toggleCourseActive(courseId: string, formData: FormData) {
-  await requirePermission(PERMISSIONS.COURSES_MANAGE);
-
-  const nextActive = formData.get("nextActive") === "true";
-  await prisma.course.update({ where: { id: courseId }, data: { isActive: nextActive } });
-
-  revalidatePath(PATH);
-  redirect(flashUrl(PATH, "success", nextActive ? "Course restored." : "Course archived."));
-}
