@@ -9,6 +9,7 @@ import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
 import { sanitizeFileName, validateResourceFile } from "@/lib/session-resources";
+import { sessionResourceUploadError } from "@/lib/session-categories";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc } from "@/lib/time";
 import { courseHref, parseCoursePortal, safeWorkspaceReturnTo, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
@@ -84,9 +85,12 @@ export async function uploadSessionResource(sessionId: string, portalArg: Course
   const path = sessionHref(portal, sessionId);
   const classSession = await prisma.classSession.findUniqueOrThrow({
     where: { id: sessionId },
-    select: { batchId: true },
+    select: { batchId: true, category: { select: { allowsResources: true } } },
   });
   const session = await requireBatchAccess(classSession.batchId, portal);
+
+  const blocked = sessionResourceUploadError(classSession.category.allowsResources);
+  if (blocked) redirect(flashUrl(path, "error", blocked));
 
   if (!isStorageConfigured()) {
     redirect(flashUrl(path, "error", "File storage is not configured."));

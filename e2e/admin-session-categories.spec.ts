@@ -98,4 +98,44 @@ test.describe("admin: session categories", () => {
     await expect(page.locator('select[name="categoryId"]')).not.toContainText(name);
     await expect(page.locator('select[name="categoryId"]')).toContainText("Class");
   });
+
+  test("hides session resources when the category disallows files", async ({ page }) => {
+    const course = await createCourse(`No Files Course ${unique("c")}`, unique("NFL").toUpperCase());
+    await loginAsAdmin(page);
+    await page.goto("/admin/session-categories");
+
+    const name = `Mangala ${unique("m")}`;
+    await page.getByRole("button", { name: "Add category" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Name").fill(name);
+    await dialog.getByRole("checkbox", { name: /Allow session files/ }).uncheck();
+    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create category" }).click())).toBe(
+      "success",
+    );
+    await expect(page.locator("tr", { hasText: name }).getByText("No files")).toBeVisible();
+    await expect(page.locator("tr", { hasText: "Class" }).getByText("Files")).toBeVisible();
+
+    await page.goto(`/admin/courses/${course.id}/sessions`);
+    await page.locator('input[type="date"]').fill("2026-03-15");
+    await page.locator('input[name="name"]').fill("Morning aarti");
+    await page.locator('select[name="categoryId"]').selectOption({ label: name });
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
+      "success",
+    );
+    await page.locator('a[href*="/admin/sessions/"]', { hasText: "Morning aarti" }).click();
+    await expect(page.getByRole("heading", { name: "Resources" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Upload" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Save attendance" })).toBeVisible();
+
+    await page.goto(`/admin/courses/${course.id}/sessions`);
+    await page.locator('input[type="date"]').fill("2026-03-16");
+    await page.locator('input[name="name"]').fill("Chapter 1");
+    await page.locator('select[name="categoryId"]').selectOption({ label: "Class" });
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
+      "success",
+    );
+    await page.locator('a[href*="/admin/sessions/"]', { hasText: "Chapter 1" }).click();
+    await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Upload" })).toBeVisible();
+  });
 });

@@ -22,7 +22,7 @@ export async function SessionDetailView({
   const classSession = await prisma.classSession.findUnique({
     where: { id: sessionId },
     include: {
-      category: { select: { name: true } },
+      category: { select: { name: true, allowsResources: true } },
       batch: {
         select: {
           id: true,
@@ -87,7 +87,14 @@ export async function SessionDetailView({
         )}
       </div>
 
-      <SessionResources sessionId={sessionId} resources={classSession.resources} canManage={canManage} portal={portal} />
+      {classSession.category.allowsResources && (
+        <SessionResources
+          sessionId={sessionId}
+          resources={classSession.resources}
+          canManage={canManage}
+          portal={portal}
+        />
+      )}
       {canManage ? (
         <AttendanceForm action={markAttendance.bind(null, sessionId, portal)} students={students} />
       ) : (
