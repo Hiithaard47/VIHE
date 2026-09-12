@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const BASE_TABS = [{ slug: "", label: "Sessions" }];
+const BASE_TABS = [
+  { slug: "", label: "Sessions" },
+  { slug: "roster", label: "Roster" },
+];
 const CONFIG_TABS = [{ slug: "settings", label: "Settings" }];
 
 export function CourseTabs({ courseId, canConfigure }: { courseId: string; canConfigure: boolean }) {
