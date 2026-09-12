@@ -6,12 +6,20 @@ import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
 // to TEST_DATABASE_URL in playwright.config.ts before this module loads.
 export const prisma = new PrismaClient();
 
-export async function createTeacher(name: string, email: string, password: string, phone?: string) {
-  const role = await prisma.role.findUniqueOrThrow({ where: { name: "Teacher" } });
+async function createStaff(name: string, email: string, password: string, roleName: "Admin" | "Teacher", phone?: string) {
+  const role = await prisma.role.findUniqueOrThrow({ where: { name: roleName } });
   const passwordHash = await bcrypt.hash(password, 10);
   return prisma.user.create({
     data: { name, email, phone, passwordHash, roles: { create: [{ roleId: role.id }] } },
   });
+}
+
+export async function createAdmin(name: string, email: string, password: string) {
+  return createStaff(name, email, password, "Admin");
+}
+
+export async function createTeacher(name: string, email: string, password: string, phone?: string) {
+  return createStaff(name, email, password, "Teacher", phone);
 }
 
 export async function createCourse(name: string, code: string, teacherId?: string) {
@@ -34,7 +42,7 @@ export async function createStudent(
   name: string,
   rollNumber: string,
   batchId?: string,
-  contact?: { email?: string; phone?: string },
+  contact?: { email?: string; phone?: string; password?: string },
 ) {
   return prisma.student.create({
     data: {
@@ -42,6 +50,7 @@ export async function createStudent(
       rollNumber,
       email: contact?.email,
       phone: contact?.phone,
+      passwordHash: contact?.password ? await bcrypt.hash(contact.password, 10) : undefined,
       enrollments: batchId ? { create: [{ batchId }] } : undefined,
     },
   });

@@ -22,7 +22,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen">
-      <AppHeader subtitle="Admin" right={<SignOutButton />} />
+      <AppHeader
+        subtitle="Admin"
+        right={
+          <nav className="flex items-center gap-5 text-sm">
+            <Link href="/admin/account" className="text-white/70 hover:text-accent">
+              Account
+            </Link>
+            <SignOutButton />
+          </nav>
+        }
+      />
       <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6">
         <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm">
           {NAV.map((item) => (

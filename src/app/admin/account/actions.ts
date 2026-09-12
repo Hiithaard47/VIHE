@@ -8,13 +8,14 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/rbac";
 
-const PATH = "/teacher/account";
+const PATH = "/admin/account";
 
 export async function changeOwnPassword(formData: FormData) {
   const session = await requireAnyPermission([
-    PERMISSIONS.SESSIONS_MANAGE,
-    PERMISSIONS.ATTENDANCE_MARK,
-    PERMISSIONS.ATTENDANCE_VIEW,
+    PERMISSIONS.USERS_MANAGE,
+    PERMISSIONS.ROLES_MANAGE,
+    PERMISSIONS.COURSES_MANAGE,
+    PERMISSIONS.STUDENTS_MANAGE,
   ]);
 
   const user = await prisma.user.findUnique({

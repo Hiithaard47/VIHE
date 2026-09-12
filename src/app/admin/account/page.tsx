@@ -2,7 +2,7 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { FlashBanner } from "@/components/flash-banner";
 import { changeOwnPassword } from "./actions";
 
-export default function TeacherAccountPage() {
+export default function AdminAccountPage() {
   return (
     <div className="flex flex-col gap-4">
       <FlashBanner />
