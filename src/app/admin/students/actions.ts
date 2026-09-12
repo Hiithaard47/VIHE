@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
-import { enrollStudentInBatch, getOrCreateDefaultBatch } from "@/lib/enrollment";
+import { enrollStudentInBatch } from "@/lib/enrollment";
 import { DEFAULT_BATCH_NAME } from "@/lib/batches";
 
 const PATH = "/admin/students";
@@ -16,8 +16,16 @@ const createStudentSchema = z.object({
   name: z.string().min(1),
   rollNumber: z.string().min(1),
   email: z.string().email().optional().or(z.literal("")),
-  courseIds: z.array(z.string()).default([]),
 });
+
+function getBatchSelections(formData: FormData) {
+  return Array.from(formData.entries())
+    .filter(([key]) => key.startsWith("batch-"))
+    .map(([key, value]) => ({
+      courseId: key.slice("batch-".length),
+      batchId: String(value),
+    }));
+}
 
 export async function createStudent(formData: FormData) {
   await requirePermission(PERMISSIONS.STUDENTS_MANAGE);
@@ -26,10 +34,10 @@ export async function createStudent(formData: FormData) {
     name: formData.get("name"),
     rollNumber: formData.get("rollNumber"),
     email: formData.get("email") || "",
-    courseIds: formData.getAll("courseIds"),
   });
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
-  const { name, rollNumber, email, courseIds } = parsed.data;
+  const { name, rollNumber, email } = parsed.data;
+  const batchSelections = getBatchSelections(formData);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -40,9 +48,14 @@ export async function createStudent(formData: FormData) {
           email: email || undefined,
         },
       });
-      for (const courseId of courseIds) {
-        const batch = await getOrCreateDefaultBatch(courseId, tx);
-        await enrollStudentInBatch(student.id, batch.id, tx);
+      for (const { courseId, batchId } of batchSelections) {
+        if (batchId) {
+          await enrollStudentInBatch(student.id, batchId, tx);
+        } else {
+          await tx.batchEnrollment.deleteMany({
+            where: { studentId: student.id, batch: { courseId } },
+          });
+        }
       }
     });
   } catch (err) {
@@ -59,15 +72,17 @@ export async function createStudent(formData: FormData) {
 export async function updateStudentEnrollments(studentId: string, formData: FormData) {
   await requirePermission(PERMISSIONS.STUDENTS_MANAGE);
 
-  const courseIds = formData.getAll("courseIds").map(String);
+  const batchSelections = getBatchSelections(formData);
 
   await prisma.$transaction(async (tx) => {
-    await tx.batchEnrollment.deleteMany({
-      where: { studentId, batch: { courseId: { notIn: courseIds } } },
-    });
-    for (const courseId of courseIds) {
-      const batch = await getOrCreateDefaultBatch(courseId, tx);
-      await enrollStudentInBatch(studentId, batch.id, tx);
+    for (const { courseId, batchId } of batchSelections) {
+      if (batchId) {
+        await enrollStudentInBatch(studentId, batchId, tx);
+      } else {
+        await tx.batchEnrollment.deleteMany({
+          where: { studentId, batch: { courseId } },
+        });
+      }
     }
   });
 

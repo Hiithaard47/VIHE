@@ -14,7 +14,11 @@ export default async function StudentsPage() {
       include: { enrollments: { include: { batch: { include: { course: true } } } } },
       orderBy: { createdAt: "asc" },
     }),
-    prisma.course.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.course.findMany({
+      where: { isActive: true },
+      include: { batches: { where: { isActive: true }, orderBy: { name: "asc" } } },
+      orderBy: { name: "asc" },
+    }),
     prisma.studentApplication.findMany({
       where: { status: "PENDING" },
       include: { desiredCourse: true },
@@ -112,11 +116,22 @@ export default async function StudentsPage() {
             <input name="email" type="email" placeholder="Email (optional)" className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
           </div>
           <fieldset className="flex flex-wrap gap-4 text-sm text-ink">
-            <legend className="mb-1 text-muted">Enroll in courses</legend>
+            <legend className="mb-1 w-full text-muted">Enroll in course batches</legend>
             {courses.map((course) => (
               <label key={course.id} className="flex items-center gap-1.5">
-                <input type="checkbox" name="courseIds" value={course.id} />
-                {course.name}
+                <span>{course.name}</span>
+                <select
+                  name={`batch-${course.id}`}
+                  defaultValue=""
+                  className="rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink"
+                >
+                  <option value="">Not enrolled</option>
+                  {course.batches.map((batch) => (
+                    <option key={batch.id} value={batch.id}>
+                      {batch.name}
+                    </option>
+                  ))}
+                </select>
               </label>
             ))}
           </fieldset>
@@ -140,7 +155,9 @@ export default async function StudentsPage() {
             </thead>
             <tbody>
               {students.map((student) => {
-                const enrolledIds = new Set(student.enrollments.map((e) => e.batch.courseId));
+                const enrolledBatches = new Map(
+                  student.enrollments.map((enrollment) => [enrollment.batch.courseId, enrollment.batchId]),
+                );
                 return (
                   <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
@@ -151,13 +168,19 @@ export default async function StudentsPage() {
                       <form action={updateStudentEnrollments.bind(null, student.id)} className="flex flex-wrap items-center gap-2">
                         {courses.map((course) => (
                           <label key={course.id} className="flex items-center gap-1 text-xs">
-                            <input
-                              type="checkbox"
-                              name="courseIds"
-                              value={course.id}
-                              defaultChecked={enrolledIds.has(course.id)}
-                            />
-                            {course.name}
+                            <span>{course.name}</span>
+                            <select
+                              name={`batch-${course.id}`}
+                              defaultValue={enrolledBatches.get(course.id) ?? ""}
+                              className="rounded-md border border-hairline bg-input px-2 py-1 text-xs text-ink"
+                            >
+                              <option value="">Not enrolled</option>
+                              {course.batches.map((batch) => (
+                                <option key={batch.id} value={batch.id}>
+                                  {batch.name}
+                                </option>
+                              ))}
+                            </select>
                           </label>
                         ))}
                         <button type="submit" className="rounded-md border border-hairline px-2 py-1 text-xs text-ink hover:bg-canvas">

@@ -17,7 +17,9 @@ test.describe("admin: students", () => {
 
     await page.fill('section:has-text("Add student") input[name="name"]', studentName);
     await page.fill('section:has-text("Add student") input[name="rollNumber"]', roll);
-    await page.check(`section:has-text("Add student") label:has-text("${course.name}") input[type="checkbox"]`);
+    await page
+      .locator(`section:has-text("Add student") select[name="batch-${course.id}"]`)
+      .selectOption(course.batches[0].id);
 
     const kind = await waitForFlashAfter(page, () =>
       page.click('section:has-text("Add student") button:has-text("Add student")'),
@@ -27,7 +29,7 @@ test.describe("admin: students", () => {
     const row = page.locator("tr", { hasText: studentName });
     await expect(row).toBeVisible();
     await expect(row.getByText(roll)).toBeVisible();
-    await expect(row.locator(`label:has-text("${course.name}") input[type="checkbox"]`)).toBeChecked();
+    await expect(row.locator(`select[name="batch-${course.id}"]`)).toHaveValue(course.batches[0].id);
   });
 
   test("deactivates and reactivates a student", async ({ page }) => {
