@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCourseConfigure } from "@/lib/rbac";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { parsePolicyForm } from "@/lib/policy";
+import { parseLoginMonthsInput } from "@/lib/student-login";
 
 const detailsSchema = z.object({
   name: z.string().min(1, "Course name is required."),
@@ -15,6 +16,14 @@ const detailsSchema = z.object({
   // which must reach the database as null — `undefined` would make Prisma
   // omit the column from the UPDATE and silently keep the old value.
   description: z.string(),
+  loginMonths: z.string().transform((value, ctx) => {
+    const months = parseLoginMonthsInput(value);
+    if (months === undefined) {
+      ctx.addIssue({ code: "custom", message: "Pick a student login length." });
+      return z.NEVER;
+    }
+    return months;
+  }),
 });
 
 export async function updateCourseDetails(courseId: string, formData: FormData) {
@@ -25,6 +34,7 @@ export async function updateCourseDetails(courseId: string, formData: FormData) 
     name: formData.get("name"),
     code: formData.get("code"),
     description: formData.get("description") ?? "",
+    loginMonths: String(formData.get("loginMonths") ?? ""),
   });
   if (!parsed.success) {
     redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));

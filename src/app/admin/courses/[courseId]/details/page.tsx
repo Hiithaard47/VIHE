@@ -1,3 +1,4 @@
+import { LoginMonthsField } from "@/components/login-months-field";
 import { prisma } from "@/lib/prisma";
 import { updateCourseDetails } from "../actions";
 
@@ -5,7 +6,7 @@ export default async function AdminCourseDetailsPage({ params }: { params: Promi
   const { courseId } = await params;
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    select: { name: true, code: true, description: true, isActive: true },
+    select: { name: true, code: true, description: true, isActive: true, loginMonths: true },
   });
   if (!course) return null;
 
@@ -27,6 +28,7 @@ export default async function AdminCourseDetailsPage({ params }: { params: Promi
             Description
             <textarea name="description" rows={3} defaultValue={course.description ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
+          <LoginMonthsField value={course.loginMonths} />
           {course.isActive && (
             <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">Save details</button>
           )}

@@ -42,7 +42,7 @@ export async function createStudent(
   name: string,
   rollNumber: string,
   batchId?: string,
-  contact?: { email?: string; phone?: string; password?: string },
+  contact?: { email?: string; phone?: string; password?: string; loginExpiresAt?: Date },
 ) {
   return prisma.student.create({
     data: {
@@ -50,6 +50,7 @@ export async function createStudent(
       rollNumber,
       email: contact?.email,
       phone: contact?.phone,
+      loginExpiresAt: contact?.loginExpiresAt,
       passwordHash: contact?.password ? await bcrypt.hash(contact.password, 10) : undefined,
       enrollments: batchId ? { create: [{ batchId }] } : undefined,
     },

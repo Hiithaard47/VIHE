@@ -12,6 +12,7 @@ import { enrollStudentInBatch } from "@/lib/enrollment";
 import { DEFAULT_BATCH_NAME } from "@/lib/batches";
 import { isBatchAssignableToCourse } from "@/lib/batch-access";
 import bcrypt from "bcryptjs";
+import { parseDateInput } from "@/lib/time";
 
 const PATH = "/admin/students";
 const APPLICATIONS_PATH = `${PATH}?tab=applications`;
@@ -30,6 +31,7 @@ const detailsSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional().default(""),
   password: z.string().optional().default(""),
+  loginExpiresAt: z.string().optional().default(""),
 });
 
 function getBatchSelections(formData: FormData) {
@@ -133,10 +135,17 @@ export async function updateStudentDetails(studentId: string, formData: FormData
     email: formData.get("email") || "",
     phone: formData.get("phone") || "",
     password: formData.get("password") || "",
+    loginExpiresAt: formData.get("loginExpiresAt") || "",
   });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   if (parsed.data.password && parsed.data.password.length < 8) {
     redirect(flashUrl(path, "error", "Portal password must be at least 8 characters."));
+  }
+  const loginExpiresAt = parsed.data.loginExpiresAt
+    ? parseDateInput(parsed.data.loginExpiresAt)
+    : null;
+  if (parsed.data.loginExpiresAt && !loginExpiresAt) {
+    redirect(flashUrl(path, "error", "Enter a valid login expiry date."));
   }
 
   try {
@@ -147,6 +156,7 @@ export async function updateStudentDetails(studentId: string, formData: FormData
         rollNumber: parsed.data.rollNumber,
         email: parsed.data.email || null,
         phone: parsed.data.phone.trim() || null,
+        loginExpiresAt,
         ...(parsed.data.password ? { passwordHash: await bcrypt.hash(parsed.data.password, 10) } : {}),
       },
     });
@@ -235,7 +245,7 @@ export async function approveApplication(applicationId: string, formData: FormDa
           create: { courseId: application.desiredCourseId, name: DEFAULT_BATCH_NAME },
           update: {},
         });
-        await tx.batchEnrollment.create({ data: { studentId: student.id, batchId: batch.id } });
+        await enrollStudentInBatch(student.id, batch.id, tx);
       }
       await tx.studentApplication.update({
         where: { id: applicationId },

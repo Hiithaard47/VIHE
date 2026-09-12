@@ -148,6 +148,10 @@ model Course {
   excusedCountsAsAttended Boolean          @default(true)
   lockAfterDays           Int?             // null = never locks
 
+  // Portal login length for first enrollment. Null = infer from course code
+  // (BSA/BPV 6 months, BS 1 year, BV/BVA 4 years, otherwise none).
+  loginMonths Int?
+
   batches      CourseBatch[]
   applications StudentApplication[]
 
@@ -208,6 +212,9 @@ model Student {
   updatedAt  DateTime @updatedAt
 
   passwordHash String?
+
+  // Null = no expiry. First enrollment may fill this from the course.
+  loginExpiresAt DateTime?
 
   enrollments BatchEnrollment[]
   attendance  AttendanceRecord[]

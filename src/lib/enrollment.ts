@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_BATCH_NAME } from "@/lib/batches";
+import { applyDefaultLoginExpiry } from "@/lib/student-login";
 
 type EnrollmentTransaction = Prisma.TransactionClient;
 
@@ -38,6 +39,7 @@ async function enrollStudentInBatchWithClient(
     create: { batchId, studentId },
     update: {},
   });
+  await applyDefaultLoginExpiry(studentId, batch.courseId, tx);
 }
 
 export async function enrollStudentInBatch(

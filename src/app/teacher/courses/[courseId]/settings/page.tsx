@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LoginMonthsField } from "@/components/login-months-field";
 import { prisma } from "@/lib/prisma";
 import { requireCourseConfigure } from "@/lib/rbac";
 import { STATUS_OPTIONS } from "@/lib/attendance";
@@ -14,6 +15,7 @@ export default async function CourseSettingsPage({ params }: { params: Promise<{
       name: true,
       code: true,
       description: true,
+      loginMonths: true,
       defaultStatus: true,
       minAttendancePercent: true,
       lateCountsAsAttended: true,
@@ -58,6 +60,7 @@ export default async function CourseSettingsPage({ params }: { params: Promise<{
               className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted"
             />
           </label>
+          <LoginMonthsField value={course.loginMonths} />
           <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
             Save details
           </button>

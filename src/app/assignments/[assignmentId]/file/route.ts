@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { canAccessBatch } from "@/lib/rbac";
+import { assertStudentLoginAllowed, canAccessBatch } from "@/lib/rbac";
 import { deniedCourseHref } from "@/lib/course-workspace";
 import { PERMISSIONS } from "@/lib/permissions";
 import { isStorageConfigured, presignedDownloadUrl } from "@/lib/storage";
@@ -18,6 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   if (!assignment) notFound();
 
   if (session.user.kind === "student") {
+    await assertStudentLoginAllowed(session.user.id);
     const enrolled = await prisma.batchEnrollment.findUnique({
       where: { batchId_studentId: { batchId: assignment.batchId, studentId: session.user.id } },
     });

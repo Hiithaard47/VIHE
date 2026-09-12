@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissions } from "@/lib/rbac";
+import { isStudentLoginExpired } from "@/lib/student-login";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -30,7 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const student = await prisma.student.findUnique({ where: { email } });
-        if (!student?.passwordHash || !student.isActive) return null;
+        if (!student?.passwordHash || !student.isActive || isStudentLoginExpired(student.loginExpiresAt)) return null;
         const validStudent = await bcrypt.compare(password, student.passwordHash);
         if (!validStudent) return null;
         return { id: student.id, name: student.name, email: student.email, kind: "student" as const };

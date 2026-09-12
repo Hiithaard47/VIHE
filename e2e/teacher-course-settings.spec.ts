@@ -16,9 +16,9 @@ test.describe("teacher: course settings", () => {
     await login(page, teacher.email, password);
 
     await page.goto(`/teacher/courses/${mine.id}`);
-    await expect(page.getByRole("link", { name: "Attendance" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Uploads" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Attendance", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Uploads", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Settings", exact: true })).toBeVisible();
 
     await page.goto(`/teacher/courses/${other.id}`);
     await expect(page).toHaveURL(/\/teacher$/);
@@ -42,10 +42,12 @@ test.describe("teacher: course settings", () => {
     const newName = `New Name ${unique("c")}`;
     await page.fill('input[name="name"]', newName);
     await page.fill('textarea[name="description"]', "Revised outline");
+    await page.selectOption('select[name="loginMonths"]', "6");
 
     const kind = await waitForFlashAfter(page, () => page.click('button:has-text("Save details")'));
     expect(kind).toBe("success");
     await expect(page.getByRole("heading", { name: newName })).toBeVisible();
+    await expect(page.locator('select[name="loginMonths"]')).toHaveValue("6");
   });
 
   test("clears a previously-set description", async ({ page }) => {

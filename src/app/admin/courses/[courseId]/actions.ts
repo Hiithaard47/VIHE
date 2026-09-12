@@ -8,11 +8,22 @@ import { requireActiveCourse, requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { parsePolicyForm } from "@/lib/policy";
+import { parseLoginMonthsInput } from "@/lib/student-login";
 
 const detailsSchema = z.object({
   name: z.string().trim().min(1, "Course name is required."),
   code: z.string().trim().min(1, "Course code is required."),
   description: z.string(),
+  loginMonths: z
+    .string()
+    .transform((value, ctx) => {
+      const months = parseLoginMonthsInput(value);
+      if (months === undefined) {
+        ctx.addIssue({ code: "custom", message: "Pick a student login length." });
+        return z.NEVER;
+      }
+      return months;
+    }),
 });
 
 const batchSchema = z.object({ name: z.string().trim().min(1, "Batch name is required.") });
@@ -42,6 +53,7 @@ export async function updateCourseDetails(courseId: string, formData: FormData) 
     name: formData.get("name"),
     code: formData.get("code"),
     description: formData.get("description") ?? "",
+    loginMonths: String(formData.get("loginMonths") ?? ""),
   });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
 

@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { DEFAULT_BATCH_NAME } from "@/lib/batches";
+import { loginMonthsForCourseCode } from "@/lib/student-login";
 
 const PATH = "/admin/courses";
 
@@ -34,6 +35,7 @@ export async function createCourse(formData: FormData) {
         name,
         code,
         description,
+        loginMonths: loginMonthsForCourseCode(code),
         batches: { create: { name: DEFAULT_BATCH_NAME } },
       },
     });

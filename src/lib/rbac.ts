@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { flashUrl } from "@/lib/flash";
 import { courseHref, deniedCourseHref, type CoursePortal } from "@/lib/course-workspace";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
+import { isStudentLoginExpired } from "@/lib/student-login";
 
 export const ARCHIVED_COURSE_MESSAGE = "This course is archived. An admin can restore it to make changes.";
 
@@ -58,7 +59,16 @@ export async function requireStudent() {
   const session = await auth();
   if (!session) redirect("/login");
   if (session.user.kind !== "student") redirect("/");
+  await assertStudentLoginAllowed(session.user.id);
   return session;
+}
+
+export async function assertStudentLoginAllowed(studentId: string) {
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: { isActive: true, loginExpiresAt: true },
+  });
+  if (!student?.isActive || isStudentLoginExpired(student.loginExpiresAt)) redirect("/login");
 }
 
 export async function requirePermission(permission: PermissionKey) {
