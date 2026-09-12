@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { updateBatchDetails } from "./actions";
+import { toggleBatchActive, updateBatchDetails } from "./actions";
 
 export default async function AdminBatchOverview({
   params,
@@ -38,8 +38,7 @@ export default async function AdminBatchOverview({
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Batch status</h2>
         <div className="flex items-center justify-between rounded-lg border border-hairline bg-card p-4 text-sm text-ink">
           <span>{batch.isActive ? "Active" : "Archived"}</span>
-          <form action={updateBatchDetails.bind(null, courseId, batchId)}>
-            <input type="hidden" name="name" value={batch.name} />
+          <form action={toggleBatchActive.bind(null, courseId, batchId)}>
             <input type="hidden" name="nextActive" value={(!batch.isActive).toString()} />
             <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
               {batch.isActive ? "Archive" : "Restore"}

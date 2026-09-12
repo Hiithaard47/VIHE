@@ -29,10 +29,7 @@ export async function updateBatchDetails(courseId: string, batchId: string, form
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
 
   try {
-    await prisma.courseBatch.update({
-      where: { id: batchId },
-      data: { name: parsed.data.name, isActive: formData.get("nextActive") === "true" },
-    });
+    await prisma.courseBatch.update({ where: { id: batchId }, data: { name: parsed.data.name } });
   } catch (err) {
     if (isUniqueConstraintError(err)) redirect(flashUrl(path, "error", "That batch name is already in use."));
     throw err;
@@ -40,6 +37,16 @@ export async function updateBatchDetails(courseId: string, batchId: string, form
   revalidatePath(path);
   revalidatePath(`/admin/courses/${courseId}`);
   redirect(flashUrl(path, "success", "Batch details saved."));
+}
+
+export async function toggleBatchActive(courseId: string, batchId: string, formData: FormData) {
+  await requireBatch(courseId, batchId);
+  const nextActive = formData.get("nextActive") === "true";
+  const path = batchPath(courseId, batchId);
+  await prisma.courseBatch.update({ where: { id: batchId }, data: { isActive: nextActive } });
+  revalidatePath(path);
+  revalidatePath(`/admin/courses/${courseId}`);
+  redirect(flashUrl(path, "success", nextActive ? "Batch restored." : "Batch archived."));
 }
 
 export async function updateBatchTeachers(courseId: string, batchId: string, formData: FormData) {

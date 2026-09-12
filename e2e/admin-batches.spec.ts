@@ -37,6 +37,9 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await page.getByRole("link", { name: "Default" }).click();
   await page.getByLabel("Batch name").fill("Morning");
   expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Save details" }).click())).toBe("success");
+  const status = page.locator('section:has-text("Batch status")');
+  await expect(status.getByText("Active")).toBeVisible();
+  await expect(status.getByRole("button", { name: "Archive" })).toBeVisible();
 
   await page.getByRole("main").getByRole("link", { name: "Teachers" }).click();
   await page.getByLabel(new RegExp(teacherOne)).check();
