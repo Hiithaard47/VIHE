@@ -13,11 +13,9 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   const classSession = await prisma.classSession.findUnique({
     where: { id: sessionId },
     include: {
-      course: {
+      batch: {
         select: {
-          id: true,
-          name: true,
-          defaultStatus: true,
+          course: { select: { id: true, name: true, defaultStatus: true } },
           enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
         },
       },
@@ -26,15 +24,15 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   });
   if (!classSession) notFound();
 
-  await requireCourseAccess(classSession.courseId);
+  await requireCourseAccess(classSession.batch.course.id);
 
   const recordByStudent = new Map(classSession.records.map((r) => [r.studentId, r]));
 
-  const students = classSession.course.enrollments.map(({ student }) => ({
+  const students = classSession.batch.enrollments.map(({ student }) => ({
     id: student.id,
     rollNumber: student.rollNumber,
     name: student.name,
-    status: recordByStudent.get(student.id)?.status ?? classSession.course.defaultStatus,
+    status: recordByStudent.get(student.id)?.status ?? classSession.batch.course.defaultStatus,
   }));
 
   const lastSaved = classSession.records.reduce<(typeof classSession.records)[number] | null>(
@@ -46,8 +44,8 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     <div className="flex flex-col gap-6">
       <FlashBanner />
       <div>
-        <Link href={`/teacher/courses/${classSession.courseId}`} className="text-sm text-muted">
-          &larr; {classSession.course.name}
+        <Link href={`/teacher/courses/${classSession.batch.course.id}`} className="text-sm text-muted">
+          &larr; {classSession.batch.course.name}
         </Link>
         <h1 className="font-heading text-lg font-semibold text-ink">{new Date(classSession.date).toLocaleDateString()}</h1>
         {classSession.topic && <p className="text-sm text-muted">{classSession.topic}</p>}

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
 
 // Separate client instance for direct test setup/assertions — independent
 // of the app's own src/lib/prisma singleton, kept simple with a relative
@@ -19,21 +20,27 @@ export async function createCourse(name: string, code: string, teacherId?: strin
     data: {
       name,
       code,
-      teachers: teacherId ? { create: [{ teacherId }] } : undefined,
+      batches: {
+        create: {
+          name: DEFAULT_BATCH_NAME,
+          teachers: teacherId ? { create: [{ teacherId }] } : undefined,
+        },
+      },
     },
+    include: { batches: true },
   });
 }
 
-export async function createStudent(name: string, rollNumber: string, courseId?: string) {
+export async function createStudent(name: string, rollNumber: string, batchId?: string) {
   return prisma.student.create({
     data: {
       name,
       rollNumber,
-      enrollments: courseId ? { create: [{ courseId }] } : undefined,
+      enrollments: batchId ? { create: [{ batchId }] } : undefined,
     },
   });
 }
 
-export async function createSession(courseId: string, createdById: string, date = new Date()) {
-  return prisma.classSession.create({ data: { courseId, date, createdById } });
+export async function createSession(batchId: string, createdById: string, date = new Date()) {
+  return prisma.classSession.create({ data: { batchId, date, createdById } });
 }

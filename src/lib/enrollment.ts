@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_BATCH_NAME } from "@/lib/batches";
 
 export function otherBatchEnrollmentWhere(args: {
   studentId: string;
@@ -45,4 +46,25 @@ export async function resolveTeacherBatchForCourse(teacherId: string, courseId: 
     select: { batchId: true },
   });
   return row?.batchId ?? null;
+}
+
+export async function resolveBatchForCourse(courseId: string, teacherId: string, canManage: boolean) {
+  const assignedBatchId = await resolveTeacherBatchForCourse(teacherId, courseId);
+  if (assignedBatchId) return assignedBatchId;
+  if (!canManage) return null;
+
+  const batch = await prisma.courseBatch.findFirst({
+    where: { courseId, isActive: true },
+    orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  return batch?.id ?? null;
+}
+
+export async function getOrCreateDefaultBatch(courseId: string) {
+  return prisma.courseBatch.upsert({
+    where: { courseId_name: { courseId, name: DEFAULT_BATCH_NAME } },
+    create: { courseId, name: DEFAULT_BATCH_NAME },
+    update: {},
+  });
 }

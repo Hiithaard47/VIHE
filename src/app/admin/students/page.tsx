@@ -11,7 +11,7 @@ import {
 export default async function StudentsPage() {
   const [students, courses, applications] = await Promise.all([
     prisma.student.findMany({
-      include: { enrollments: { include: { course: true } } },
+      include: { enrollments: { include: { batch: { include: { course: true } } } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.course.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
@@ -140,7 +140,7 @@ export default async function StudentsPage() {
             </thead>
             <tbody>
               {students.map((student) => {
-                const enrolledIds = new Set(student.enrollments.map((e) => e.courseId));
+                const enrolledIds = new Set(student.enrollments.map((e) => e.batch.courseId));
                 return (
                   <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">

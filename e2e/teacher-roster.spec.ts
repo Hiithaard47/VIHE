@@ -13,8 +13,8 @@ test.describe("teacher: roster", () => {
     const course = await createCourse(`Roster Course ${unique("c")}`, unique("ROS").toUpperCase(), teacher.id);
     await prisma.course.update({ where: { id: course.id }, data: { minAttendancePercent: 75 } });
 
-    const good = await createStudent(`Good Student ${unique("s")}`, unique("RG").toUpperCase(), course.id);
-    const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.id);
+    const good = await createStudent(`Good Student ${unique("s")}`, unique("RG").toUpperCase(), course.batches[0].id);
+    const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.batches[0].id);
 
     // Four past sessions: `good` attends all four, `poor` attends one.
     //
@@ -27,7 +27,7 @@ test.describe("teacher: roster", () => {
     const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     const day = 24 * 60 * 60 * 1000;
     for (let i = 1; i <= 4; i++) {
-      const classSession = await createSession(course.id, teacher.id, new Date(todayUtc - i * day));
+      const classSession = await createSession(course.batches[0].id, teacher.id, new Date(todayUtc - i * day));
       await prisma.attendanceRecord.createMany({
         data: [
           { sessionId: classSession.id, studentId: good.id, status: "PRESENT", markedById: teacher.id },
@@ -61,7 +61,7 @@ test.describe("teacher: roster", () => {
       password,
     );
     const course = await createCourse(`Blank Course ${unique("c")}`, unique("BLK").toUpperCase(), teacher.id);
-    const student = await createStudent(`Blank Student ${unique("s")}`, unique("RB").toUpperCase(), course.id);
+    const student = await createStudent(`Blank Student ${unique("s")}`, unique("RB").toUpperCase(), course.batches[0].id);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);
@@ -124,7 +124,7 @@ test.describe("teacher: roster", () => {
       password,
     );
     const course = await createCourse(`Racer Course ${unique("c")}`, unique("RCE").toUpperCase(), teacher.id);
-    const student = await createStudent(`Racer Student ${unique("s")}`, unique("RR").toUpperCase(), course.id);
+    const student = await createStudent(`Racer Student ${unique("s")}`, unique("RR").toUpperCase(), course.batches[0].id);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);

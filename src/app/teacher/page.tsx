@@ -11,7 +11,7 @@ export default async function TeacherHome() {
 
   const courses = await prisma.course.findMany({
     where: { isActive: true },
-    include: { teachers: { select: { teacherId: true } } },
+    include: { batches: { select: { teachers: { select: { teacherId: true } } } } },
     orderBy: { name: "asc" },
   });
 
@@ -25,7 +25,7 @@ export default async function TeacherHome() {
       {courses.length === 0 && <p className="text-sm text-muted">No courses yet.</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {courses.map((course) => {
-          const assigned = isAdmin || course.teachers.some((t) => t.teacherId === session.user.id);
+          const assigned = isAdmin || course.batches.some((batch) => batch.teachers.some((t) => t.teacherId === session.user.id));
           return (
             <Link
               key={course.id}

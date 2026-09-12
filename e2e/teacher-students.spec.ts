@@ -11,7 +11,7 @@ test.describe("teacher: students directory", () => {
       password,
     );
     const course = await createCourse(`Directory Course ${unique("c")}`, unique("DIR").toUpperCase(), teacher.id);
-    const student = await createStudent(`Directory Student ${unique("s")}`, unique("R"), course.id);
+    const student = await createStudent(`Directory Student ${unique("s")}`, unique("R"), course.batches[0].id);
 
     await login(page, teacher.email, password);
     await page.goto("/teacher/students");

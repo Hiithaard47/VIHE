@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
+import { enrollStudentInBatch, getOrCreateDefaultBatch } from "@/lib/enrollment";
 
 const PATH = "/admin/students";
 
@@ -30,14 +31,17 @@ export async function createStudent(formData: FormData) {
   const { name, rollNumber, email, courseIds } = parsed.data;
 
   try {
-    await prisma.student.create({
+    const student = await prisma.student.create({
       data: {
         name,
         rollNumber,
         email: email || undefined,
-        enrollments: { create: courseIds.map((courseId) => ({ courseId })) },
       },
     });
+    for (const courseId of courseIds) {
+      const batch = await getOrCreateDefaultBatch(courseId);
+      await enrollStudentInBatch(student.id, batch.id);
+    }
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(PATH, "error", "That roll number or email is already in use."));
@@ -54,10 +58,11 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
 
   const courseIds = formData.getAll("courseIds").map(String);
 
-  await prisma.$transaction([
-    prisma.courseEnrollment.deleteMany({ where: { studentId } }),
-    prisma.courseEnrollment.createMany({ data: courseIds.map((courseId) => ({ courseId, studentId })) }),
-  ]);
+  await prisma.batchEnrollment.deleteMany({ where: { studentId, batch: { courseId: { notIn: courseIds } } } });
+  for (const courseId of courseIds) {
+    const batch = await getOrCreateDefaultBatch(courseId);
+    await enrollStudentInBatch(studentId, batch.id);
+  }
 
   revalidatePath(PATH);
   redirect(flashUrl(PATH, "success", "Enrollment updated."));
@@ -88,9 +93,12 @@ export async function approveApplication(applicationId: string, formData: FormDa
         data: { name: application.name, email: application.email, rollNumber },
       });
       if (application.desiredCourseId) {
-        await tx.courseEnrollment.create({
-          data: { studentId: student.id, courseId: application.desiredCourseId },
+        const batch = await tx.courseBatch.upsert({
+          where: { courseId_name: { courseId: application.desiredCourseId, name: "Default" } },
+          create: { courseId: application.desiredCourseId, name: "Default" },
+          update: {},
         });
+        await tx.batchEnrollment.create({ data: { studentId: student.id, batchId: batch.id } });
       }
       await tx.studentApplication.update({
         where: { id: applicationId },

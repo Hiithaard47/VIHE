@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
-import { createTeacher } from "./db";
 
 test.describe("admin: courses", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,18 +7,12 @@ test.describe("admin: courses", () => {
     await page.goto("/admin/courses");
   });
 
-  test("creates a course with an assigned teacher", async ({ page }) => {
-    const teacherName = `Course Teacher ${unique("t")}`;
-    await createTeacher(teacherName, `${unique("courseteacher")}@example.com`, "TempPass123!");
-    await page.reload();
-
+  test("creates a course with a default batch", async ({ page }) => {
     const courseName = `Bhakti Sastra ${unique("course")}`;
     const code = unique("BS").toUpperCase();
 
     await page.fill('section:has-text("Add course") input[name="name"]', courseName);
     await page.fill('section:has-text("Add course") input[name="code"]', code);
-    await page.check(`section:has-text("Add course") label:has-text("${teacherName}") input[type="checkbox"]`);
-
     const kind = await waitForFlashAfter(page, () =>
       page.click('section:has-text("Add course") button:has-text("Create course")'),
     );
@@ -28,7 +21,7 @@ test.describe("admin: courses", () => {
     const row = page.locator("tr", { hasText: courseName });
     await expect(row).toBeVisible();
     await expect(row.getByText(code)).toBeVisible();
-    await expect(row.locator(`label:has-text("${teacherName}") input[type="checkbox"]`)).toBeChecked();
+    await expect(row.getByText("Unassigned")).toBeVisible();
   });
 
   test("archives and restores a course", async ({ page }) => {

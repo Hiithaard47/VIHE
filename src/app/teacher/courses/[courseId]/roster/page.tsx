@@ -12,6 +12,7 @@ import {
   type StatusValue,
 } from "@/lib/attendance";
 import { enrollStudent, unenrollStudent } from "./actions";
+import { resolveBatchForCourse } from "@/lib/enrollment";
 
 export default async function CourseRosterPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
@@ -21,6 +22,7 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
     PERMISSIONS.ATTENDANCE_VIEW,
   ]);
   const canConfigure = await canConfigureCourse(session, courseId);
+  const batchId = await resolveBatchForCourse(courseId, session.user.id, canConfigure);
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -28,7 +30,7 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
       minAttendancePercent: true,
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
-      enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
+      batches: { where: batchId ? { id: batchId } : { isActive: true }, include: { enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } } } },
     },
   });
   if (!course) notFound();
@@ -43,7 +45,11 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
   // course's past sessions.
   const grouped = await prisma.attendanceRecord.groupBy({
     by: ["studentId", "status"],
-    where: { session: { courseId, date: { lt: startOfTodayUtc() } } },
+    where: {
+      session: batchId
+        ? { batchId, date: { lt: startOfTodayUtc() } }
+        : { batch: { courseId }, date: { lt: startOfTodayUtc() } },
+    },
     _count: { _all: true },
   });
 
@@ -54,7 +60,8 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
     tallies.set(row.studentId, tally);
   }
 
-  const enrolledIds = course.enrollments.map((e) => e.studentId);
+  const enrollments = course.batches.flatMap((batch) => batch.enrollments);
+  const enrolledIds = enrollments.map((e) => e.studentId);
   const available = canConfigure
     ? await prisma.student.findMany({
         where: { isActive: true, id: { notIn: enrolledIds } },
@@ -65,7 +72,7 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        Roster &middot; {course.enrollments.length} student(s)
+        Roster &middot; {enrollments.length} student(s)
       </h2>
       {policy.minAttendancePercent !== null && (
         <p className="text-xs text-muted">
@@ -112,7 +119,7 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
             </tr>
           </thead>
           <tbody>
-            {course.enrollments.map(({ student }) => {
+          {enrollments.map(({ student }) => {
               const percent = attendancePercent(tallies.get(student.id) ?? emptyTally(), policy);
               const atRisk = isAtRisk(percent, policy);
               return (
@@ -147,7 +154,7 @@ export default async function CourseRosterPage({ params }: { params: Promise<{ c
                 </tr>
               );
             })}
-            {course.enrollments.length === 0 && (
+            {enrollments.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-3 text-sm text-muted">
                   No students enrolled in this course yet.

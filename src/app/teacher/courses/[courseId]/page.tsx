@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission, canManageCourse } from "@/lib/rbac";
+import { resolveBatchForCourse } from "@/lib/enrollment";
 import { PERMISSIONS } from "@/lib/permissions";
 import { createSession } from "./actions";
 
@@ -17,12 +18,17 @@ export default async function CourseSessionsPage({ params }: { params: Promise<{
     where: { id: courseId },
     select: {
       description: true,
-      sessions: { orderBy: { date: "desc" }, include: { _count: { select: { records: true } } } },
+      batches: { where: { isActive: true }, include: { sessions: { orderBy: { date: "desc" }, include: { _count: { select: { records: true } } } } } },
     },
   });
   if (!course) notFound();
 
   const canManage = await canManageCourse(session, courseId);
+  const batchId = await resolveBatchForCourse(courseId, session.user.id, canManage);
+  const sessions = course.batches
+    .filter((batch) => !batchId || batch.id === batchId)
+    .flatMap((batch) => batch.sessions)
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,8 +59,8 @@ export default async function CourseSessionsPage({ params }: { params: Promise<{
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Sessions</h2>
         <div className="flex flex-col gap-2">
-          {course.sessions.length === 0 && <p className="text-sm text-muted">No sessions yet.</p>}
-          {course.sessions.map((s) => {
+          {sessions.length === 0 && <p className="text-sm text-muted">No sessions yet.</p>}
+          {sessions.map((s) => {
             const row = (
               <div className="flex items-center justify-between rounded-lg border border-hairline bg-card p-4">
                 <div>

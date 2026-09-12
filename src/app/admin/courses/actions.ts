@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
+import { DEFAULT_BATCH_NAME } from "@/lib/batches";
 
 const PATH = "/admin/courses";
 
@@ -27,7 +28,7 @@ export async function createCourse(formData: FormData) {
     teacherIds: formData.getAll("teacherIds"),
   });
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
-  const { name, code, description, teacherIds } = parsed.data;
+  const { name, code, description } = parsed.data;
 
   try {
     await prisma.course.create({
@@ -35,7 +36,7 @@ export async function createCourse(formData: FormData) {
         name,
         code,
         description,
-        teachers: { create: teacherIds.map((teacherId) => ({ teacherId })) },
+        batches: { create: { name: DEFAULT_BATCH_NAME } },
       },
     });
   } catch (err) {
@@ -45,20 +46,6 @@ export async function createCourse(formData: FormData) {
 
   revalidatePath(PATH);
   redirect(flashUrl(PATH, "success", `${name} was created.`));
-}
-
-export async function updateCourseTeachers(courseId: string, formData: FormData) {
-  await requirePermission(PERMISSIONS.COURSES_MANAGE);
-
-  const teacherIds = formData.getAll("teacherIds").map(String);
-
-  await prisma.$transaction([
-    prisma.courseTeacher.deleteMany({ where: { courseId } }),
-    prisma.courseTeacher.createMany({ data: teacherIds.map((teacherId) => ({ courseId, teacherId })) }),
-  ]);
-
-  revalidatePath(PATH);
-  redirect(flashUrl(PATH, "success", "Teachers updated."));
 }
 
 export async function toggleCourseActive(courseId: string, formData: FormData) {

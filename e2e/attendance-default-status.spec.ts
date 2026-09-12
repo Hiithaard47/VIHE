@@ -13,8 +13,8 @@ test.describe("attendance: course default status", () => {
     const course = await createCourse(`Default Course ${unique("c")}`, unique("DEF").toUpperCase(), teacher.id);
     await prisma.course.update({ where: { id: course.id }, data: { defaultStatus: "ABSENT" } });
 
-    const student = await createStudent(`Default Student ${unique("s")}`, unique("RD").toUpperCase(), course.id);
-    const classSession = await createSession(course.id, teacher.id);
+    const student = await createStudent(`Default Student ${unique("s")}`, unique("RD").toUpperCase(), course.batches[0].id);
+    const classSession = await createSession(course.batches[0].id, teacher.id);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/sessions/${classSession.id}`);

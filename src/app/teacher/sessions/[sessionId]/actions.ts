@@ -13,11 +13,14 @@ const STATUS_VALUES = new Set(Object.values(AttendanceStatus));
 export async function markAttendance(sessionId: string, formData: FormData) {
   const session = await requireAnyPermission([PERMISSIONS.ATTENDANCE_MARK]);
 
-  const classSession = await prisma.classSession.findUniqueOrThrow({ where: { id: sessionId } });
-  await requireCourseAccess(classSession.courseId);
+  const classSession = await prisma.classSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    include: { batch: { select: { courseId: true } } },
+  });
+  await requireCourseAccess(classSession.batch.courseId);
 
-  const enrollments = await prisma.courseEnrollment.findMany({
-    where: { courseId: classSession.courseId },
+  const enrollments = await prisma.batchEnrollment.findMany({
+    where: { batchId: classSession.batchId },
     select: { studentId: true },
   });
 
