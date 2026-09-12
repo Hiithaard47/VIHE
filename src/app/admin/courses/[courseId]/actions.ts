@@ -1,0 +1,80 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac";
+import { PERMISSIONS } from "@/lib/permissions";
+import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
+import { parsePolicyForm } from "@/lib/policy";
+
+const detailsSchema = z.object({
+  name: z.string().trim().min(1, "Course name is required."),
+  code: z.string().trim().min(1, "Course code is required."),
+  description: z.string(),
+});
+
+const batchSchema = z.object({ name: z.string().trim().min(1, "Batch name is required.") });
+
+export async function createBatch(courseId: string, formData: FormData) {
+  await requirePermission(PERMISSIONS.COURSES_MANAGE);
+  const path = `/admin/courses/${courseId}`;
+  const parsed = batchSchema.safeParse({ name: formData.get("name") });
+  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid batch"));
+
+  try {
+    const batch = await prisma.courseBatch.create({ data: { courseId, name: parsed.data.name } });
+    revalidatePath(path);
+    redirect(flashUrl(`${path}/batches/${batch.id}`, "success", `${batch.name} was created.`));
+  } catch (err) {
+    if (isUniqueConstraintError(err)) redirect(flashUrl(path, "error", "That batch name is already in use."));
+    throw err;
+  }
+}
+
+export async function updateCourseDetails(courseId: string, formData: FormData) {
+  await requirePermission(PERMISSIONS.COURSES_MANAGE);
+  const path = `/admin/courses/${courseId}/details`;
+  const parsed = detailsSchema.safeParse({
+    name: formData.get("name"),
+    code: formData.get("code"),
+    description: formData.get("description") ?? "",
+  });
+  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
+
+  try {
+    await prisma.course.update({
+      where: { id: courseId },
+      data: { ...parsed.data, description: parsed.data.description.trim() || null },
+    });
+  } catch (err) {
+    if (isUniqueConstraintError(err)) redirect(flashUrl(path, "error", "That course code is already in use."));
+    throw err;
+  }
+  revalidatePath(path);
+  revalidatePath(`/admin/courses/${courseId}`);
+  revalidatePath("/admin/courses");
+  redirect(flashUrl(path, "success", "Course details saved."));
+}
+
+export async function updateCoursePolicy(courseId: string, formData: FormData) {
+  await requirePermission(PERMISSIONS.COURSES_MANAGE);
+  const path = `/admin/courses/${courseId}/policy`;
+  const parsed = parsePolicyForm(formData);
+  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid policy"));
+  await prisma.course.update({ where: { id: courseId }, data: parsed.data });
+  revalidatePath(path);
+  redirect(flashUrl(path, "success", "Attendance policy saved."));
+}
+
+export async function toggleCourseActive(courseId: string, formData: FormData) {
+  await requirePermission(PERMISSIONS.COURSES_MANAGE);
+  const nextActive = formData.get("nextActive") === "true";
+  const path = `/admin/courses/${courseId}/details`;
+  await prisma.course.update({ where: { id: courseId }, data: { isActive: nextActive } });
+  revalidatePath(path);
+  revalidatePath(`/admin/courses/${courseId}`);
+  revalidatePath("/admin/courses");
+  redirect(flashUrl(path, "success", nextActive ? "Course restored." : "Course archived."));
+}

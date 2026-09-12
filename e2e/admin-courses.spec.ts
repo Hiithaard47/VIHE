@@ -18,10 +18,14 @@ test.describe("admin: courses", () => {
     );
     expect(kind).toBe("success");
 
-    const row = page.locator("tr", { hasText: courseName });
-    await expect(row).toBeVisible();
-    await expect(row.getByText(code)).toBeVisible();
-    await expect(row.getByText("Unassigned")).toBeVisible();
+    await page.getByRole("link", { name: courseName }).click();
+    await expect(page.getByRole("link", { name: "Default" })).toBeVisible();
+    await page.fill('section:has-text("Add batch") input[name="name"]', "Morning");
+    const batchKind = await waitForFlashAfter(page, () =>
+      page.click('section:has-text("Add batch") button:has-text("Add batch")'),
+    );
+    expect(batchKind).toBe("success");
+    await expect(page.getByText("Morning")).toBeVisible();
   });
 
   test("archives and restores a course", async ({ page }) => {
@@ -32,14 +36,15 @@ test.describe("admin: courses", () => {
 
     const row = page.locator("tr", { hasText: courseName });
     await expect(row.getByText("Active")).toBeVisible();
+    await row.getByRole("link", { name: courseName }).click();
+    await page.getByRole("link", { name: "Details" }).click();
 
-    const archiveKind = await waitForFlashAfter(page, () => row.locator('button:has-text("Archive")').click());
+    const archiveKind = await waitForFlashAfter(page, () => page.locator('button:has-text("Archive")').click());
     expect(archiveKind).toBe("success");
-    await expect(page.locator("tr", { hasText: courseName }).getByText("Archived")).toBeVisible();
+    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
 
-    const restoreRow = page.locator("tr", { hasText: courseName });
-    const restoreKind = await waitForFlashAfter(page, () => restoreRow.locator('button:has-text("Restore")').click());
+    const restoreKind = await waitForFlashAfter(page, () => page.locator('button:has-text("Restore")').click());
     expect(restoreKind).toBe("success");
-    await expect(page.locator("tr", { hasText: courseName }).getByText("Active")).toBeVisible();
+    await expect(page.getByText("Active", { exact: true })).toBeVisible();
   });
 });

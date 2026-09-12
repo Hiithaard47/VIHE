@@ -15,7 +15,6 @@ const createCourseSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
   description: z.string().optional(),
-  teacherIds: z.array(z.string()).default([]),
 });
 
 export async function createCourse(formData: FormData) {
@@ -25,7 +24,6 @@ export async function createCourse(formData: FormData) {
     name: formData.get("name"),
     code: formData.get("code"),
     description: formData.get("description") || undefined,
-    teacherIds: formData.getAll("teacherIds"),
   });
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   const { name, code, description } = parsed.data;

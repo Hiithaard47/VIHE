@@ -1,12 +1,13 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { FlashBanner } from "@/components/flash-banner";
-import { createCourse, toggleCourseActive } from "./actions";
+import { createCourse } from "./actions";
 
 export default async function CoursesPage() {
   const courses = await prisma.course.findMany({
-      include: { batches: { include: { teachers: { include: { teacher: true } }, _count: { select: { enrollments: true } } } } },
-      orderBy: { createdAt: "asc" },
-    });
+    include: { batches: { include: { enrollments: true } } },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -32,40 +33,28 @@ export default async function CoursesPage() {
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Course</th>
-                <th className="px-4 py-2 font-medium">Teachers</th>
+                <th className="px-4 py-2 font-medium">Batches</th>
                 <th className="px-4 py-2 font-medium">Students</th>
                 <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
               {courses.map((course) => {
-                const teachers = course.batches.flatMap((batch) => batch.teachers.map((t) => t.teacher));
-                const studentCount = course.batches.reduce((total, batch) => total + batch._count.enrollments, 0);
+                const studentCount = course.batches.reduce((total, batch) => total + batch.enrollments.length, 0);
                 return (
                   <tr key={course.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
-                      <p className="font-heading font-medium">{course.name}</p>
+                      <Link href={`/admin/courses/${course.id}`} className="font-heading font-medium hover:text-accent-dark">
+                        {course.name}
+                      </Link>
                       <p className="text-xs text-muted">{course.code}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      {[...new Map(teachers.map((teacher) => [teacher.id, teacher])).values()]
-                        .map((teacher) => teacher.name)
-                        .join(", ") || <span className="text-muted">Unassigned</span>}
-                    </td>
+                    <td className="px-4 py-3">{course.batches.length}</td>
                     <td className="px-4 py-3">{studentCount}</td>
                     <td className="px-4 py-3">
                       <span className={course.isActive ? "text-emerald-700" : "text-muted"}>
                         {course.isActive ? "Active" : "Archived"}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <form action={toggleCourseActive.bind(null, course.id)}>
-                        <input type="hidden" name="nextActive" value={(!course.isActive).toString()} />
-                        <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-                          {course.isActive ? "Archive" : "Restore"}
-                        </button>
-                      </form>
                     </td>
                   </tr>
                 );
