@@ -37,3 +37,11 @@ export function parseMinAttendancePercent(raw: FormDataEntryValue | null): numbe
   if (!Number.isInteger(n) || n < 0 || n > 100) return undefined;
   return n;
 }
+
+export function parseAllowsResources(formData: FormData): boolean {
+  return formData.get("allowsResources") !== null;
+}
+
+export function sessionResourceUploadError(allowsResources: boolean): string | null {
+  return allowsResources ? null : "This category does not allow session files.";
+}

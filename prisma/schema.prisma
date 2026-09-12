@@ -241,6 +241,7 @@ model SessionCategory {
   minAttendancePercent  Int?
   isActive              Boolean  @default(true)
   isSystem              Boolean  @default(false)
+  allowsResources       Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

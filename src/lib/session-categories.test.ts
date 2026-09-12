@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SESSION_CATEGORY_NAME,
   groupSessionsByCategory,
+  parseAllowsResources,
   resolveCategoryTab,
   sessionCategoryTabs,
+  sessionResourceUploadError,
 } from "@/lib/session-categories";
 
 describe("groupSessionsByCategory", () => {
@@ -44,5 +46,21 @@ describe("sessionCategoryTabs", () => {
       "Temple",
     ]);
     expect(sessionCategoryTabs(groups).some((tab) => tab.name === "Kirtana")).toBe(false);
+  });
+});
+
+describe("parseAllowsResources", () => {
+  it("is true when the checkbox is present, false when absent", () => {
+    const on = new FormData();
+    on.set("allowsResources", "on");
+    expect(parseAllowsResources(on)).toBe(true);
+    expect(parseAllowsResources(new FormData())).toBe(false);
+  });
+});
+
+describe("sessionResourceUploadError", () => {
+  it("refuses upload when the category does not allow session files", () => {
+    expect(sessionResourceUploadError(true)).toBeNull();
+    expect(sessionResourceUploadError(false)).toBe("This category does not allow session files.");
   });
 });
