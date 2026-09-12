@@ -10,7 +10,10 @@ import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 const detailsSchema = z.object({
   name: z.string().min(1, "Course name is required."),
   code: z.string().min(1, "Course code is required."),
-  description: z.string().optional(),
+  // Always a string (the textarea always submits). Empty means "cleared",
+  // which must reach the database as null — `undefined` would make Prisma
+  // omit the column from the UPDATE and silently keep the old value.
+  description: z.string(),
 });
 
 export async function updateCourseDetails(courseId: string, formData: FormData) {
@@ -20,14 +23,17 @@ export async function updateCourseDetails(courseId: string, formData: FormData) 
   const parsed = detailsSchema.safeParse({
     name: formData.get("name"),
     code: formData.get("code"),
-    description: formData.get("description") || undefined,
+    description: formData.get("description") ?? "",
   });
   if (!parsed.success) {
     redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   }
 
   try {
-    await prisma.course.update({ where: { id: courseId }, data: parsed.data });
+    await prisma.course.update({
+      where: { id: courseId },
+      data: { ...parsed.data, description: parsed.data.description.trim() || null },
+    });
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(path, "error", "That course code is already in use."));
