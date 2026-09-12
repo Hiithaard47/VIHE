@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireCourseConfigure } from "@/lib/rbac";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
+import { parsePolicyForm } from "@/lib/policy";
 
 const detailsSchema = z.object({
   name: z.string().min(1, "Course name is required."),
@@ -44,4 +45,19 @@ export async function updateCourseDetails(courseId: string, formData: FormData) 
   revalidatePath(path);
   revalidatePath(`/teacher/courses/${courseId}`);
   redirect(flashUrl(path, "success", "Course details saved."));
+}
+
+export async function updateCoursePolicy(courseId: string, formData: FormData) {
+  await requireCourseConfigure(courseId);
+  const path = `/teacher/courses/${courseId}/settings`;
+
+  const parsed = parsePolicyForm(formData);
+  if (!parsed.success) {
+    redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid policy"));
+  }
+
+  await prisma.course.update({ where: { id: courseId }, data: parsed.data });
+
+  revalidatePath(path);
+  redirect(flashUrl(path, "success", "Attendance policy saved."));
 }

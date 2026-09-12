@@ -70,4 +70,36 @@ test.describe("teacher: course settings", () => {
     await page.reload();
     await expect(page.locator('textarea[name="description"]')).toHaveValue("");
   });
+
+  test("saves an attendance policy and rejects an out-of-range percentage", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(
+      `Policy Teacher ${unique("t")}`,
+      `${unique("policyteacher")}@example.com`,
+      password,
+    );
+    const course = await createCourse(`Policy Course ${unique("c")}`, unique("POL").toUpperCase(), teacher.id);
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}/settings`);
+
+    await page.selectOption('select[name="defaultStatus"]', "ABSENT");
+    await page.fill('input[name="minAttendancePercent"]', "75");
+    await page.uncheck('input[name="excusedCountsAsAttended"]');
+    await page.fill('input[name="lockAfterDays"]', "7");
+
+    const ok = await waitForFlashAfter(page, () => page.click('button:has-text("Save policy")'));
+    expect(ok).toBe("success");
+
+    await page.reload();
+    await expect(page.locator('select[name="defaultStatus"]')).toHaveValue("ABSENT");
+    await expect(page.locator('input[name="minAttendancePercent"]')).toHaveValue("75");
+    await expect(page.locator('input[name="excusedCountsAsAttended"]')).not.toBeChecked();
+
+    // Bypass the browser's own number-input clamping to reach server validation.
+    await page.locator('input[name="minAttendancePercent"]').evaluate((el) => el.removeAttribute("max"));
+    await page.fill('input[name="minAttendancePercent"]', "101");
+    const bad = await waitForFlashAfter(page, () => page.click('button:has-text("Save policy")'));
+    expect(bad).toBe("error");
+  });
 });
