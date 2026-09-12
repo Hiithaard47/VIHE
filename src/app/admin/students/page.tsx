@@ -158,6 +158,9 @@ export default async function StudentsPage() {
                 const enrolledBatches = new Map(
                   student.enrollments.map((enrollment) => [enrollment.batch.courseId, enrollment.batchId]),
                 );
+                const enrolledBatchByCourse = new Map(
+                  student.enrollments.map((enrollment) => [enrollment.batch.courseId, enrollment.batch]),
+                );
                 return (
                   <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
@@ -167,21 +170,31 @@ export default async function StudentsPage() {
                     <td className="px-4 py-3">
                       <form action={updateStudentEnrollments.bind(null, student.id)} className="flex flex-wrap items-center gap-2">
                         {courses.map((course) => (
-                          <label key={course.id} className="flex items-center gap-1 text-xs">
-                            <span>{course.name}</span>
-                            <select
-                              name={`batch-${course.id}`}
-                              defaultValue={enrolledBatches.get(course.id) ?? ""}
-                              className="rounded-md border border-hairline bg-input px-2 py-1 text-xs text-ink"
-                            >
-                              <option value="">Not enrolled</option>
-                              {course.batches.map((batch) => (
-                                <option key={batch.id} value={batch.id}>
-                                  {batch.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                          (() => {
+                            const enrolledBatch = enrolledBatchByCourse.get(course.id);
+                            const batchOptions =
+                              enrolledBatch && !course.batches.some((batch) => batch.id === enrolledBatch.id)
+                                ? [...course.batches, enrolledBatch]
+                                : course.batches;
+                            return (
+                              <label key={course.id} className="flex items-center gap-1 text-xs">
+                                <span>{course.name}</span>
+                                <select
+                                  name={`batch-${course.id}`}
+                                  defaultValue={enrolledBatches.get(course.id) ?? ""}
+                                  className="rounded-md border border-hairline bg-input px-2 py-1 text-xs text-ink"
+                                >
+                                  <option value="">Not enrolled</option>
+                                  {batchOptions.map((batch) => (
+                                    <option key={batch.id} value={batch.id}>
+                                      {batch.name}
+                                      {!batch.isActive && " (archived)"}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            );
+                          })()
                         ))}
                         <button type="submit" className="rounded-md border border-hairline px-2 py-1 text-xs text-ink hover:bg-canvas">
                           Save

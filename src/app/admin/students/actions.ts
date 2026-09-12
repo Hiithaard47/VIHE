@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
@@ -9,6 +10,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { enrollStudentInBatch } from "@/lib/enrollment";
 import { DEFAULT_BATCH_NAME } from "@/lib/batches";
+import { isBatchAssignableToCourse } from "@/lib/batch-access";
 
 const PATH = "/admin/students";
 
@@ -25,6 +27,30 @@ function getBatchSelections(formData: FormData) {
       courseId: key.slice("batch-".length),
       batchId: String(value),
     }));
+}
+
+class InvalidBatchSelectionError extends Error {}
+
+async function validateBatchSelection(
+  tx: Prisma.TransactionClient,
+  studentId: string | undefined,
+  courseId: string,
+  batchId: string,
+) {
+  const batch = await tx.courseBatch.findUnique({
+    where: { id: batchId },
+    select: { id: true, courseId: true, isActive: true },
+  });
+  if (!batch || !isBatchAssignableToCourse(batch, courseId)) {
+    if (!studentId || !batch) throw new InvalidBatchSelectionError();
+
+    const existingEnrollment = await tx.batchEnrollment.findUnique({
+      where: { batchId_studentId: { batchId, studentId } },
+    });
+    if (!existingEnrollment || batch.courseId !== courseId) {
+      throw new InvalidBatchSelectionError();
+    }
+  }
 }
 
 export async function createStudent(formData: FormData) {
@@ -50,6 +76,7 @@ export async function createStudent(formData: FormData) {
       });
       for (const { courseId, batchId } of batchSelections) {
         if (batchId) {
+          await validateBatchSelection(tx, student.id, courseId, batchId);
           await enrollStudentInBatch(student.id, batchId, tx);
         } else {
           await tx.batchEnrollment.deleteMany({
@@ -59,6 +86,9 @@ export async function createStudent(formData: FormData) {
       }
     });
   } catch (err) {
+    if (err instanceof InvalidBatchSelectionError) {
+      redirect(flashUrl(PATH, "error", "Select an active batch belonging to the selected course."));
+    }
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(PATH, "error", "That roll number or email is already in use."));
     }
@@ -74,17 +104,25 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
 
   const batchSelections = getBatchSelections(formData);
 
-  await prisma.$transaction(async (tx) => {
-    for (const { courseId, batchId } of batchSelections) {
-      if (batchId) {
-        await enrollStudentInBatch(studentId, batchId, tx);
-      } else {
-        await tx.batchEnrollment.deleteMany({
-          where: { studentId, batch: { courseId } },
-        });
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const { courseId, batchId } of batchSelections) {
+        if (batchId) {
+          await validateBatchSelection(tx, studentId, courseId, batchId);
+          await enrollStudentInBatch(studentId, batchId, tx);
+        } else {
+          await tx.batchEnrollment.deleteMany({
+            where: { studentId, batch: { courseId } },
+          });
+        }
       }
+    });
+  } catch (err) {
+    if (err instanceof InvalidBatchSelectionError) {
+      redirect(flashUrl(PATH, "error", "Select an active batch belonging to the selected course."));
     }
-  });
+    throw err;
+  }
 
   revalidatePath(PATH);
   redirect(flashUrl(PATH, "success", "Enrollment updated."));

@@ -11,7 +11,7 @@ export default async function TeacherHome() {
 
   const courses = await prisma.course.findMany({
     where: { isActive: true },
-    include: { batches: { select: { teachers: { select: { teacherId: true } } } } },
+    include: { batches: { where: { isActive: true }, select: { teachers: { select: { teacherId: true } } } } },
     orderBy: { name: "asc" },
   });
 

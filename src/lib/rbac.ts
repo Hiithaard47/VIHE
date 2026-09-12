@@ -46,8 +46,8 @@ export async function requirePermission(permission: PermissionKey) {
 
 export async function canManageBatch(session: Session, batchId: string) {
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
-  const assignment = await prisma.batchTeacher.findUnique({
-    where: { batchId_teacherId: { batchId, teacherId: session.user.id } },
+  const assignment = await prisma.batchTeacher.findFirst({
+    where: { batchId, teacherId: session.user.id, batch: { isActive: true } },
   });
   return Boolean(assignment);
 }
@@ -65,8 +65,8 @@ export async function requireBatchAccess(batchId: string) {
 export async function canConfigureBatch(session: Session, batchId: string) {
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
   if (!session.user.permissions.includes(PERMISSIONS.COURSES_CONFIGURE)) return false;
-  const assignment = await prisma.batchTeacher.findUnique({
-    where: { batchId_teacherId: { batchId, teacherId: session.user.id } },
+  const assignment = await prisma.batchTeacher.findFirst({
+    where: { batchId, teacherId: session.user.id, batch: { isActive: true } },
   });
   return Boolean(assignment);
 }
@@ -91,7 +91,7 @@ export async function canManageCourse(session: Session, courseId: string) {
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
 
   const assignment = await prisma.batchTeacher.findFirst({
-    where: { teacherId: session.user.id, batch: { courseId } },
+    where: { teacherId: session.user.id, batch: { courseId, isActive: true } },
   });
   return Boolean(assignment);
 }
@@ -119,7 +119,7 @@ export async function canConfigureCourse(session: Session, courseId: string) {
   if (!session.user.permissions.includes(PERMISSIONS.COURSES_CONFIGURE)) return false;
 
   const assignment = await prisma.batchTeacher.findFirst({
-    where: { teacherId: session.user.id, batch: { courseId } },
+    where: { teacherId: session.user.id, batch: { courseId, isActive: true } },
   });
   return Boolean(assignment);
 }
