@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 export default async function Home() {
   const session = await auth();
   if (!session) redirect("/login");
+  if (session.user.kind === "student") redirect("/student");
 
   const permissions = session.user.permissions;
   if (permissions.includes(PERMISSIONS.USERS_MANAGE) || permissions.includes(PERMISSIONS.ROLES_MANAGE)) {

@@ -16,14 +16,15 @@ test.describe("teacher: course settings", () => {
     await login(page, teacher.email, password);
 
     await page.goto(`/teacher/courses/${mine.id}`);
+    await expect(page.getByRole("link", { name: "Attendance" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Uploads" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
 
     await page.goto(`/teacher/courses/${other.id}`);
-    await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/teacher$/);
 
-    // A hidden tab is not access control — the route itself must refuse.
     await page.goto(`/teacher/courses/${other.id}/settings`);
-    await expect(page).toHaveURL(`/teacher/courses/${other.id}`);
+    await expect(page).toHaveURL(/\/teacher$/);
   });
 
   test("edits course details", async ({ page }) => {

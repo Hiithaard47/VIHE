@@ -2,9 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
 
-// Separate client instance for direct test setup/assertions — independent
-// of the app's own src/lib/prisma singleton, kept simple with a relative
-// import since Playwright's test runner doesn't need the `@/*` path alias.
+// Separate client for fixture setup/assertions. Playwright sets DATABASE_URL
+// to TEST_DATABASE_URL in playwright.config.ts before this module loads.
 export const prisma = new PrismaClient();
 
 export async function createTeacher(name: string, email: string, password: string) {

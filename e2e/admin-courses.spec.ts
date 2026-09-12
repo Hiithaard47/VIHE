@@ -11,40 +11,52 @@ test.describe("admin: courses", () => {
     const courseName = `Bhakti Sastra ${unique("course")}`;
     const code = unique("BS").toUpperCase();
 
-    await page.fill('section:has-text("Add course") input[name="name"]', courseName);
-    await page.fill('section:has-text("Add course") input[name="code"]', code);
+    await page.getByRole("button", { name: "Add course" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Course name").fill(courseName);
+    await dialog.getByLabel("Course code").fill(code);
     const kind = await waitForFlashAfter(page, () =>
-      page.click('section:has-text("Add course") button:has-text("Create course")'),
+      dialog.getByRole("button", { name: "Create course" }).click(),
     );
     expect(kind).toBe("success");
 
     await page.getByRole("link", { name: courseName }).click();
     await expect(page.getByRole("link", { name: "Default", exact: true })).toBeVisible();
-    await page.fill('section:has-text("Add batch") input[name="name"]', "Morning");
-    const batchKind = await waitForFlashAfter(page, () =>
-      page.click('section:has-text("Add batch") button:has-text("Add batch")'),
-    );
+    await page.getByRole("button", { name: "Add batch" }).click();
+    const batchDialog = page.getByRole("dialog");
+    await batchDialog.getByLabel("Batch name").fill("Morning");
+    const batchKind = await waitForFlashAfter(page, () => batchDialog.getByRole("button", { name: "Create batch" }).click());
     expect(batchKind).toBe("success");
-    await expect(page.getByRole("heading", { name: "Morning" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Morning", exact: true })).toBeVisible();
   });
 
   test("archives and restores a course", async ({ page }) => {
     const courseName = `Archive Test ${unique("course")}`;
-    await page.fill('section:has-text("Add course") input[name="name"]', courseName);
-    await page.fill('section:has-text("Add course") input[name="code"]', unique("ARC").toUpperCase());
-    await waitForFlashAfter(page, () => page.click('section:has-text("Add course") button:has-text("Create course")'));
+    await page.getByRole("button", { name: "Add course" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Course name").fill(courseName);
+    await dialog.getByLabel("Course code").fill(unique("ARC").toUpperCase());
+    await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create course" }).click());
 
-    const row = page.locator("tr", { hasText: courseName });
-    await expect(row.getByText("Active")).toBeVisible();
-    await row.getByRole("link", { name: courseName }).click();
-    await page.getByRole("link", { name: "Details" }).click();
-
-    const archiveKind = await waitForFlashAfter(page, () => page.locator('button:has-text("Archive")').click());
+    await expect(page.locator("tr", { hasText: courseName }).getByRole("button", { name: "Archive" })).toHaveCount(0);
+    await page.getByRole("link", { name: courseName }).click();
+    const archiveKind = await waitForFlashAfter(page, () => page.getByRole("button", { name: "Archive" }).click());
     expect(archiveKind).toBe("success");
-    await expect(page.getByText("Archived", { exact: true })).toBeVisible();
+    await expect(page.getByText("This course is archived. Restore it to make changes.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add batch" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Details" }).click();
+    await expect(page.getByRole("button", { name: "Save details" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Policy" }).click();
+    await expect(page.getByRole("button", { name: "Save policy" })).toHaveCount(0);
 
-    const restoreKind = await waitForFlashAfter(page, () => page.locator('button:has-text("Restore")').click());
+    await page.goto("/admin/courses");
+    await expect(page.locator("tr", { hasText: courseName })).toHaveCount(0);
+    await page.getByRole("link", { name: "Archived", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Archived", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("tr", { hasText: courseName }).getByRole("button", { name: "Restore" })).toHaveCount(0);
+    await page.getByRole("link", { name: courseName }).click();
+    const restoreKind = await waitForFlashAfter(page, () => page.getByRole("button", { name: "Restore" }).click());
     expect(restoreKind).toBe("success");
-    await expect(page.getByText("Active", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add batch" })).toBeVisible();
   });
 });

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireAnyPermission, canConfigureCourse, canManageCourse } from "@/lib/rbac";
-import { PERMISSIONS } from "@/lib/permissions";
+import { canConfigureCourse, canManageCourse, requireCourseAccess } from "@/lib/rbac";
 import { CourseTabs } from "@/components/course-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { resolveBatchForCourse } from "@/lib/enrollment";
@@ -15,16 +14,12 @@ export default async function CourseLayout({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = await params;
-  const session = await requireAnyPermission([
-    PERMISSIONS.SESSIONS_MANAGE,
-    PERMISSIONS.ATTENDANCE_MARK,
-    PERMISSIONS.ATTENDANCE_VIEW,
-  ]);
+  const session = await requireCourseAccess(courseId);
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: {
-      id: true, name: true, code: true,
+      id: true, name: true, code: true, isActive: true,
       batches: { where: { isActive: true }, select: { id: true, _count: { select: { enrollments: true } } } },
     },
   });
@@ -50,9 +45,9 @@ export default async function CourseLayout({
         <p className="text-sm text-muted">
           {course.code} &middot; {enrolledCount} enrolled student(s)
         </p>
-        {!canManage && (
+        {!course.isActive && (
           <p className="mt-2 text-xs text-muted">
-            View only &mdash; you&apos;re not assigned to teach this course.
+            This course is archived. An admin can restore it to make changes.
           </p>
         )}
       </div>

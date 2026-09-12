@@ -1,99 +1,100 @@
-import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { AddTeacherDialog } from "@/components/add-teacher-dialog";
+import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
-import { createUser, updateUserRoles, toggleUserActive } from "./actions";
+import { ListPagination } from "@/components/list-pagination";
+import { ListSearch } from "@/components/list-search";
+import { ADMIN_PAGE_SIZE, adminListHref, parseAdminListPage, parseAdminListSearch, parseAdminListTab } from "@/lib/admin-list";
+import { PERMISSIONS } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac";
 
-export default async function TeachersPage() {
-  const [users, roles] = await Promise.all([
-    prisma.user.findMany({
-      include: { roles: { include: { role: true } } },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.role.findMany({ orderBy: { name: "asc" } }),
+const PATH = "/admin/teachers";
+
+export default async function TeachersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; page?: string; q?: string }>;
+}) {
+  await requirePermission(PERMISSIONS.USERS_MANAGE);
+  const { tab: rawTab, page: rawPage, q: rawQ } = await searchParams;
+  const tab = parseAdminListTab(rawTab);
+  const q = parseAdminListSearch(rawQ);
+  const isActive = tab === "active";
+  const where = {
+    isActive,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { email: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [total, roles] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.role.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const page = parseAdminListPage(rawPage, totalPages);
+  const users = await prisma.user.findMany({
+    where,
+    include: { roles: { include: { role: true } } },
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
+  });
 
   return (
     <div className="flex flex-col gap-8">
       <FlashBanner />
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Add user</h2>
-        <form action={createUser} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input name="name" placeholder="Full name" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="email" type="email" placeholder="Email" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="password" type="password" placeholder="Temporary password" required minLength={8} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-          </div>
-          <fieldset className="flex flex-wrap gap-4 text-sm text-ink">
-            <legend className="mb-1 text-muted">Roles</legend>
-            {roles.map((role) => (
-              <label key={role.id} className="flex items-center gap-1.5">
-                <input type="checkbox" name="roleIds" value={role.id} />
-                {role.name}
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Create user
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Users</h2>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Teachers</h2>
+          {isActive && <AddTeacherDialog roles={roles} />}
+        </div>
+        <AdminStatusTabs tab={tab} hrefForTab={(nextTab) => adminListHref(PATH, nextTab, 1, q)} />
+        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or email" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
+                <th className="px-4 py-2 font-medium">Teacher</th>
                 <th className="px-4 py-2 font-medium">Email</th>
                 <th className="px-4 py-2 font-medium">Roles</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
-                const activeRoleIds = new Set(user.roles.map((r) => r.roleId));
-                return (
-                  <tr key={user.id} className="border-b border-hairline text-ink last:border-0 align-top">
-                    <td className="px-4 py-3">{user.name}</td>
-                    <td className="px-4 py-3 text-muted">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <form action={updateUserRoles.bind(null, user.id)} className="flex flex-wrap items-center gap-2">
-                        {roles.map((role) => (
-                          <label key={role.id} className="flex items-center gap-1 text-xs">
-                            <input
-                              type="checkbox"
-                              name="roleIds"
-                              value={role.id}
-                              defaultChecked={activeRoleIds.has(role.id)}
-                            />
-                            {role.name}
-                          </label>
-                        ))}
-                        <button type="submit" className="rounded-md border border-hairline px-2 py-1 text-xs text-ink hover:bg-canvas">
-                          Save
-                        </button>
-                      </form>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={user.isActive ? "text-emerald-700" : "text-muted"}>
-                        {user.isActive ? "Active" : "Deactivated"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <form action={toggleUserActive.bind(null, user.id)}>
-                        <input type="hidden" name="nextActive" value={(!user.isActive).toString()} />
-                        <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-                          {user.isActive ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                );
-              })}
+              {users.map((user) => (
+                <tr key={user.id} className="border-b border-hairline text-ink last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/teachers/${user.id}`} className="font-heading font-medium hover:text-accent-dark">
+                      {user.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-muted">{user.email}</td>
+                  <td className="px-4 py-3">
+                    {user.roles.map(({ role }) => role.name).join(", ") || <span className="text-muted">None</span>}
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                    {q ? "No matching teachers." : isActive ? "No active teachers yet." : "No archived teachers."}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        <ListPagination
+          page={page}
+          totalPages={totalPages}
+          hrefForPage={(nextPage) => adminListHref(PATH, tab, nextPage, q)}
+        />
       </section>
     </div>
   );

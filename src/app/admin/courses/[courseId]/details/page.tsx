@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { updateCourseDetails, toggleCourseActive } from "../actions";
+import { updateCourseDetails } from "../actions";
 
 export default async function AdminCourseDetailsPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
@@ -14,6 +14,7 @@ export default async function AdminCourseDetailsPage({ params }: { params: Promi
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Details</h2>
         <form action={updateCourseDetails.bind(null, courseId)} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
+          <fieldset disabled={!course.isActive} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-ink">
             Course name
             <input name="name" required defaultValue={course.name} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
@@ -26,21 +27,11 @@ export default async function AdminCourseDetailsPage({ params }: { params: Promi
             Description
             <textarea name="description" rows={3} defaultValue={course.description ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">Save details</button>
+          {course.isActive && (
+            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">Save details</button>
+          )}
+          </fieldset>
         </form>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Course status</h2>
-        <div className="flex items-center justify-between rounded-lg border border-hairline bg-card p-4 text-sm text-ink">
-          <span>{course.isActive ? "Active" : "Archived"}</span>
-          <form action={toggleCourseActive.bind(null, courseId)}>
-            <input type="hidden" name="nextActive" value={(!course.isActive).toString()} />
-            <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-              {course.isActive ? "Archive" : "Restore"}
-            </button>
-          </form>
-        </div>
       </section>
     </div>
   );

@@ -24,12 +24,14 @@ test.describe("admin: reviewing student applications", () => {
       data: { name, email, desiredCourseId: course.id },
     });
 
-    await page.goto("/admin/students");
+    await page.goto("/admin/students?tab=applications");
     const card = applicationCard(page, name);
     const roll = unique("R");
     await card.locator('input[name="rollNumber"]').fill(roll);
     const kind = await waitForFlashAfter(page, () => card.locator('button:has-text("Approve")').click());
     expect(kind).toBe("success");
+    await expect(page.locator("p", { hasText: name })).toHaveCount(0);
+    await page.getByRole("link", { name: "Active" }).click();
     await expect(page.locator("tr", { hasText: name })).toBeVisible();
 
     const student = await prisma.student.findFirstOrThrow({
@@ -48,7 +50,7 @@ test.describe("admin: reviewing student applications", () => {
     const email = `${unique("reject")}@example.com`;
     await prisma.studentApplication.create({ data: { name, email } });
 
-    await page.goto("/admin/students");
+    await page.goto("/admin/students?tab=applications");
     const card = applicationCard(page, name);
     const kind = await waitForFlashAfter(page, () => card.locator('button:has-text("Reject")').click());
     expect(kind).toBe("success");

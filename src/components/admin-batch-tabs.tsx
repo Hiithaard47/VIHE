@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { slug: "", label: "Overview" },
   { slug: "teachers", label: "Teachers" },
-  { slug: "roster", label: "Roster" },
+  { slug: "students", label: "Students" },
 ];
 
 export function AdminBatchTabs({ courseId, batchId }: { courseId: string; batchId: string }) {

@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@example.com";
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "ChangeMe123!";
 
-// Unique-enough suffix so repeated runs against the same dev database never
+// Unique-enough suffix so repeated runs against the test database never
 // collide on unique columns (email, course code, roll number, role name).
 export function unique(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
+import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { updateBatchTeachers } from "../actions";
+import { addBatchTeacher, removeBatchTeacher } from "../actions";
 
 export default async function AdminBatchTeachersPage({
   params,
@@ -13,35 +14,81 @@ export default async function AdminBatchTeachersPage({
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
   const batch = await prisma.courseBatch.findUnique({
     where: { id: batchId },
-    select: { courseId: true, teachers: { select: { teacherId: true } } },
+    select: {
+      courseId: true,
+      course: { select: { isActive: true } },
+      teachers: {
+        include: { teacher: { select: { id: true, name: true, email: true } } },
+        orderBy: { teacher: { name: "asc" } },
+      },
+    },
   });
   if (!batch || batch.courseId !== courseId) notFound();
-  const [teachers] = await Promise.all([
-    prisma.user.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
-  ]);
-  const assigned = new Set(batch.teachers.map(({ teacherId }) => teacherId));
+
+  const assignedIds = batch.teachers.map(({ teacherId }) => teacherId);
+  const available = await prisma.user.findMany({
+    where: { isActive: true, id: { notIn: assignedIds } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true },
+  });
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Teachers</h2>
-      <form action={updateBatchTeachers.bind(null, courseId, batchId)} className="flex flex-col gap-4 rounded-lg border border-hairline bg-card p-4">
-        <fieldset className="flex flex-col gap-3 text-sm text-ink">
-          <legend className="mb-1 text-muted">Active users assigned to this batch</legend>
-          {teachers.map((teacher) => (
-            <label key={teacher.id} className="flex items-start gap-2">
-              <input type="checkbox" name="teacherIds" value={teacher.id} defaultChecked={assigned.has(teacher.id)} />
-              <span>
-                {teacher.name}
-                <span className="ml-2 text-xs text-muted">{teacher.email}</span>
-              </span>
-            </label>
-          ))}
-          {teachers.length === 0 && <p className="text-sm text-muted">No active users available.</p>}
-        </fieldset>
-        <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-          Save teachers
-        </button>
-      </form>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Teachers &middot; {batch.teachers.length} assigned
+        </h2>
+        {batch.course.isActive && (
+          <AddPersonDialog
+            people={available.map((teacher) => ({
+              id: teacher.id,
+              title: teacher.name,
+              subtitle: teacher.email,
+            }))}
+            fieldName="teacherId"
+            buttonLabel="Add teacher"
+            placeholder="Search by name or email"
+            emptyLabel="No matching teachers."
+            action={addBatchTeacher.bind(null, courseId, batchId)}
+          />
+        )}
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-hairline bg-canvas text-muted">
+            <tr>
+              <th className="px-4 py-2 font-medium">Teacher</th>
+              <th className="px-4 py-2 font-medium">Email</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {batch.teachers.map(({ teacher }) => (
+              <tr key={teacher.id} className="border-b border-hairline text-ink last:border-0">
+                <td className="px-4 py-3">{teacher.name}</td>
+                <td className="px-4 py-3 text-muted">{teacher.email}</td>
+                <td className="px-4 py-3">
+                  {batch.course.isActive && (
+                    <form action={removeBatchTeacher.bind(null, courseId, batchId)}>
+                      <input type="hidden" name="teacherId" value={teacher.id} />
+                      <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
+                        Remove
+                      </button>
+                    </form>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {batch.teachers.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                  No teachers assigned yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

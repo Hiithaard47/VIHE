@@ -2,35 +2,65 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
+import { AddCourseDialog } from "@/components/add-course-dialog";
+import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
-import { createCourse } from "./actions";
+import { ListPagination } from "@/components/list-pagination";
+import { ListSearch } from "@/components/list-search";
+import {
+  ADMIN_PAGE_SIZE,
+  adminListHref,
+  parseAdminListPage,
+  parseAdminListSearch,
+  parseAdminListTab,
+} from "@/lib/admin-list";
 
-export default async function CoursesPage() {
+const PATH = "/admin/courses";
+
+export default async function CoursesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; page?: string; q?: string }>;
+}) {
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
+  const { tab: rawTab, page: rawPage, q: rawQ } = await searchParams;
+  const tab = parseAdminListTab(rawTab);
+  const q = parseAdminListSearch(rawQ);
+  const isActive = tab === "active";
+  const where = {
+    isActive,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { code: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const total = await prisma.course.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const page = parseAdminListPage(rawPage, totalPages);
+
   const courses = await prisma.course.findMany({
+    where,
     include: { batches: { include: { enrollments: true } } },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
   });
 
   return (
     <div className="flex flex-col gap-8">
       <FlashBanner />
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Add course</h2>
-        <form action={createCourse} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input name="name" placeholder="Course name" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="code" placeholder="Course code (unique)" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="description" placeholder="Description (optional)" className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-          </div>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Create course
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Courses</h2>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Courses</h2>
+          {isActive && <AddCourseDialog />}
+        </div>
+        <AdminStatusTabs tab={tab} hrefForTab={(nextTab) => adminListHref(PATH, nextTab, 1, q)} />
+        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or code" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
@@ -38,7 +68,6 @@ export default async function CoursesPage() {
                 <th className="px-4 py-2 font-medium">Course</th>
                 <th className="px-4 py-2 font-medium">Batches</th>
                 <th className="px-4 py-2 font-medium">Students</th>
-                <th className="px-4 py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -54,17 +83,20 @@ export default async function CoursesPage() {
                     </td>
                     <td className="px-4 py-3">{course.batches.length}</td>
                     <td className="px-4 py-3">{studentCount}</td>
-                    <td className="px-4 py-3">
-                      <span className={course.isActive ? "text-ink" : "text-muted"}>
-                        {course.isActive ? "Active" : "Archived"}
-                      </span>
-                    </td>
                   </tr>
                 );
               })}
+              {courses.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                    {q ? "No matching courses." : isActive ? "No active courses yet." : "No archived courses."}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        <ListPagination page={page} totalPages={totalPages} hrefForPage={(nextPage) => adminListHref(PATH, tab, nextPage, q)} />
       </section>
     </div>
   );

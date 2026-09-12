@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
-import { AdminCourseTabs } from "@/components/admin-course-tabs";
+import { AdminCourseChrome } from "@/components/admin-course-chrome";
 import { FlashBanner } from "@/components/flash-banner";
+import { toggleCourseActive } from "../actions";
 
 export default async function AdminCourseLayout({
   children,
@@ -17,22 +17,29 @@ export default async function AdminCourseLayout({
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    select: { id: true, name: true, code: true },
+    select: { id: true, name: true, code: true, isActive: true },
   });
   if (!course) notFound();
 
   return (
     <div className="flex flex-col gap-5">
       <FlashBanner />
-      <div>
-        <Link href="/admin/courses" className="text-sm text-muted">
-          &larr; Courses
-        </Link>
-        <h1 className="font-heading text-lg font-semibold text-ink">{course.name}</h1>
-        <p className="text-sm text-muted">{course.code}</p>
-      </div>
-      <AdminCourseTabs courseId={course.id} />
-      {children}
+      <AdminCourseChrome
+        courseId={course.id}
+        name={course.name}
+        code={course.code}
+        isActive={course.isActive}
+        action={
+          <form action={toggleCourseActive.bind(null, course.id)}>
+            <input type="hidden" name="nextActive" value={(!course.isActive).toString()} />
+            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+              {course.isActive ? "Archive" : "Restore"}
+            </button>
+          </form>
+        }
+      >
+        {children}
+      </AdminCourseChrome>
     </div>
   );
 }

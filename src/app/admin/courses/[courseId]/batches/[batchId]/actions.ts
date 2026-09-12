@@ -7,15 +7,22 @@ import { flashUrl, isForeignKeyError, isUniqueConstraintError } from "@/lib/flas
 import { enrollStudentInBatch, unenrollStudentFromBatch } from "@/lib/enrollment";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/rbac";
+import { ARCHIVED_COURSE_MESSAGE, requirePermission } from "@/lib/rbac";
 
 const batchSchema = z.object({ name: z.string().trim().min(1, "Batch name is required.") });
 const studentSchema = z.object({ studentId: z.string().min(1, "Pick a student.") });
+const teacherSchema = z.object({ teacherId: z.string().min(1, "Pick a teacher.") });
 
 async function requireBatch(courseId: string, batchId: string) {
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
-  const batch = await prisma.courseBatch.findUnique({ where: { id: batchId }, select: { id: true, courseId: true } });
+  const batch = await prisma.courseBatch.findUnique({
+    where: { id: batchId },
+    select: { id: true, courseId: true, course: { select: { isActive: true } } },
+  });
   if (!batch || batch.courseId !== courseId) redirect(`/admin/courses/${courseId}`);
+  if (!batch.course.isActive) {
+    redirect(flashUrl(`/admin/courses/${courseId}/batches/${batchId}`, "error", ARCHIVED_COURSE_MESSAGE));
+  }
   return batch;
 }
 
@@ -49,33 +56,44 @@ export async function toggleBatchActive(courseId: string, batchId: string, formD
   redirect(flashUrl(path, "success", nextActive ? "Batch restored." : "Batch archived."));
 }
 
-export async function updateBatchTeachers(courseId: string, batchId: string, formData: FormData) {
+export async function addBatchTeacher(courseId: string, batchId: string, formData: FormData) {
   await requireBatch(courseId, batchId);
   const path = batchPath(courseId, batchId, "teachers");
-  const teacherIds = formData.getAll("teacherIds").map(String);
-  const activeTeachers = await prisma.user.findMany({
-    where: { id: { in: teacherIds }, isActive: true },
-    select: { id: true },
+  const parsed = teacherSchema.safeParse({ teacherId: formData.get("teacherId") });
+  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
+
+  const teacher = await prisma.user.findFirst({
+    where: { id: parsed.data.teacherId, isActive: true },
+    select: { id: true, name: true },
   });
+  if (!teacher) redirect(flashUrl(path, "error", "That teacher is no longer available."));
+
   try {
-    await prisma.$transaction([
-      prisma.batchTeacher.deleteMany({ where: { batchId } }),
-      prisma.batchTeacher.createMany({
-        data: activeTeachers.map(({ id }) => ({ batchId, teacherId: id })),
-      }),
-    ]);
+    await prisma.batchTeacher.create({ data: { batchId, teacherId: teacher.id } });
   } catch (err) {
-    if (isForeignKeyError(err)) redirect(flashUrl(path, "error", "One of those teachers is no longer available."));
+    if (isUniqueConstraintError(err)) redirect(flashUrl(path, "error", "That teacher is already assigned."));
+    if (isForeignKeyError(err)) redirect(flashUrl(path, "error", "That teacher is no longer available."));
     throw err;
   }
   revalidatePath(path);
   revalidatePath(`/admin/courses/${courseId}`);
-  redirect(flashUrl(path, "success", "Teachers saved."));
+  redirect(flashUrl(path, "success", `${teacher.name} was assigned.`));
+}
+
+export async function removeBatchTeacher(courseId: string, batchId: string, formData: FormData) {
+  await requireBatch(courseId, batchId);
+  const path = batchPath(courseId, batchId, "teachers");
+  const parsed = teacherSchema.safeParse({ teacherId: formData.get("teacherId") });
+  if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
+  await prisma.batchTeacher.deleteMany({ where: { batchId, teacherId: parsed.data.teacherId } });
+  revalidatePath(path);
+  revalidatePath(`/admin/courses/${courseId}`);
+  redirect(flashUrl(path, "success", "Teacher removed."));
 }
 
 export async function enrollBatchStudent(courseId: string, batchId: string, formData: FormData) {
   await requireBatch(courseId, batchId);
-  const path = batchPath(courseId, batchId, "roster");
+  const path = batchPath(courseId, batchId, "students");
   const parsed = studentSchema.safeParse({ studentId: formData.get("studentId") });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   try {
@@ -92,7 +110,7 @@ export async function enrollBatchStudent(courseId: string, batchId: string, form
 
 export async function unenrollBatchStudent(courseId: string, batchId: string, formData: FormData) {
   await requireBatch(courseId, batchId);
-  const path = batchPath(courseId, batchId, "roster");
+  const path = batchPath(courseId, batchId, "students");
   const parsed = studentSchema.safeParse({ studentId: formData.get("studentId") });
   if (!parsed.success) redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   await unenrollStudentFromBatch(parsed.data.studentId, batchId);

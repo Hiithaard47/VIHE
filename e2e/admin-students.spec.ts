@@ -2,10 +2,22 @@ import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 import { createCourse } from "./db";
 
+async function createStudent(page: import("@playwright/test").Page, name: string, roll: string, courseId?: string, batchId?: string) {
+  await page.getByRole("button", { name: "Add student" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Full name").fill(name);
+  await dialog.getByLabel("Roll number").fill(roll);
+  if (courseId && batchId) {
+    await dialog.locator(`select[name="batch-${courseId}"]`).selectOption(batchId);
+  }
+  return waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create student" }).click());
+}
+
 test.describe("admin: students", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/admin/students");
+    await expect(page.getByRole("link", { name: "Applications" })).toBeVisible();
   });
 
   test("adds a student enrolled in a course", async ({ page }) => {
@@ -14,40 +26,32 @@ test.describe("admin: students", () => {
 
     const studentName = `Test Student ${unique("s")}`;
     const roll = unique("R");
-
-    await page.fill('section:has-text("Add student") input[name="name"]', studentName);
-    await page.fill('section:has-text("Add student") input[name="rollNumber"]', roll);
-    await page
-      .locator(`section:has-text("Add student") select[name="batch-${course.id}"]`)
-      .selectOption(course.batches[0].id);
-
-    const kind = await waitForFlashAfter(page, () =>
-      page.click('section:has-text("Add student") button:has-text("Add student")'),
-    );
-    expect(kind).toBe("success");
+    expect(await createStudent(page, studentName, roll, course.id, course.batches[0].id)).toBe("success");
 
     const row = page.locator("tr", { hasText: studentName });
     await expect(row).toBeVisible();
     await expect(row.getByText(roll)).toBeVisible();
-    await expect(row.locator(`select[name="batch-${course.id}"]`)).toHaveValue(course.batches[0].id);
+    await expect(row.getByText(course.name)).toBeVisible();
+
+    await row.getByRole("link", { name: studentName }).click();
+    await expect(page.getByRole("heading", { name: studentName })).toBeVisible();
+    await expect(page.getByRole("link", { name: course.name })).toBeVisible();
   });
 
-  test("deactivates and reactivates a student", async ({ page }) => {
+  test("archives and restores a student from the detail page", async ({ page }) => {
     const studentName = `Toggle Student ${unique("s")}`;
-    await page.fill('section:has-text("Add student") input[name="name"]', studentName);
-    await page.fill('section:has-text("Add student") input[name="rollNumber"]', unique("R"));
-    await waitForFlashAfter(page, () => page.click('section:has-text("Add student") button:has-text("Add student")'));
+    expect(await createStudent(page, studentName, unique("R"))).toBe("success");
+    await expect(page.locator("tr", { hasText: studentName }).getByRole("button", { name: "Archive" })).toHaveCount(0);
 
-    const row = page.locator("tr", { hasText: studentName });
-    const deactivateKind = await waitForFlashAfter(page, () => row.locator('button:has-text("Deactivate")').click());
-    expect(deactivateKind).toBe("success");
-    await expect(page.locator("tr", { hasText: studentName }).getByText("Deactivated")).toBeVisible();
+    await page.getByRole("link", { name: studentName }).click();
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Archive" }).click())).toBe("success");
+    await expect(page.getByText("This student is archived. Restore to make changes.")).toBeVisible();
 
-    const reactivateRow = page.locator("tr", { hasText: studentName });
-    const reactivateKind = await waitForFlashAfter(page, () =>
-      reactivateRow.locator('button:has-text("Reactivate")').click(),
-    );
-    expect(reactivateKind).toBe("success");
-    await expect(page.locator("tr", { hasText: studentName }).getByText("Active")).toBeVisible();
+    await page.goto("/admin/students");
+    await expect(page.locator("tr", { hasText: studentName })).toHaveCount(0);
+    await page.getByRole("link", { name: "Archived", exact: true }).click();
+    await page.getByRole("link", { name: studentName }).click();
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Restore" }).click())).toBe("success");
+    await expect(page.getByRole("button", { name: "Archive" })).toBeVisible();
   });
 });

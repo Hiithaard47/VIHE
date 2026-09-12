@@ -88,8 +88,11 @@ test.describe("teacher: roster", () => {
 
     await expect(page.getByText("No students enrolled in this course yet.")).toBeVisible();
 
-    await page.selectOption('select[name="studentId"]', student.id);
-    const added = await waitForFlashAfter(page, () => page.click('button:has-text("Enroll")'));
+    await page.getByRole("button", { name: "Add student" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByPlaceholder("Search by name or roll number").fill(student.name);
+    await dialog.getByRole("option", { name: new RegExp(student.name) }).click();
+    const added = await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Add student" }).click());
     expect(added).toBe("success");
     await expect(page.locator("tr", { hasText: student.name })).toBeVisible();
 
@@ -111,9 +114,7 @@ test.describe("teacher: roster", () => {
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${other.id}/roster`);
-
-    await expect(page.locator('select[name="studentId"]')).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/teacher$/);
   });
 
   test("removing an already-removed student is a graceful no-op", async ({ page, context }) => {

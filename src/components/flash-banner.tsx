@@ -7,14 +7,23 @@ function FlashBannerInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const query = searchParams.toString();
   const flash = searchParams.get("flash");
   const isError = searchParams.get("kind") === "error";
 
+  function dismiss() {
+    const next = new URLSearchParams(query);
+    next.delete("flash");
+    next.delete("kind");
+    const cleaned = next.toString();
+    router.replace(cleaned ? `${pathname}?${cleaned}` : pathname, { scroll: false });
+  }
+
   useEffect(() => {
     if (!flash) return;
-    const timeout = setTimeout(() => router.replace(pathname, { scroll: false }), 4000);
+    const timeout = setTimeout(dismiss, 4000);
     return () => clearTimeout(timeout);
-  }, [flash, pathname, router]);
+  }, [flash, pathname, query, router]);
 
   if (!flash) return null;
 
@@ -31,11 +40,7 @@ function FlashBannerInner() {
         {!isError && <span className="font-medium text-accent-dark">Saved. </span>}
         {flash}
       </span>
-      <button
-        onClick={() => router.replace(pathname, { scroll: false })}
-        aria-label="Dismiss"
-        className="text-xs text-muted hover:text-ink"
-      >
+      <button onClick={dismiss} aria-label="Dismiss" className="text-xs text-muted hover:text-ink">
         Dismiss
       </button>
     </div>

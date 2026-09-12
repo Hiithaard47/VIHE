@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 const BASE_TABS = [
   { slug: "", label: "Sessions" },
   { slug: "roster", label: "Roster" },
+  { slug: "attendance", label: "Attendance" },
+  { slug: "uploads", label: "Uploads" },
 ];
 const CONFIG_TABS = [{ slug: "settings", label: "Settings" }];
 

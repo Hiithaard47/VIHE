@@ -28,6 +28,7 @@ model User {
   createdSessions      ClassSession[]        @relation("SessionCreatedBy")
   markedRecords        AttendanceRecord[]    @relation("AttendanceMarkedBy")
   reviewedApplications StudentApplication[]  @relation("ApplicationReviewedBy")
+  uploadedResources    SessionResource[]     @relation("SessionResourceUploadedBy")
 
   @@map("users")
 }
@@ -201,6 +202,8 @@ model Student {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  passwordHash String?
+
   enrollments BatchEnrollment[]
   attendance  AttendanceRecord[]
 
@@ -237,8 +240,25 @@ model ClassSession {
   batch      CourseBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
   records   AttendanceRecord[]
+  resources SessionResource[]
 
   @@map("class_sessions")
+}
+
+model SessionResource {
+  id           String   @id @default(cuid())
+  sessionId    String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String   @unique
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  session    ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploadedBy User         @relation("SessionResourceUploadedBy", fields: [uploadedById], references: [id])
+
+  @@map("session_resources")
 }
 
 enum AttendanceStatus {

@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireBatchAccess } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
-import { relativeTimeFromNow } from "@/lib/time";
+import { SessionActionsMenu } from "@/components/session-actions-menu";
+import { PERMISSIONS } from "@/lib/permissions";
+import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
+import { SessionResources } from "@/components/session-resources";
 import { markAttendance } from "./actions";
 import { AttendanceForm } from "./attendance-form";
 
@@ -21,11 +24,14 @@ export default async function SessionAttendancePage({ params }: { params: Promis
         },
       },
       records: { include: { markedBy: { select: { name: true } } } },
+      resources: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, contentType: true, sizeBytes: true } },
     },
   });
   if (!classSession) notFound();
 
-  await requireBatchAccess(classSession.batch.id);
+  const session = await requireBatchAccess(classSession.batch.id);
+  const canChangeDate =
+    session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE) && isFutureSessionDate(classSession.date);
 
   const recordByStudent = new Map(classSession.records.map((r) => [r.studentId, r]));
 
@@ -48,8 +54,20 @@ export default async function SessionAttendancePage({ params }: { params: Promis
         <Link href={`/teacher/courses/${classSession.batch.course.id}`} className="text-sm text-muted">
           &larr; {classSession.batch.course.name}
         </Link>
-        <h1 className="font-heading text-lg font-semibold text-ink">{new Date(classSession.date).toLocaleDateString()}</h1>
-        {classSession.topic && <p className="text-sm text-muted">{classSession.topic}</p>}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-lg font-semibold text-ink">{formatDisplayDate(classSession.date)}</h1>
+            {classSession.topic && <p className="text-sm text-muted">{classSession.topic}</p>}
+          </div>
+          {canChangeDate && (
+            <SessionActionsMenu
+              sessionId={sessionId}
+              date={classSession.date.toISOString()}
+              returnTo={`/teacher/sessions/${sessionId}`}
+              canChangeDate
+            />
+          )}
+        </div>
         {lastSaved && (
           <p className="mt-1 text-xs text-muted">
             Last saved {relativeTimeFromNow(lastSaved.markedAt)} by {lastSaved.markedBy.name}
@@ -57,6 +75,7 @@ export default async function SessionAttendancePage({ params }: { params: Promis
         )}
       </div>
 
+      <SessionResources sessionId={sessionId} resources={classSession.resources} canManage />
       <AttendanceForm action={markAttendance.bind(null, sessionId)} students={students} />
     </div>
   );

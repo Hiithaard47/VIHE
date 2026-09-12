@@ -1,226 +1,306 @@
-import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { AddStudentDialog } from "@/components/add-student-dialog";
 import { FlashBanner } from "@/components/flash-banner";
-import {
-  createStudent,
-  updateStudentEnrollments,
-  toggleStudentActive,
-  approveApplication,
-  rejectApplication,
-} from "./actions";
+import { ListPagination } from "@/components/list-pagination";
+import { ListSearch } from "@/components/list-search";
+import { ADMIN_PAGE_SIZE, parseAdminListPage, parseAdminListSearch } from "@/lib/admin-list";
+import { PERMISSIONS } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac";
+import { formatDisplayDate } from "@/lib/time";
+import { approveApplication, rejectApplication } from "./actions";
 
-export default async function StudentsPage() {
-  const [students, courses, applications] = await Promise.all([
-    prisma.student.findMany({
-      include: { enrollments: { include: { batch: { include: { course: true } } } } },
+const PATH = "/admin/students";
+const MODE_LABELS = { ONLINE: "Online", HYBRID: "Hybrid", ON_SITE: "On-site" } as const;
+const LANGUAGE_LABELS = { ENGLISH: "English", HINDI: "Hindi" } as const;
+
+type StudentListTab = "active" | "archived" | "applications";
+
+function parseStudentListTab(value: string | undefined): StudentListTab {
+  if (value === "archived" || value === "applications") return value;
+  return "active";
+}
+
+function studentListHref(tab: StudentListTab, page = 1, q = "") {
+  const params = new URLSearchParams();
+  if (tab !== "active") params.set("tab", tab);
+  if (page > 1) params.set("page", String(page));
+  if (q) params.set("q", q);
+  const query = params.toString();
+  return query ? `${PATH}?${query}` : PATH;
+}
+
+const TABS: { slug: StudentListTab; label: string }[] = [
+  { slug: "active", label: "Active" },
+  { slug: "archived", label: "Archived" },
+  { slug: "applications", label: "Applications" },
+];
+
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; page?: string; q?: string }>;
+}) {
+  await requirePermission(PERMISSIONS.STUDENTS_MANAGE);
+  const { tab: rawTab, page: rawPage, q: rawQ } = await searchParams;
+  const tab = parseStudentListTab(rawTab);
+  const q = parseAdminListSearch(rawQ);
+  const isApplications = tab === "applications";
+  const isActive = tab === "active";
+
+  if (isApplications) {
+    const applicationWhere = q
+      ? {
+          status: "PENDING" as const,
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { email: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : { status: "PENDING" as const };
+    const total = await prisma.studentApplication.count({ where: applicationWhere });
+    const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+    const page = parseAdminListPage(rawPage, totalPages);
+    const applications = await prisma.studentApplication.findMany({
+      where: applicationWhere,
+      include: { desiredCourse: true },
       orderBy: { createdAt: "asc" },
-    }),
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
+    });
+
+    return (
+      <div className="flex flex-col gap-8">
+        <FlashBanner />
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
+          </div>
+          <StudentTabs tab={tab} />
+          <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or email" />
+          <ApplicationCards
+            applications={applications}
+            empty={q ? "No matching applications." : "No pending applications."}
+          />
+          <ListPagination
+            page={page}
+            totalPages={totalPages}
+            hrefForPage={(nextPage) => studentListHref(tab, nextPage, q)}
+          />
+        </section>
+      </div>
+    );
+  }
+
+  const where = {
+    isActive,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { rollNumber: { contains: q, mode: "insensitive" as const } },
+            { email: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [total, courses] = await Promise.all([
+    prisma.student.count({ where }),
     prisma.course.findMany({
       where: { isActive: true },
       include: { batches: { where: { isActive: true }, orderBy: { name: "asc" } } },
       orderBy: { name: "asc" },
     }),
-    prisma.studentApplication.findMany({
-      where: { status: "PENDING" },
-      include: { desiredCourse: true },
-      orderBy: { createdAt: "asc" },
-    }),
   ]);
-
-  const MODE_LABELS = { ONLINE: "Online", HYBRID: "Hybrid", ON_SITE: "On-site" } as const;
-  const LANGUAGE_LABELS = { ENGLISH: "English", HINDI: "Hindi" } as const;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const page = parseAdminListPage(rawPage, totalPages);
+  const students = await prisma.student.findMany({
+    where,
+    include: { enrollments: { include: { batch: { include: { course: true } } } } },
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
+  });
 
   return (
     <div className="flex flex-col gap-8">
       <FlashBanner />
-      {applications.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-            Applications ({applications.length})
-          </h2>
-          <div className="flex flex-col gap-3">
-            {applications.map((application) => (
-              <div key={application.id} className="rounded-lg border border-hairline bg-card p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="max-w-lg">
-                    <p className="font-heading font-medium text-ink">{application.name}</p>
-                    <p className="text-xs text-muted">{application.email}</p>
-                    {application.phone && <p className="text-xs text-muted">{application.phone}</p>}
-                    {(application.city || application.country) && (
-                      <p className="text-xs text-muted">
-                        {[application.city, application.country].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                    {application.dateOfBirth && (
-                      <p className="text-xs text-muted">
-                        Born {application.dateOfBirth.toLocaleDateString()}
-                      </p>
-                    )}
-
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {application.desiredCourse && (
-                        <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-accent-dark">
-                          {application.desiredCourse.name}
-                        </span>
-                      )}
-                      {application.preferredMode && (
-                        <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
-                          {MODE_LABELS[application.preferredMode]}
-                        </span>
-                      )}
-                      {application.preferredLanguage && (
-                        <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
-                          {LANGUAGE_LABELS[application.preferredLanguage]}
-                        </span>
-                      )}
-                    </div>
-
-                    {application.priorExperience && (
-                      <p className="mt-2 text-sm text-ink">
-                        <span className="text-xs font-medium text-muted">Prior experience: </span>
-                        {application.priorExperience}
-                      </p>
-                    )}
-                    {application.message && <p className="mt-2 text-sm text-ink">{application.message}</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <form action={approveApplication.bind(null, application.id)} className="flex items-center gap-2">
-                      <input
-                        name="rollNumber"
-                        placeholder="Assign roll no."
-                        required
-                        className="w-32 rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink placeholder:text-muted"
-                      />
-                      <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-accent">
-                        Approve
-                      </button>
-                    </form>
-                    <form action={rejectApplication.bind(null, application.id)}>
-                      <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-                        Reject
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Add student</h2>
-        <form action={createStudent} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input name="name" placeholder="Full name" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="rollNumber" placeholder="Roll number (unique)" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-            <input name="email" type="email" placeholder="Email (optional)" className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
-          </div>
-          <fieldset className="flex flex-wrap gap-4 text-sm text-ink">
-            <legend className="mb-1 w-full text-muted">Enroll in course batches</legend>
-            {courses.map((course) => (
-              <label key={course.id} className="flex items-center gap-1.5">
-                <span>{course.name}</span>
-                <select
-                  name={`batch-${course.id}`}
-                  defaultValue=""
-                  className="rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink"
-                >
-                  <option value="">Not enrolled</option>
-                  {course.batches.map((batch) => (
-                    <option key={batch.id} value={batch.id}>
-                      {batch.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Add student
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
+          {isActive && <AddStudentDialog courses={courses} />}
+        </div>
+        <StudentTabs tab={tab} />
+        <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name or roll number" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Student</th>
-                <th className="px-4 py-2 font-medium">Enrolled courses</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2" />
+                <th className="px-4 py-2 font-medium">Course</th>
+                <th className="px-4 py-2 font-medium">Batch</th>
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => {
-                const enrolledBatches = new Map(
-                  student.enrollments.map((enrollment) => [enrollment.batch.courseId, enrollment.batchId]),
-                );
-                const enrolledBatchByCourse = new Map(
-                  student.enrollments.map((enrollment) => [enrollment.batch.courseId, enrollment.batch]),
-                );
-                return (
-                  <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
-                    <td className="px-4 py-3">
-                      <p className="font-heading font-medium">{student.name}</p>
-                      <p className="text-xs text-muted">{student.rollNumber}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <form action={updateStudentEnrollments.bind(null, student.id)} className="flex flex-wrap items-center gap-2">
-                        {courses.map((course) => (
-                          (() => {
-                            const enrolledBatch = enrolledBatchByCourse.get(course.id);
-                            const batchOptions =
-                              enrolledBatch && !course.batches.some((batch) => batch.id === enrolledBatch.id)
-                                ? [...course.batches, enrolledBatch]
-                                : course.batches;
-                            return (
-                              <label key={course.id} className="flex items-center gap-1 text-xs">
-                                <span>{course.name}</span>
-                                <select
-                                  name={`batch-${course.id}`}
-                                  defaultValue={enrolledBatches.get(course.id) ?? ""}
-                                  className="rounded-md border border-hairline bg-input px-2 py-1 text-xs text-ink"
-                                >
-                                  <option value="">Not enrolled</option>
-                                  {batchOptions.map((batch) => (
-                                    <option key={batch.id} value={batch.id}>
-                                      {batch.name}
-                                      {!batch.isActive && " (archived)"}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            );
-                          })()
-                        ))}
-                        <button type="submit" className="rounded-md border border-hairline px-2 py-1 text-xs text-ink hover:bg-canvas">
-                          Save
-                        </button>
-                      </form>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={student.isActive ? "text-emerald-700" : "text-muted"}>
-                        {student.isActive ? "Active" : "Deactivated"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <form action={toggleStudentActive.bind(null, student.id)}>
-                        <input type="hidden" name="nextActive" value={(!student.isActive).toString()} />
-                        <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-                          {student.isActive ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                );
-              })}
+              {students.map((student) => (
+                <tr key={student.id} className="border-b border-hairline text-ink last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/students/${student.id}`} className="font-heading font-medium hover:text-accent-dark">
+                      {student.name}
+                    </Link>
+                    <p className="text-xs text-muted">{student.rollNumber}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    {student.enrollments.length > 0 ? (
+                      student.enrollments.map(({ batch }) => (
+                        <p key={batch.id}>
+                          {batch.course.name}
+                          {!batch.course.isActive && <span className="text-muted"> (completed)</span>}
+                        </p>
+                      ))
+                    ) : (
+                      <span className="text-muted">None</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {student.enrollments.length > 0 ? (
+                      student.enrollments.map(({ batch }) => <p key={batch.id}>{batch.name}</p>)
+                    ) : (
+                      <span className="text-muted">None</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {students.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                    {q ? "No matching students." : isActive ? "No active students yet." : "No archived students."}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        <ListPagination
+          page={page}
+          totalPages={totalPages}
+          hrefForPage={(nextPage) => studentListHref(tab, nextPage, q)}
+        />
       </section>
+    </div>
+  );
+}
+
+function StudentTabs({ tab }: { tab: StudentListTab }) {
+  return (
+    <nav className="-mb-px flex gap-1 border-b border-hairline">
+      {TABS.map((item) => {
+        const active = item.slug === tab;
+        return (
+          <Link
+            key={item.slug}
+            href={studentListHref(item.slug)}
+            aria-current={active ? "page" : undefined}
+            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
+              active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function ApplicationCards({
+  applications,
+  empty,
+}: {
+  applications: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    city: string | null;
+    country: string | null;
+    dateOfBirth: Date | null;
+    desiredCourse: { name: string } | null;
+    preferredMode: keyof typeof MODE_LABELS | null;
+    preferredLanguage: keyof typeof LANGUAGE_LABELS | null;
+    priorExperience: string | null;
+    message: string | null;
+  }>;
+  empty: string;
+}) {
+  if (applications.length === 0) {
+    return <p className="rounded-lg border border-hairline bg-card px-4 py-3 text-sm text-muted">{empty}</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {applications.map((application) => (
+        <div key={application.id} className="rounded-lg border border-hairline bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-lg">
+              <p className="font-heading font-medium text-ink">{application.name}</p>
+              <p className="text-xs text-muted">{application.email}</p>
+              {application.phone && <p className="text-xs text-muted">{application.phone}</p>}
+              {(application.city || application.country) && (
+                <p className="text-xs text-muted">
+                  {[application.city, application.country].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {application.dateOfBirth && (
+                <p className="text-xs text-muted">Born {formatDisplayDate(application.dateOfBirth)}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {application.desiredCourse && (
+                  <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-accent-dark">
+                    {application.desiredCourse.name}
+                  </span>
+                )}
+                {application.preferredMode && (
+                  <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
+                    {MODE_LABELS[application.preferredMode]}
+                  </span>
+                )}
+                {application.preferredLanguage && (
+                  <span className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
+                    {LANGUAGE_LABELS[application.preferredLanguage]}
+                  </span>
+                )}
+              </div>
+              {application.priorExperience && (
+                <p className="mt-2 text-sm text-ink">
+                  <span className="text-xs font-medium text-muted">Prior experience: </span>
+                  {application.priorExperience}
+                </p>
+              )}
+              {application.message && <p className="mt-2 text-sm text-ink">{application.message}</p>}
+            </div>
+            <div className="flex items-center gap-3">
+              <form action={approveApplication.bind(null, application.id)} className="flex items-center gap-2">
+                <input
+                  name="rollNumber"
+                  placeholder="Assign roll no."
+                  required
+                  className="w-32 rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink placeholder:text-muted"
+                />
+                <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-accent">
+                  Approve
+                </button>
+              </form>
+              <form action={rejectApplication.bind(null, application.id)}>
+                <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
+                  Reject
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -23,12 +23,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.passwordHash || !user.isActive) return null;
+        if (user?.passwordHash && user.isActive) {
+          const valid = await bcrypt.compare(password, user.passwordHash);
+          if (!valid) return null;
+          return { id: user.id, name: user.name, email: user.email, image: user.image, kind: "staff" as const };
+        }
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
-
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+        const student = await prisma.student.findUnique({ where: { email } });
+        if (!student?.passwordHash || !student.isActive) return null;
+        const validStudent = await bcrypt.compare(password, student.passwordHash);
+        if (!validStudent) return null;
+        return { id: student.id, name: student.name, email: student.email, kind: "student" as const };
       },
     }),
     Google({
@@ -48,10 +53,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
+      if (user?.kind === "student") {
+        token.id = user.id;
+        token.kind = "student";
+        token.roles = [];
+        token.permissions = [];
+        return token;
+      }
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
         if (dbUser) {
           token.id = dbUser.id;
+          token.kind = "staff";
           const { roles, permissions } = await getUserPermissions(dbUser.id);
           token.roles = roles;
           token.permissions = permissions;
@@ -61,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       session.user.id = token.id;
+      session.user.kind = token.kind ?? "staff";
       session.user.roles = token.roles ?? [];
       session.user.permissions = token.permissions ?? [];
       return session;

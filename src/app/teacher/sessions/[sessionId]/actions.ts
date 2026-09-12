@@ -7,8 +7,46 @@ import { requireBatchAccess, requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
+import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
+import { sanitizeFileName, validateResourceFile } from "@/lib/session-resources";
+import { isFutureSessionDate, parseDateInput, startOfTodayUtc } from "@/lib/time";
 
 const STATUS_VALUES = new Set(Object.values(AttendanceStatus));
+
+function teacherReturnTo(raw: FormDataEntryValue | null, fallback: string) {
+  if (typeof raw !== "string" || !raw.startsWith("/teacher/") || raw.includes("://")) return fallback;
+  return raw.split("?")[0] || fallback;
+}
+
+export async function updateSessionDate(sessionId: string, formData: FormData) {
+  await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
+
+  const classSession = await prisma.classSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: { date: true, batchId: true, batch: { select: { courseId: true } } },
+  });
+  await requireBatchAccess(classSession.batchId);
+
+  const fallback = `/teacher/sessions/${sessionId}`;
+  const path = teacherReturnTo(formData.get("returnTo"), fallback);
+
+  if (!isFutureSessionDate(classSession.date)) {
+    redirect(flashUrl(path, "error", "Only future sessions can change date."));
+  }
+
+  const nextDate = parseDateInput(String(formData.get("date") ?? ""));
+  if (!nextDate) redirect(flashUrl(path, "error", "Pick a valid date."));
+  if (nextDate.getTime() < startOfTodayUtc().getTime()) {
+    redirect(flashUrl(path, "error", "Pick today or a future date."));
+  }
+
+  await prisma.classSession.update({ where: { id: sessionId }, data: { date: nextDate } });
+
+  revalidatePath(path);
+  revalidatePath(`/teacher/courses/${classSession.batch.courseId}`);
+  revalidatePath(fallback);
+  redirect(flashUrl(path, "success", "Session date updated."));
+}
 
 export async function markAttendance(sessionId: string, formData: FormData) {
   const session = await requireAnyPermission([PERMISSIONS.ATTENDANCE_MARK]);
@@ -43,4 +81,67 @@ export async function markAttendance(sessionId: string, formData: FormData) {
   const path = `/teacher/sessions/${sessionId}`;
   revalidatePath(path);
   redirect(flashUrl(path, "success", "Attendance saved."));
+}
+
+export async function uploadSessionResource(sessionId: string, formData: FormData) {
+  const path = `/teacher/sessions/${sessionId}`;
+  const classSession = await prisma.classSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: { batchId: true },
+  });
+  const session = await requireBatchAccess(classSession.batchId);
+
+  if (!isStorageConfigured()) {
+    redirect(flashUrl(path, "error", "File storage is not configured."));
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) redirect(flashUrl(path, "error", "Choose a file to upload."));
+  const invalid = validateResourceFile(file);
+  if (invalid) redirect(flashUrl(path, "error", invalid));
+
+  const fileName = sanitizeFileName(file.name);
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const resource = await prisma.sessionResource.create({
+    data: {
+      sessionId,
+      fileName,
+      contentType: file.type,
+      sizeBytes: file.size,
+      storageKey: `pending/${sessionId}/${crypto.randomUUID()}`,
+      uploadedById: session.user.id,
+    },
+  });
+  const storageKey = `sessions/${sessionId}/${resource.id}/${fileName}`;
+
+  try {
+    await putObject(storageKey, bytes, file.type);
+    await prisma.sessionResource.update({ where: { id: resource.id }, data: { storageKey } });
+  } catch {
+    await prisma.sessionResource.delete({ where: { id: resource.id } }).catch(() => {});
+    redirect(flashUrl(path, "error", "Could not store that file."));
+  }
+
+  revalidatePath(path);
+  redirect(flashUrl(path, "success", `${fileName} was uploaded.`));
+}
+
+export async function deleteSessionResource(sessionId: string, resourceId: string, formData?: FormData) {
+  const path = `/teacher/sessions/${sessionId}`;
+  const returnTo = String(formData?.get("returnTo") || path);
+  const resource = await prisma.sessionResource.findUniqueOrThrow({
+    where: { id: resourceId },
+    include: { session: { select: { id: true, batchId: true } } },
+  });
+  if (resource.session.id !== sessionId) redirect(flashUrl(returnTo, "error", "That file is not on this session."));
+  await requireBatchAccess(resource.session.batchId);
+
+  if (isStorageConfigured()) {
+    await deleteObject(resource.storageKey).catch(() => {});
+  }
+  await prisma.sessionResource.delete({ where: { id: resourceId } });
+
+  revalidatePath(path);
+  revalidatePath(returnTo);
+  redirect(flashUrl(returnTo, "success", "File removed."));
 }

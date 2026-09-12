@@ -1,6 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 
+async function createTeacher(page: import("@playwright/test").Page, name: string, email: string) {
+  await page.getByRole("button", { name: "Add teacher" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Full name").fill(name);
+  await dialog.getByLabel("Email").fill(email);
+  await dialog.getByLabel("Temporary password").fill("TempPass123!");
+  return waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create teacher" }).click());
+}
+
 test.describe("admin: teachers", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -9,55 +18,45 @@ test.describe("admin: teachers", () => {
 
   test("creates a teacher user with the Teacher role", async ({ page }) => {
     const email = `${unique("teacher")}@example.com`;
-
-    await page.fill('section:has-text("Add user") input[name="name"]', "Test Teacher");
-    await page.fill('section:has-text("Add user") input[name="email"]', email);
-    await page.fill('section:has-text("Add user") input[name="password"]', "TempPass123!");
-    await page.check('section:has-text("Add user") label:has-text("Teacher") input[type="checkbox"]');
-
-    const kind = await waitForFlashAfter(page, () =>
-      page.click('section:has-text("Add user") button:has-text("Create user")'),
-    );
-    expect(kind).toBe("success");
+    await page.getByRole("button", { name: "Add teacher" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Full name").fill("Test Teacher");
+    await dialog.getByLabel("Email").fill(email);
+    await dialog.getByLabel("Temporary password").fill("TempPass123!");
+    await dialog.locator('label:has-text("Teacher") input[type="checkbox"]').check();
+    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create teacher" }).click())).toBe("success");
     await expect(page.getByText(email)).toBeVisible();
   });
 
   test("updates a user's roles and it persists after reload", async ({ page }) => {
     const email = `${unique("teacher")}@example.com`;
-    await page.fill('section:has-text("Add user") input[name="name"]', "Role Update Teacher");
-    await page.fill('section:has-text("Add user") input[name="email"]', email);
-    await page.fill('section:has-text("Add user") input[name="password"]', "TempPass123!");
-    await waitForFlashAfter(page, () => page.click('section:has-text("Add user") button:has-text("Create user")'));
+    expect(await createTeacher(page, "Role Update Teacher", email)).toBe("success");
 
-    const row = page.locator("tr", { hasText: email });
-    await row.locator('label:has-text("Admin") input[type="checkbox"]').check();
-    const kind = await waitForFlashAfter(page, () => row.locator('button:has-text("Save")').click());
-    expect(kind).toBe("success");
+    await page.locator("tr", { hasText: email }).getByRole("link", { name: "Role Update Teacher" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Roles" }).click();
+    await page.locator('label:has-text("Admin") input[type="checkbox"]').check();
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Save roles" }).click())).toBe("success");
 
     await page.goto("/admin/teachers");
-    const reloadedRow = page.locator("tr", { hasText: email });
-    await expect(reloadedRow.locator('label:has-text("Admin") input[type="checkbox"]')).toBeChecked();
+    await page.locator("tr", { hasText: email }).getByRole("link", { name: "Role Update Teacher" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Roles" }).click();
+    await expect(page.locator('label:has-text("Admin") input[type="checkbox"]')).toBeChecked();
   });
 
-  test("deactivates and reactivates a user", async ({ page }) => {
+  test("archives and restores a teacher from the detail page", async ({ page }) => {
     const email = `${unique("teacher")}@example.com`;
-    await page.fill('section:has-text("Add user") input[name="name"]', "Toggle Teacher");
-    await page.fill('section:has-text("Add user") input[name="email"]', email);
-    await page.fill('section:has-text("Add user") input[name="password"]', "TempPass123!");
-    await waitForFlashAfter(page, () => page.click('section:has-text("Add user") button:has-text("Create user")'));
+    expect(await createTeacher(page, "Toggle Teacher", email)).toBe("success");
+    await expect(page.locator("tr", { hasText: email }).getByRole("button", { name: "Archive" })).toHaveCount(0);
 
-    const row = page.locator("tr", { hasText: email });
-    await expect(row.getByText("Active")).toBeVisible();
+    await page.locator("tr", { hasText: email }).getByRole("link", { name: "Toggle Teacher" }).click();
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Archive" }).click())).toBe("success");
+    await expect(page.getByText("This teacher is archived. Restore to make changes.")).toBeVisible();
 
-    const deactivateKind = await waitForFlashAfter(page, () => row.locator('button:has-text("Deactivate")').click());
-    expect(deactivateKind).toBe("success");
-    await expect(page.locator("tr", { hasText: email }).getByText("Deactivated")).toBeVisible();
-
-    const reactivateRow = page.locator("tr", { hasText: email });
-    const reactivateKind = await waitForFlashAfter(page, () =>
-      reactivateRow.locator('button:has-text("Reactivate")').click(),
-    );
-    expect(reactivateKind).toBe("success");
-    await expect(page.locator("tr", { hasText: email }).getByText("Active")).toBeVisible();
+    await page.goto("/admin/teachers");
+    await expect(page.locator("tr", { hasText: email })).toHaveCount(0);
+    await page.getByRole("link", { name: "Archived", exact: true }).click();
+    await page.locator("tr", { hasText: email }).getByRole("link", { name: "Toggle Teacher" }).click();
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Restore" }).click())).toBe("success");
+    await expect(page.getByRole("button", { name: "Archive" })).toBeVisible();
   });
 });

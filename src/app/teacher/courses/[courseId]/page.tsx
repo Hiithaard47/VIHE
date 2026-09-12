@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAnyPermission, canManageCourse } from "@/lib/rbac";
 import { resolveBatchForCourse } from "@/lib/enrollment";
 import { PERMISSIONS } from "@/lib/permissions";
+import { SessionActionsMenu } from "@/components/session-actions-menu";
+import { formatDisplayDate, isFutureSessionDate } from "@/lib/time";
 import { createSession } from "./actions";
 
 export default async function CourseSessionsPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -61,21 +63,39 @@ export default async function CourseSessionsPage({ params }: { params: Promise<{
         <div className="flex flex-col gap-2">
           {sessions.length === 0 && <p className="text-sm text-muted">No sessions yet.</p>}
           {sessions.map((s) => {
-            const row = (
-              <div className="flex items-center justify-between rounded-lg border border-hairline bg-card p-4">
-                <div>
-                  <p className="font-medium text-ink">{new Date(s.date).toLocaleDateString()}</p>
-                  {s.topic && <p className="text-xs text-muted">{s.topic}</p>}
-                </div>
-                <span className="text-xs text-muted">{s._count.records} marked</span>
-              </div>
+            const heading = (
+              <>
+                <p className="font-medium text-ink">{formatDisplayDate(s.date)}</p>
+                {s.topic && <p className="text-xs text-muted">{s.topic}</p>}
+              </>
             );
-            return canManage ? (
-              <Link key={s.id} href={`/teacher/sessions/${s.id}`} className="hover:opacity-80">
-                {row}
-              </Link>
-            ) : (
-              <div key={s.id}>{row}</div>
+            return (
+              <div
+                key={s.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-card p-4"
+              >
+                <div>
+                  {canManage ? (
+                    <Link href={`/teacher/sessions/${s.id}`} className="hover:opacity-80">
+                      {heading}
+                    </Link>
+                  ) : (
+                    heading
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted">{s._count.records} marked</span>
+                  {canManage && (
+                    <SessionActionsMenu
+                      sessionId={s.id}
+                      date={s.date.toISOString()}
+                      returnTo={`/teacher/courses/${courseId}`}
+                      attendanceHref={`/teacher/sessions/${s.id}`}
+                      canChangeDate={isFutureSessionDate(s.date)}
+                    />
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>

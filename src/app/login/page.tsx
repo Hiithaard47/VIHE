@@ -103,7 +103,7 @@ function LoginForm() {
           </button>
 
           <p className="mt-5 text-center text-xs text-muted">
-            No self sign-up for teachers — ask an admin for access.
+            Teachers and students sign in here. Ask an admin for an account.
           </p>
           <p className="mt-2 text-center text-xs text-muted">
             Prospective student?{" "}

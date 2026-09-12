@@ -13,9 +13,10 @@ export default async function AdminBatchOverview({
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
   const batch = await prisma.courseBatch.findUnique({
     where: { id: batchId },
-    select: { name: true, isActive: true, courseId: true },
+    select: { name: true, isActive: true, courseId: true, course: { select: { isActive: true } } },
   });
   if (!batch || batch.courseId !== courseId) notFound();
+  const courseActive = batch.course.isActive;
 
   return (
     <div className="flex flex-col gap-8">
@@ -25,25 +26,31 @@ export default async function AdminBatchOverview({
           action={updateBatchDetails.bind(null, courseId, batchId)}
           className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4"
         >
+          <fieldset disabled={!courseActive} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-ink">
             Batch name
             <input name="name" required defaultValue={batch.name} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Save details
-          </button>
+          {courseActive && (
+            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+              Save details
+            </button>
+          )}
+          </fieldset>
         </form>
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Batch status</h2>
         <div className="flex items-center justify-between rounded-lg border border-hairline bg-card p-4 text-sm text-ink">
           <span>{batch.isActive ? "Active" : "Archived"}</span>
-          <form action={toggleBatchActive.bind(null, courseId, batchId)}>
-            <input type="hidden" name="nextActive" value={(!batch.isActive).toString()} />
-            <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-              {batch.isActive ? "Archive" : "Restore"}
-            </button>
-          </form>
+          {courseActive && (
+            <form action={toggleBatchActive.bind(null, courseId, batchId)}>
+              <input type="hidden" name="nextActive" value={(!batch.isActive).toString()} />
+              <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
+                {batch.isActive ? "Archive" : "Restore"}
+              </button>
+            </form>
+          )}
         </div>
       </section>
     </div>

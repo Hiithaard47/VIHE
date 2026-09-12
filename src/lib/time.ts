@@ -19,3 +19,35 @@ export function relativeTimeFromNow(date: Date): string {
 export function startOfTodayUtc(now = new Date()): Date {
   return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 }
+
+export function sessionDateUtc(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+export function isFutureSessionDate(date: Date, now = new Date()): boolean {
+  return sessionDateUtc(date).getTime() > startOfTodayUtc(now).getTime();
+}
+
+const DISPLAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
+
+export function formatDisplayDate(date: Date): string {
+  const utc = sessionDateUtc(date);
+  return `${utc.getUTCDate()} ${DISPLAY_MONTHS[utc.getUTCMonth()]} ${utc.getUTCFullYear()}`;
+}
+
+export function toDateInputValue(date: Date): string {
+  return sessionDateUtc(date).toISOString().slice(0, 10);
+}
+
+export function parseDateInput(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+  return date;
+}

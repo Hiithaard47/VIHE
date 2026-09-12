@@ -4,12 +4,14 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      kind: "staff" | "student";
       roles: string[];
       permissions: string[];
     } & DefaultSession["user"];
   }
 
   interface User {
+    kind?: "staff" | "student";
     roles?: string[];
     permissions?: string[];
   }
@@ -22,6 +24,7 @@ declare module "next-auth" {
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
+    kind: "staff" | "student";
     roles: string[];
     permissions: string[];
   }

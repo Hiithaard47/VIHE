@@ -12,6 +12,7 @@ export default async function AdminCoursePolicyPage({ params }: { params: Promis
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       lockAfterDays: true,
+      isActive: true,
     },
   });
   if (!course) return null;
@@ -20,6 +21,7 @@ export default async function AdminCoursePolicyPage({ params }: { params: Promis
     <section className="flex flex-col gap-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Attendance policy</h2>
       <form action={updateCoursePolicy.bind(null, courseId)} className="flex flex-col gap-4 rounded-lg border border-hairline bg-card p-4">
+        <fieldset disabled={!course.isActive} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm text-ink">
           Default status on a fresh session
           <select name="defaultStatus" defaultValue={course.defaultStatus} className="w-fit rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink">
@@ -39,7 +41,10 @@ export default async function AdminCoursePolicyPage({ params }: { params: Promis
           Lock attendance after (days)
           <input type="number" name="lockAfterDays" min={0} defaultValue={course.lockAfterDays ?? ""} className="w-28 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
         </label>
-        <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">Save policy</button>
+        {course.isActive && (
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">Save policy</button>
+        )}
+        </fieldset>
       </form>
     </section>
   );

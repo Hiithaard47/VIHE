@@ -1,9 +1,23 @@
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export default async function TeacherStudentsPage() {
+  const session = await auth();
+  if (!session) return null;
+
   const students = await prisma.student.findMany({
-    where: { isActive: true },
-    include: { enrollments: { include: { batch: { include: { course: true } } } } },
+    where: {
+      isActive: true,
+      enrollments: {
+        some: { batch: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
+      },
+    },
+    include: {
+      enrollments: {
+        where: { batch: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
+        include: { batch: { include: { course: true } } },
+      },
+    },
     orderBy: { rollNumber: "asc" },
   });
 
@@ -11,10 +25,7 @@ export default async function TeacherStudentsPage() {
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="font-heading text-lg font-semibold text-ink">Students</h1>
-        <p className="text-sm text-muted">
-          All active students, across every course. Manage enrolment for a course you teach from its Roster
-          tab; ask an admin to add a new student record.
-        </p>
+        <p className="text-sm text-muted">Students enrolled in courses you teach.</p>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
