@@ -56,6 +56,12 @@ Create `vitest.config.ts`:
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
+// startOfTodayUtc (Task 5) reads LOCAL calendar fields and rebuilds them in
+// UTC. Pinned to a non-zero offset so those tests stay meaningful on a UTC
+// CI runner, where local and UTC getters agree and a broken implementation
+// would pass unnoticed.
+process.env.TZ = "America/New_York";
+
 export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
@@ -453,7 +459,7 @@ export default async function CourseLayout({
 
 In `src/app/teacher/courses/[courseId]/page.tsx`, the header block, the `<FlashBanner />`, and the "View only" notice now live in the layout — rendering them twice is the bug this step prevents.
 
-Delete the `<FlashBanner />` element and the entire `<div>` holding the back-link, `<h1>`, code/enrolment line, and the `!canManage` notice. Remove the now-unused `Link` and `FlashBanner` imports. Keep the course description, the New-session form, and the sessions list. Narrow the query — `sessions` and `description` are all this page still needs:
+Delete the `<FlashBanner />` element and the entire `<div>` holding the back-link, `<h1>`, code/enrolment line, and the `!canManage` notice. Remove the now-unused `FlashBanner` import. **Keep `Link`** — the session rows still use it to link to `/teacher/sessions/[id]`. Keep the course description, the New-session form, and the sessions list. Narrow the query — `sessions` and `description` are all this page still needs:
 
 ```tsx
   const course = await prisma.course.findUnique({
@@ -489,7 +495,10 @@ import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 const detailsSchema = z.object({
   name: z.string().min(1, "Course name is required."),
   code: z.string().min(1, "Course code is required."),
-  description: z.string().optional(),
+  // Always a string (the textarea always submits). Empty means "cleared",
+  // which must reach the database as null — `undefined` would make Prisma
+  // omit the column from the UPDATE and silently keep the old value.
+  description: z.string(),
 });
 
 export async function updateCourseDetails(courseId: string, formData: FormData) {
@@ -499,14 +508,17 @@ export async function updateCourseDetails(courseId: string, formData: FormData) 
   const parsed = detailsSchema.safeParse({
     name: formData.get("name"),
     code: formData.get("code"),
-    description: formData.get("description") || undefined,
+    description: formData.get("description") ?? "",
   });
   if (!parsed.success) {
     redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   }
 
   try {
-    await prisma.course.update({ where: { id: courseId }, data: parsed.data });
+    await prisma.course.update({
+      where: { id: courseId },
+      data: { ...parsed.data, description: parsed.data.description.trim() || null },
+    });
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(path, "error", "That course code is already in use."));
@@ -1226,9 +1238,17 @@ test.describe("teacher: roster", () => {
     const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.id);
 
     // Four past sessions: `good` attends all four, `poor` attends one.
+    //
+    // Anchor to the same UTC-midnight boundary the page filters on, then step
+    // back whole days. Deriving these from Date.now() instead puts the i=1
+    // session exactly ON the cutoff for any host at a negative UTC offset late
+    // in the day, silently dropping it from the groupBy and turning the
+    // asserted 25% into 0%.
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     const day = 24 * 60 * 60 * 1000;
     for (let i = 1; i <= 4; i++) {
-      const classSession = await createSession(course.id, teacher.id, new Date(Date.now() - i * day));
+      const classSession = await createSession(course.id, teacher.id, new Date(todayUtc - i * day));
       await prisma.attendanceRecord.createMany({
         data: [
           { sessionId: classSession.id, studentId: good.id, status: "PRESENT", markedById: teacher.id },
