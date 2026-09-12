@@ -12,7 +12,8 @@ export default async function TeacherStudentsPage() {
       <div>
         <h1 className="font-heading text-lg font-semibold text-ink">Students</h1>
         <p className="text-sm text-muted">
-          All enrolled students, across every course. Ask an admin to add or reassign a student.
+          All active students, across every course. Manage enrolment for a course you teach from its Roster
+          tab; ask an admin to add a new student record.
         </p>
       </div>
 

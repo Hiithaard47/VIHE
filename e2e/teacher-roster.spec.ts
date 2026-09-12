@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login, unique } from "./helpers";
+import { login, unique, waitForFlashAfter } from "./helpers";
 import { createTeacher, createCourse, createStudent, createSession, prisma } from "./db";
 
 test.describe("teacher: roster", () => {
@@ -71,5 +71,48 @@ test.describe("teacher: roster", () => {
     const attendanceCell = page.locator("tr", { hasText: student.name }).locator("td").nth(2);
     await expect(attendanceCell).toHaveText("—");
     await expect(page.locator("tr", { hasText: student.name }).getByText("0%")).toHaveCount(0);
+  });
+
+  test("enrolls and unenrolls a student", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(
+      `Enroll Teacher ${unique("t")}`,
+      `${unique("enrollteacher")}@example.com`,
+      password,
+    );
+    const course = await createCourse(`Enroll Course ${unique("c")}`, unique("ENR").toUpperCase(), teacher.id);
+    const student = await createStudent(`Enroll Student ${unique("s")}`, unique("RE").toUpperCase());
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}/roster`);
+
+    await expect(page.getByText("No students enrolled in this course yet.")).toBeVisible();
+
+    await page.selectOption('select[name="studentId"]', student.id);
+    const added = await waitForFlashAfter(page, () => page.click('button:has-text("Enroll")'));
+    expect(added).toBe("success");
+    await expect(page.locator("tr", { hasText: student.name })).toBeVisible();
+
+    const removed = await waitForFlashAfter(page, () =>
+      page.locator("tr", { hasText: student.name }).getByRole("button", { name: "Remove" }).click(),
+    );
+    expect(removed).toBe("success");
+    await expect(page.locator("tr", { hasText: student.name })).toHaveCount(0);
+  });
+
+  test("does not offer enrolment to a teacher who is not assigned", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(
+      `Outsider Teacher ${unique("t")}`,
+      `${unique("outsiderteacher")}@example.com`,
+      password,
+    );
+    const other = await createCourse(`Outsider Course ${unique("c")}`, unique("OUT").toUpperCase());
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${other.id}/roster`);
+
+    await expect(page.locator('select[name="studentId"]')).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
   });
 });
