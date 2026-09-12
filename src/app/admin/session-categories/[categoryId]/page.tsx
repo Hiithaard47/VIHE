@@ -15,7 +15,14 @@ export default async function AdminSessionCategoryPage({
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
   const category = await prisma.sessionCategory.findUnique({
     where: { id: categoryId },
-    select: { id: true, name: true, minAttendancePercent: true, isActive: true, isSystem: true },
+    select: {
+      id: true,
+      name: true,
+      minAttendancePercent: true,
+      allowsResources: true,
+      isActive: true,
+      isSystem: true,
+    },
   });
   if (!category) notFound();
 
@@ -75,6 +82,20 @@ export default async function AdminSessionCategoryPage({
                   className="w-28 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
                 />
                 <span className="text-xs text-muted">Leave blank for no at-risk flag.</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="allowsResources"
+                  defaultChecked={category.allowsResources}
+                  className="mt-1"
+                />
+                <span>
+                  Allow session files
+                  <span className="block text-xs text-muted">
+                    Show upload and file list on sessions of this category.
+                  </span>
+                </span>
               </label>
               {category.isActive && (
                 <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">

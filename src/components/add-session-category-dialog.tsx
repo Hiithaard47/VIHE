@@ -47,6 +47,15 @@ export function AddSessionCategoryDialog() {
             />
             <span className="text-xs text-muted">Leave blank for no at-risk flag.</span>
           </label>
+          <label className="flex items-start gap-2 text-sm text-ink">
+            <input type="checkbox" name="allowsResources" defaultChecked className="mt-1" />
+            <span>
+              Allow session files
+              <span className="block text-xs text-muted">
+                Show upload and file list on sessions of this category.
+              </span>
+            </span>
+          </label>
           <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
             Create category
           </button>

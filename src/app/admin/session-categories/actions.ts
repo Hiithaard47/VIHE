@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
-import { parseMinAttendancePercent } from "@/lib/session-categories";
+import { parseAllowsResources, parseMinAttendancePercent } from "@/lib/session-categories";
 
 const PATH = "/admin/session-categories";
 
@@ -28,7 +28,11 @@ function parseCategoryForm(formData: FormData, path: string) {
   if (minAttendancePercent === undefined) {
     redirect(flashUrl(path, "error", "Minimum attendance must be between 0 and 100."));
   }
-  return { name: parsed.data.name, minAttendancePercent };
+  return {
+    name: parsed.data.name,
+    minAttendancePercent,
+    allowsResources: parseAllowsResources(formData),
+  };
 }
 
 export async function createSessionCategory(formData: FormData) {
@@ -63,6 +67,7 @@ export async function updateSessionCategory(categoryId: string, formData: FormDa
       data: {
         name: category.isSystem ? undefined : data.name,
         minAttendancePercent: data.minAttendancePercent,
+        allowsResources: data.allowsResources,
       },
     });
   } catch (err) {

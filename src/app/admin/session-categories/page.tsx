@@ -50,6 +50,7 @@ export default async function AdminSessionCategoriesPage({
               <tr>
                 <th className="px-4 py-2 font-medium">Category</th>
                 <th className="px-4 py-2 font-medium">Min %</th>
+                <th className="px-4 py-2 font-medium">Files</th>
                 <th className="px-4 py-2 font-medium">Sessions</th>
                 <th className="px-4 py-2" />
               </tr>
@@ -66,6 +67,7 @@ export default async function AdminSessionCategoriesPage({
                     </Link>
                   </td>
                   <td className="px-4 py-3">{category.minAttendancePercent ?? "—"}</td>
+                  <td className="px-4 py-3">{category.allowsResources ? "Files" : "No files"}</td>
                   <td className="px-4 py-3">{category._count.sessions}</td>
                   <td className="px-4 py-3">
                     {!category.isSystem &&
@@ -88,7 +90,7 @@ export default async function AdminSessionCategoriesPage({
               ))}
               {categories.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-3 text-sm text-muted">
+                  <td colSpan={5} className="px-4 py-3 text-sm text-muted">
                     {archived ? "No archived categories." : "No categories yet."}
                   </td>
                 </tr>
