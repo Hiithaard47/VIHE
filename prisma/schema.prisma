@@ -24,7 +24,7 @@ model User {
   sessions Session[]
 
   roles                UserRole[]
-  taughtCourses        CourseTeacher[]
+  taughtBatches        BatchTeacher[]
   createdSessions      ClassSession[]        @relation("SessionCreatedBy")
   markedRecords        AttendanceRecord[]    @relation("AttendanceMarkedBy")
   reviewedApplications StudentApplication[]  @relation("ApplicationReviewedBy")
@@ -144,37 +144,52 @@ model Course {
   excusedCountsAsAttended Boolean          @default(true)
   lockAfterDays           Int?             // null = never locks
 
-  teachers      CourseTeacher[]
-  enrollments   CourseEnrollment[]
-  sessions      ClassSession[]
-  applications  StudentApplication[]
-  scheduleSlots CourseScheduleSlot[]
+  batches      CourseBatch[]
+  applications StudentApplication[]
 
   @@map("courses")
 }
 
 model CourseScheduleSlot {
   id          String @id @default(cuid())
-  courseId    String
+  batchId     String
   weekday     Int    // 0 = Sunday … 6 = Saturday
   startMinute Int    // wall-clock minutes from midnight, e.g. 1080 = 18:00
   endMinute   Int
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batch CourseBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
-  @@unique([courseId, weekday, startMinute])
+  @@unique([batchId, weekday, startMinute])
   @@map("course_schedule_slots")
 }
 
-model CourseTeacher {
-  courseId String
+model CourseBatch {
+  id        String   @id @default(cuid())
+  courseId  String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course        Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teachers      BatchTeacher[]
+  enrollments   BatchEnrollment[]
+  scheduleSlots CourseScheduleSlot[]
+  sessions      ClassSession[]
+
+  @@unique([courseId, name])
+  @@map("course_batches")
+}
+
+model BatchTeacher {
+  batchId   String
   teacherId String
 
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  teacher User   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  batch   CourseBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teacher User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  @@id([courseId, teacherId])
-  @@map("course_teachers")
+  @@id([batchId, teacherId])
+  @@map("batch_teachers")
 }
 
 model Student {
@@ -186,27 +201,27 @@ model Student {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  enrollments CourseEnrollment[]
+  enrollments BatchEnrollment[]
   attendance  AttendanceRecord[]
 
   @@map("students")
 }
 
-model CourseEnrollment {
-  courseId  String
+model BatchEnrollment {
+  batchId   String
   studentId String
   createdAt DateTime @default(now())
 
-  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batch   CourseBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@id([courseId, studentId])
-  @@map("course_enrollments")
+  @@id([batchId, studentId])
+  @@map("batch_enrollments")
 }
 
 model ClassSession {
   id        String   @id @default(cuid())
-  courseId  String
+  batchId   String
   date      DateTime
   topic     String?
   createdById String
@@ -219,7 +234,7 @@ model ClassSession {
   // auto-removed; set = generated and eligible for regeneration.
   slotId      String?
 
-  course    Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batch      CourseBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
   records   AttendanceRecord[]
 
