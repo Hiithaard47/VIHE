@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireCourseAccess } from "@/lib/rbac";
+import { requireBatchAccess } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
 import { relativeTimeFromNow } from "@/lib/time";
 import { markAttendance } from "./actions";
@@ -15,6 +15,7 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     include: {
       batch: {
         select: {
+          id: true,
           course: { select: { id: true, name: true, defaultStatus: true } },
           enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
         },
@@ -24,7 +25,7 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   });
   if (!classSession) notFound();
 
-  await requireCourseAccess(classSession.batch.course.id);
+  await requireBatchAccess(classSession.batch.id);
 
   const recordByStudent = new Map(classSession.records.map((r) => [r.studentId, r]));
 

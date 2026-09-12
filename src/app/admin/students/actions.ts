@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { enrollStudentInBatch, getOrCreateDefaultBatch } from "@/lib/enrollment";
+import { DEFAULT_BATCH_NAME } from "@/lib/batches";
 
 const PATH = "/admin/students";
 
@@ -31,17 +32,19 @@ export async function createStudent(formData: FormData) {
   const { name, rollNumber, email, courseIds } = parsed.data;
 
   try {
-    const student = await prisma.student.create({
-      data: {
-        name,
-        rollNumber,
-        email: email || undefined,
-      },
+    await prisma.$transaction(async (tx) => {
+      const student = await tx.student.create({
+        data: {
+          name,
+          rollNumber,
+          email: email || undefined,
+        },
+      });
+      for (const courseId of courseIds) {
+        const batch = await getOrCreateDefaultBatch(courseId, tx);
+        await enrollStudentInBatch(student.id, batch.id, tx);
+      }
     });
-    for (const courseId of courseIds) {
-      const batch = await getOrCreateDefaultBatch(courseId);
-      await enrollStudentInBatch(student.id, batch.id);
-    }
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(PATH, "error", "That roll number or email is already in use."));
@@ -58,11 +61,15 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
 
   const courseIds = formData.getAll("courseIds").map(String);
 
-  await prisma.batchEnrollment.deleteMany({ where: { studentId, batch: { courseId: { notIn: courseIds } } } });
-  for (const courseId of courseIds) {
-    const batch = await getOrCreateDefaultBatch(courseId);
-    await enrollStudentInBatch(studentId, batch.id);
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.batchEnrollment.deleteMany({
+      where: { studentId, batch: { courseId: { notIn: courseIds } } },
+    });
+    for (const courseId of courseIds) {
+      const batch = await getOrCreateDefaultBatch(courseId, tx);
+      await enrollStudentInBatch(studentId, batch.id, tx);
+    }
+  });
 
   revalidatePath(PATH);
   redirect(flashUrl(PATH, "success", "Enrollment updated."));
@@ -94,8 +101,8 @@ export async function approveApplication(applicationId: string, formData: FormDa
       });
       if (application.desiredCourseId) {
         const batch = await tx.courseBatch.upsert({
-          where: { courseId_name: { courseId: application.desiredCourseId, name: "Default" } },
-          create: { courseId: application.desiredCourseId, name: "Default" },
+          where: { courseId_name: { courseId: application.desiredCourseId, name: DEFAULT_BATCH_NAME } },
+          create: { courseId: application.desiredCourseId, name: DEFAULT_BATCH_NAME },
           update: {},
         });
         await tx.batchEnrollment.create({ data: { studentId: student.id, batchId: batch.id } });

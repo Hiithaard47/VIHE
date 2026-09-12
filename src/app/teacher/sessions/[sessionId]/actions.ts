@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireCourseAccess, requireAnyPermission } from "@/lib/rbac";
+import { requireBatchAccess, requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
@@ -15,9 +15,9 @@ export async function markAttendance(sessionId: string, formData: FormData) {
 
   const classSession = await prisma.classSession.findUniqueOrThrow({
     where: { id: sessionId },
-    include: { batch: { select: { courseId: true } } },
+    select: { batchId: true },
   });
-  await requireCourseAccess(classSession.batch.courseId);
+  await requireBatchAccess(classSession.batchId);
 
   const enrollments = await prisma.batchEnrollment.findMany({
     where: { batchId: classSession.batchId },
