@@ -62,7 +62,10 @@ export default defineConfig({
     environment: "node",
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "src") },
+    // process.cwd(), not __dirname: whether __dirname exists in a .ts config
+    // depends on how Vite compiles it (package.json has no "type" field), and
+    // vitest always runs from the project root.
+    alias: { "@": path.resolve(process.cwd(), "src") },
   },
 });
 ```
@@ -606,7 +609,7 @@ git commit -m "feat: tabbed course workspace with teacher-editable details"
 Stores all four policy fields. Only `defaultStatus` gets a consumer in this plan (Task 4); the rest are consumed in plans 2 and 3.
 
 **Files:**
-- Modify: `src/lib/attendance.ts`
+- Read only (imported, not changed): `src/lib/attendance.ts`
 - Create: `src/lib/policy.ts`
 - Create: `src/lib/policy.test.ts`
 - Modify: `src/app/teacher/courses/[courseId]/settings/actions.ts`
@@ -1196,7 +1199,7 @@ The List half of the Roster tab. The Grid half is plan 3; this task adds the tab
 - Create: `e2e/teacher-roster.spec.ts`
 
 **Interfaces:**
-- Consumes: `attendancePercent`, `isAtRisk`, `emptyTally`, `AttendancePolicy`, `StatusTally` from Task 5; `startOfTodayUtc` from Task 5; `canConfigureCourse` from Task 2.
+- Consumes: `attendancePercent`, `isAtRisk`, `emptyTally`, `AttendancePolicy`, `StatusTally`, `startOfTodayUtc` from Task 5. (`canConfigureCourse` is not used until Task 7.)
 - Produces: the `/teacher/courses/[courseId]/roster` route.
 
 - [ ] **Step 1: Write the failing e2e test**
