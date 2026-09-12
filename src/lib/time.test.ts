@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { startOfTodayUtc } from "@/lib/time";
 
+// TZ is pinned to America/New_York in vitest.config.mts. This ensures the tests
+// remain hermetic and discriminate between local and UTC getters, catching a
+// broken implementation that uses getUTCDate instead of getDate.
 describe("startOfTodayUtc", () => {
   it("returns the local calendar date at UTC midnight", () => {
     const result = startOfTodayUtc(new Date(2026, 8, 12, 23, 30));
