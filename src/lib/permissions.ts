@@ -16,12 +16,12 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 export const PERMISSION_DEFINITIONS: { key: PermissionKey; description: string }[] = [
   { key: PERMISSIONS.USERS_MANAGE, description: "Create, deactivate, and manage teacher/admin accounts" },
   { key: PERMISSIONS.ROLES_MANAGE, description: "Create roles and configure the permission matrix" },
-  { key: PERMISSIONS.COURSES_MANAGE, description: "Create, edit, and assign teachers to courses" },
+  { key: PERMISSIONS.COURSES_MANAGE, description: "Create and archive courses; manage batches, batch teachers, and batch rosters" },
   {
     key: PERMISSIONS.COURSES_CONFIGURE,
-    description: "Configure schedule, roster, and attendance policy for an assigned course",
+    description: "Configure schedule, roster, and attendance policy for an assigned batch",
   },
-  { key: PERMISSIONS.STUDENTS_MANAGE, description: "Add students and manage course enrollment" },
+  { key: PERMISSIONS.STUDENTS_MANAGE, description: "Add students and manage course → batch enrollment" },
   { key: PERMISSIONS.SESSIONS_MANAGE, description: "Create class sessions for a course" },
   { key: PERMISSIONS.ATTENDANCE_MARK, description: "Mark attendance for a class session" },
   { key: PERMISSIONS.ATTENDANCE_VIEW, description: "View attendance records and reports" },
