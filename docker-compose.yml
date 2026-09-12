@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vihe
+      POSTGRES_PASSWORD: vihe
+      POSTGRES_DB: vihe_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - vihe-app-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vihe -d vihe_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vihe-app-db-data:

@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth (NextAuth / Auth.js) ---
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  image         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  roles                UserRole[]
+  taughtCourses        CourseTeacher[]
+  createdSessions      ClassSession[]        @relation("SessionCreatedBy")
+  markedRecords        AttendanceRecord[]    @relation("AttendanceMarkedBy")
+  reviewedApplications StudentApplication[]  @relation("ApplicationReviewedBy")
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// --- Roles & permissions (flexible RBAC) ---
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "courses.manage"
+  description String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g. "Admin", "Teacher"
+  description String?
+  isSystem    Boolean  @default(false) // system roles cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// --- Academic domain ---
+
+model Course {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teachers     CourseTeacher[]
+  enrollments  CourseEnrollment[]
+  sessions     ClassSession[]
+  applications StudentApplication[]
+
+  @@map("courses")
+}
+
+model CourseTeacher {
+  courseId String
+  teacherId String
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacher User   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, teacherId])
+  @@map("course_teachers")
+}
+
+model Student {
+  id         String   @id @default(cuid())
+  name       String
+  email      String?  @unique
+  rollNumber String   @unique
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  enrollments CourseEnrollment[]
+  attendance  AttendanceRecord[]
+
+  @@map("students")
+}
+
+model CourseEnrollment {
+  courseId  String
+  studentId String
+  createdAt DateTime @default(now())
+
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, studentId])
+  @@map("course_enrollments")
+}
+
+model ClassSession {
+  id        String   @id @default(cuid())
+  courseId  String
+  date      DateTime
+  topic     String?
+  createdById String
+  createdAt DateTime @default(now())
+
+  course    Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
+  records   AttendanceRecord[]
+
+  @@map("class_sessions")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRecord {
+  id           String            @id @default(cuid())
+  sessionId    String
+  studentId    String
+  status       AttendanceStatus
+  markedById   String
+  markedAt     DateTime          @default(now())
+
+  session   ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy  User         @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@map("attendance_records")
+}
+
+// --- Public prospective-student intake ---
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PreferredMode {
+  ONLINE
+  HYBRID
+  ON_SITE
+}
+
+enum PreferredLanguage {
+  ENGLISH
+  HINDI
+}
+
+model StudentApplication {
+  id                String             @id @default(cuid())
+  name              String
+  email             String
+  phone             String?
+  message           String?
+  desiredCourseId   String?
+  preferredMode     PreferredMode?
+  preferredLanguage PreferredLanguage?
+  dateOfBirth       DateTime?
+  country           String?
+  city              String?
+  priorExperience   String?
+  status            ApplicationStatus  @default(PENDING)
+  createdAt         DateTime           @default(now())
+  reviewedAt        DateTime?
+  reviewedById      String?
+
+  desiredCourse Course? @relation(fields: [desiredCourseId], references: [id])
+  reviewedBy    User?   @relation("ApplicationReviewedBy", fields: [reviewedById], references: [id])
+
+  @@map("student_applications")
+}
