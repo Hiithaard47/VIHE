@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission, canManageCourse } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
-import { FlashBanner } from "@/components/flash-banner";
 import { createSession } from "./actions";
 
 export default async function CourseSessionsPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -16,9 +15,9 @@ export default async function CourseSessionsPage({ params }: { params: Promise<{
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    include: {
+    select: {
+      description: true,
       sessions: { orderBy: { date: "desc" }, include: { _count: { select: { records: true } } } },
-      _count: { select: { enrollments: true } },
     },
   });
   if (!course) notFound();
@@ -27,22 +26,7 @@ export default async function CourseSessionsPage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-6">
-      <FlashBanner />
-      <div>
-        <Link href="/teacher" className="text-sm text-muted">
-          &larr; Courses
-        </Link>
-        <h1 className="font-heading text-lg font-semibold text-ink">{course.name}</h1>
-        <p className="text-sm text-muted">
-          {course.code} &middot; {course._count.enrollments} enrolled student(s)
-        </p>
-        {course.description && <p className="mt-1 text-sm text-ink">{course.description}</p>}
-        {!canManage && (
-          <p className="mt-2 text-xs text-muted">
-            View only — you&apos;re not assigned to teach this course.
-          </p>
-        )}
-      </div>
+      {course.description && <p className="text-sm text-ink">{course.description}</p>}
 
       {canManage && (
         <section>

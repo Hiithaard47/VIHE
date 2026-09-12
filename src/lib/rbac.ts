@@ -71,3 +71,30 @@ export async function requireCourseAccess(courseId: string) {
 
   return session;
 }
+
+// Non-redirecting check: can this user configure (edit details, policy,
+// roster, schedule for) a given course? Admins holding COURSES_MANAGE can
+// configure any course; everyone else needs COURSES_CONFIGURE *and* an
+// assignment to this specific course.
+export async function canConfigureCourse(session: Session, courseId: string) {
+  if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
+  if (!session.user.permissions.includes(PERMISSIONS.COURSES_CONFIGURE)) return false;
+
+  const assignment = await prisma.courseTeacher.findUnique({
+    where: { courseId_teacherId: { courseId, teacherId: session.user.id } },
+  });
+  return Boolean(assignment);
+}
+
+// Server-action / page guard: redirects back to the course when the
+// signed-in user may not configure it.
+export async function requireCourseConfigure(courseId: string) {
+  const session = await requireAnyPermission([
+    PERMISSIONS.COURSES_CONFIGURE,
+    PERMISSIONS.COURSES_MANAGE,
+  ]);
+
+  if (!(await canConfigureCourse(session, courseId))) redirect(`/teacher/courses/${courseId}`);
+
+  return session;
+}
