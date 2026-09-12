@@ -1,76 +1,80 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { studentEnrollmentWhere } from "@/lib/enrollment";
 import { requireStudent } from "@/lib/rbac";
-import { formatDisplayDate } from "@/lib/time";
 
 export default async function StudentHome() {
   const session = await requireStudent();
   const enrollments = await prisma.batchEnrollment.findMany({
-    where: { studentId: session.user.id, batch: { isActive: true, course: { isActive: true } } },
+    where: studentEnrollmentWhere(session.user.id),
     include: {
       batch: {
         include: {
-          course: { select: { name: true, code: true } },
-          sessions: {
-            orderBy: { date: "desc" },
-            include: { resources: { orderBy: { createdAt: "asc" } } },
-          },
+          course: { select: { id: true, name: true, code: true, description: true, isActive: true } },
+          _count: { select: { sessions: true } },
         },
       },
     },
     orderBy: { createdAt: "asc" },
   });
-
-  const sessions = enrollments.flatMap(({ batch }) =>
-    batch.sessions
-      .filter((classSession) => classSession.resources.length > 0)
-      .map((classSession) => ({
-        ...classSession,
-        courseName: batch.course.name,
-        courseCode: batch.course.code,
-        batchName: batch.name,
-      })),
-  );
+  enrollments.sort((a, b) => a.batch.course.name.localeCompare(b.batch.course.name));
+  const active = enrollments.filter(({ batch }) => batch.course.isActive);
+  const completed = enrollments.filter(({ batch }) => !batch.course.isActive);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-heading text-lg font-semibold text-ink">Session files</h1>
-        <p className="text-sm text-muted">PDFs and images from class sessions in your batches.</p>
+        <h1 className="font-heading text-lg font-semibold text-ink">My courses</h1>
+        <p className="text-sm text-muted">Open a course to see every session.</p>
       </div>
-      {sessions.length === 0 && <p className="text-sm text-muted">No files have been shared yet.</p>}
-      {sessions.map((classSession) => (
-        <section key={classSession.id} className="flex flex-col gap-3">
-          <div>
-            <h2 className="font-heading font-medium text-ink">
-              {classSession.courseName} · {formatDisplayDate(classSession.date)}
-            </h2>
-            <p className="text-xs text-muted">
-              {classSession.courseCode} · {classSession.batchName}
-              {classSession.topic ? ` · ${classSession.topic}` : ""}
-            </p>
-          </div>
-          <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-hairline bg-canvas text-muted">
-                <tr>
-                  <th className="px-4 py-2 font-medium">File</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classSession.resources.map((resource) => (
-                  <tr key={resource.id} className="border-b border-hairline text-ink last:border-0">
-                    <td className="px-4 py-3">
-                      <a href={`/resources/${resource.id}`} className="font-medium hover:text-accent-dark">
-                        {resource.fileName}
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+      {enrollments.length === 0 && <p className="text-sm text-muted">You are not enrolled in a course yet.</p>}
+      {enrollments.length > 0 && (
+        <>
+          <CourseGroup title="Active" courses={active} empty="No active courses." />
+          <CourseGroup title="Completed" courses={completed} empty="No completed courses." />
+        </>
+      )}
     </div>
+  );
+}
+
+function CourseGroup({
+  title,
+  courses,
+  empty,
+}: {
+  title: string;
+  courses: Array<{
+    batch: {
+      id: string;
+      name: string;
+      _count: { sessions: number };
+      course: { id: string; name: string; code: string; description: string | null; isActive: boolean };
+    };
+  }>;
+  empty: string;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+        {title} &middot; {courses.length}
+      </h2>
+      {courses.length === 0 && <p className="text-sm text-muted">{empty}</p>}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {courses.map(({ batch }) => (
+          <Link
+            key={batch.id}
+            href={`/student/courses/${batch.course.id}`}
+            className="rounded-lg border border-hairline bg-card p-4 hover:border-accent-dark"
+          >
+            <p className="font-heading font-medium text-ink">{batch.course.name}</p>
+            <p className="text-xs text-muted">
+              {batch.course.code} · {batch.name} · {batch._count.sessions} session(s)
+            </p>
+            {batch.course.description && <p className="mt-2 text-sm text-ink">{batch.course.description}</p>}
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

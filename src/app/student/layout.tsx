@@ -12,6 +12,9 @@ export default async function StudentLayout({ children }: { children: React.Reac
         subtitle="Student"
         right={
           <nav className="flex items-center gap-5 text-sm">
+            <Link href="/student" className="text-white/70 hover:text-accent">
+              My courses
+            </Link>
             <Link href="/student/account" className="text-white/70 hover:text-accent">
               Account
             </Link>

@@ -28,6 +28,14 @@ export function isFutureSessionDate(date: Date, now = new Date()): boolean {
   return sessionDateUtc(date).getTime() > startOfTodayUtc(now).getTime();
 }
 
+export function sessionTiming(date: Date, now = new Date()): "past" | "today" | "upcoming" {
+  const day = sessionDateUtc(date).getTime();
+  const today = startOfTodayUtc(now).getTime();
+  if (day < today) return "past";
+  if (day > today) return "upcoming";
+  return "today";
+}
+
 const DISPLAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
 
 export function formatDisplayDate(date: Date): string {

@@ -55,6 +55,25 @@ export async function unenrollStudentFromBatch(studentId: string, batchId: strin
   await prisma.batchEnrollment.deleteMany({ where: { studentId, batchId } });
 }
 
+export function studentEnrollmentWhere(studentId: string) {
+  return { studentId };
+}
+
+export async function findStudentCourseEnrollment(studentId: string, courseId: string) {
+  return prisma.batchEnrollment.findFirst({
+    where: { studentId, batch: { courseId } },
+    include: {
+      batch: {
+        select: {
+          id: true,
+          name: true,
+          course: { select: { id: true, name: true, code: true, description: true, isActive: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function resolveTeacherBatchForCourse(teacherId: string, courseId: string) {
   const row = await prisma.batchTeacher.findFirst({
     where: { teacherId, batch: { courseId, isActive: true } },

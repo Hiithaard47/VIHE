@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDisplayDate, isFutureSessionDate, parseDateInput, startOfTodayUtc, toDateInputValue } from "@/lib/time";
+import { formatDisplayDate, isFutureSessionDate, parseDateInput, sessionTiming, startOfTodayUtc, toDateInputValue } from "@/lib/time";
 
 // TZ is pinned to America/New_York in vitest.config.mts. This ensures the tests
 // remain hermetic and discriminate between local and UTC getters, catching a
@@ -13,6 +13,16 @@ describe("startOfTodayUtc", () => {
   it("uses the local date even when UTC has already rolled over", () => {
     const result = startOfTodayUtc(new Date(2026, 0, 1, 0, 15));
     expect(result.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+  });
+});
+
+describe("sessionTiming", () => {
+  const now = new Date(2026, 8, 12, 15, 0);
+
+  it("classifies past, today, and upcoming from the session calendar date", () => {
+    expect(sessionTiming(new Date("2026-09-11T00:00:00.000Z"), now)).toBe("past");
+    expect(sessionTiming(new Date("2026-09-12T00:00:00.000Z"), now)).toBe("today");
+    expect(sessionTiming(new Date("2026-09-13T00:00:00.000Z"), now)).toBe("upcoming");
   });
 });
 
