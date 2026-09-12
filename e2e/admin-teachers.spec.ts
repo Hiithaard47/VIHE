@@ -79,4 +79,27 @@ test.describe("admin: teachers", () => {
     await expect(page.locator("tr", { hasText: email })).toBeVisible();
     await expect(page.getByText(phone)).toBeVisible();
   });
+
+  test("resets a teacher password so they can sign in with the new one", async ({ page }) => {
+    const email = `${unique("resetpw")}@example.com`;
+    expect(await createTeacher(page, "Reset Password Teacher", email)).toBe("success");
+
+    await page.locator("tr", { hasText: email }).getByRole("link", { name: "Reset Password Teacher" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Details" }).click();
+    await page.getByLabel("New password", { exact: true }).fill("ResetPass123!");
+    await page.getByLabel("Confirm password").fill("ResetPass123!");
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Reset password" }).click())).toBe(
+      "success",
+    );
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.goto("/login");
+    await page.fill('input[type="email"]', email);
+    await page.fill('input[type="password"]', "ResetPass123!");
+    await Promise.all([
+      page.waitForURL((url) => !url.pathname.startsWith("/login")),
+      page.click('button[type="submit"]'),
+    ]);
+    await expect(page).toHaveURL(/\/teacher/);
+  });
 });

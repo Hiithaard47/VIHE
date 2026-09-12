@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
+import { hashPassword, validateNewPassword } from "@/lib/password";
 
 const PATH = "/admin/teachers";
 
@@ -44,7 +44,7 @@ export async function createUser(formData: FormData) {
   if (!parsed.success) redirect(flashUrl(PATH, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   const { name, email, phone, password, roleIds } = parsed.data;
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
 
   try {
     await prisma.user.create({
@@ -89,6 +89,25 @@ export async function updateUserDetails(userId: string, formData: FormData) {
   revalidatePath(PATH);
   revalidatePath(`/admin/teachers/${userId}`);
   redirect(flashUrl(path, "success", "Teacher details saved."));
+}
+
+export async function resetUserPassword(userId: string, formData: FormData) {
+  await requirePermission(PERMISSIONS.USERS_MANAGE);
+  const path = `/admin/teachers/${userId}/details`;
+  await requireActiveUser(userId, path);
+
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  const invalid = validateNewPassword(password, confirm);
+  if (invalid) redirect(flashUrl(path, "error", invalid));
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(password) },
+  });
+
+  revalidatePath(path);
+  redirect(flashUrl(path, "success", "Password reset. Share the new password with the teacher."));
 }
 
 export async function updateUserRoles(userId: string, formData: FormData) {

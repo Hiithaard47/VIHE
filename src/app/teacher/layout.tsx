@@ -19,6 +19,9 @@ export default async function TeacherLayout({ children }: { children: React.Reac
             <Link href="/teacher/students" className="text-white/70 hover:text-accent">
               Students
             </Link>
+            <Link href="/teacher/account" className="text-white/70 hover:text-accent">
+              Account
+            </Link>
             <SignOutButton />
           </nav>
         }
