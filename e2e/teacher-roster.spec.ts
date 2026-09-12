@@ -17,9 +17,17 @@ test.describe("teacher: roster", () => {
     const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.id);
 
     // Four past sessions: `good` attends all four, `poor` attends one.
+    //
+    // Anchor to the same UTC-midnight boundary the page filters on, then step
+    // back whole days. Deriving these from Date.now() instead puts the i=1
+    // session exactly ON the cutoff for any host at a negative UTC offset late
+    // in the day, silently dropping it from the groupBy and turning the
+    // asserted 25% into 0%.
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     const day = 24 * 60 * 60 * 1000;
     for (let i = 1; i <= 4; i++) {
-      const classSession = await createSession(course.id, teacher.id, new Date(Date.now() - i * day));
+      const classSession = await createSession(course.id, teacher.id, new Date(todayUtc - i * day));
       await prisma.attendanceRecord.createMany({
         data: [
           { sessionId: classSession.id, studentId: good.id, status: "PRESENT", markedById: teacher.id },
