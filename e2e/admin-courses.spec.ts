@@ -19,13 +19,13 @@ test.describe("admin: courses", () => {
     expect(kind).toBe("success");
 
     await page.getByRole("link", { name: courseName }).click();
-    await expect(page.getByRole("link", { name: "Default" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Default", exact: true })).toBeVisible();
     await page.fill('section:has-text("Add batch") input[name="name"]', "Morning");
     const batchKind = await waitForFlashAfter(page, () =>
       page.click('section:has-text("Add batch") button:has-text("Add batch")'),
     );
     expect(batchKind).toBe("success");
-    await expect(page.getByText("Morning")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Morning" })).toBeVisible();
   });
 
   test("archives and restores a course", async ({ page }) => {
