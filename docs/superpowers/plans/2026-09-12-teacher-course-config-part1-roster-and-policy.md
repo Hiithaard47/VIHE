@@ -1566,8 +1566,13 @@ export async function unenrollStudent(courseId: string, formData: FormData) {
 
   // Attendance records are left intact: removing someone from the roster
   // must not rewrite the history of sessions they actually attended.
-  await prisma.courseEnrollment.delete({
-    where: { courseId_studentId: { courseId, studentId: parsed.data.studentId } },
+  //
+  // deleteMany, not delete: `delete` throws P2025 when the row is already
+  // gone — a double-click, or two people removing the same student — which
+  // would surface as a 500. deleteMany treats that as a zero-row no-op, and
+  // the end state the teacher wanted already holds either way.
+  await prisma.courseEnrollment.deleteMany({
+    where: { courseId, studentId: parsed.data.studentId },
   });
 
   revalidatePath(path);
