@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { BatchField } from "@/components/course-workspace-fields";
-import { sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
+import { firstTeacherCoursePath, sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
+import { hasSessionsManage, hasSessionsRead } from "@/lib/permissions";
 import {
   DEFAULT_SESSION_CATEGORY_NAME,
   groupSessionsByCategory,
@@ -26,7 +27,12 @@ export async function CourseSessionsView({
   categoryId?: string;
   selectedBatchId?: string;
 }) {
-  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const perms = session.user.permissions;
+  if (portal === "teacher" && !hasSessionsRead(perms)) {
+    redirect(firstTeacherCoursePath(courseId, perms));
+  }
+  const canWriteSessions = canManage && hasSessionsManage(perms);
 
   const [course, categories] = await Promise.all([
     prisma.course.findUnique({
@@ -74,7 +80,7 @@ export async function CourseSessionsView({
     <div className="flex flex-col gap-6">
       {course.description && <p className="text-sm text-ink">{course.description}</p>}
 
-      {canManage && (
+      {canWriteSessions && (
         <section>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">New session</h2>
           <form
@@ -156,7 +162,7 @@ export async function CourseSessionsView({
                   className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-card p-4"
                 >
                   <div>
-                    {canManage ? (
+                    {hasSessionsRead(perms) ? (
                       <Link href={sessionHref(portal, item.id)} className="hover:opacity-80">
                         {heading}
                       </Link>
@@ -166,7 +172,7 @@ export async function CourseSessionsView({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted">{item._count.records} marked</span>
-                    {canManage && (
+                    {canWriteSessions && (
                       <SessionActionsMenu
                         sessionId={item.id}
                         date={item.date.toISOString()}

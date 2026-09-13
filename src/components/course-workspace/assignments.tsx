@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { batchWhere, sessionWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
 import { BatchField } from "@/components/course-workspace-fields";
-import { courseHref, type CoursePortal } from "@/lib/course-workspace";
+import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
+import { hasCoursesRead } from "@/lib/permissions";
 
 export async function CourseAssignmentsView({
   courseId,
@@ -16,7 +18,10 @@ export async function CourseAssignmentsView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
+    redirect(firstTeacherCoursePath(courseId, session.user.permissions));
+  }
 
   const [assignments, writableBatches] = await Promise.all([
     prisma.assignment.findMany({

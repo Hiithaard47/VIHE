@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { batchWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
+import { hasStudentsRead } from "@/lib/permissions";
 import {
   attendancePercent,
   categoryAttendancePolicy,
@@ -13,7 +14,7 @@ import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { BatchField } from "@/components/course-workspace-fields";
 import { enrollStudent, unenrollStudent } from "@/app/teacher/courses/[courseId]/roster/actions";
 import { contactKeywords } from "@/lib/admin-list";
-import type { CoursePortal } from "@/lib/course-workspace";
+import { firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
 
 export async function CourseRosterView({
   courseId,
@@ -24,7 +25,10 @@ export async function CourseRosterView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const { scope, canConfigure } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canConfigure } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  if (portal === "teacher" && !hasStudentsRead(session.user.permissions)) {
+    redirect(firstTeacherCoursePath(courseId, session.user.permissions));
+  }
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },

@@ -40,6 +40,7 @@ export async function SessionDetailView({
   const session = await requireBatchView(classSession.batch.id, portal);
   const canManage = await canManageBatch(session, classSession.batch.id);
   const canManageSession = canManage && session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE);
+  const canMarkAttendance = canManage && session.user.permissions.includes(PERMISSIONS.ATTENDANCE_MARK);
   const canChangeDate = canManageSession && isFutureSessionDate(classSession.date);
   const canRemove = canManageSession && classSession.records.length === 0;
 
@@ -104,7 +105,7 @@ export async function SessionDetailView({
           portal={portal}
         />
       )}
-      {canManage ? (
+      {canMarkAttendance ? (
         <AttendanceForm action={markAttendance.bind(null, sessionId, portal)} students={students} />
       ) : (
         <section className="overflow-x-auto rounded-lg border border-hairline bg-card">

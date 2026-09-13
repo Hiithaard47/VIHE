@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sessionWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { deleteSessionResource } from "@/app/sessions/actions";
-import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
+import { courseHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
+import { hasCoursesRead } from "@/lib/permissions";
 import { formatDisplayDate } from "@/lib/time";
 
 function formatSize(bytes: number) {
@@ -21,7 +23,10 @@ export async function CourseUploadsView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
+    redirect(firstTeacherCoursePath(courseId, session.user.permissions));
+  }
   const returnTo = courseHref(portal, courseId, "uploads", selectedBatchId);
 
   const resources = await prisma.sessionResource.findMany({

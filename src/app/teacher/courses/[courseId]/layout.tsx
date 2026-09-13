@@ -7,6 +7,7 @@ import { CourseTabs } from "@/components/course-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { TeacherCourseHeading } from "@/components/teacher-course-heading";
 import { resolveCourseScope } from "@/lib/batch-scope";
+import { teacherCourseTabSlugs } from "@/lib/course-workspace";
 
 export default async function CourseLayout({
   children,
@@ -31,6 +32,7 @@ export default async function CourseLayout({
   if (!course) notFound();
 
   const canConfigure = await canConfigureCourse(session, courseId);
+  const slugs = teacherCourseTabSlugs(session.user.permissions, canConfigure);
   const scope = await resolveCourseScope(session, courseId);
   const headingBatches = course.batches
     .filter((batch) => scope?.kind === "all" || Boolean(scope?.ids.includes(batch.id)))
@@ -53,7 +55,7 @@ export default async function CourseLayout({
         )}
       </div>
       <Suspense>
-        <CourseTabs courseId={courseId} canConfigure={canConfigure} />
+        <CourseTabs courseId={courseId} slugs={slugs} />
       </Suspense>
       {children}
     </div>

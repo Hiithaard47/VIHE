@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { batchWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
+import { hasAttendanceAccess } from "@/lib/permissions";
 import {
   attendancePercent,
   categoryAttendancePolicy,
@@ -17,7 +18,7 @@ import {
   statusAt,
   tallyFor,
 } from "@/lib/course-attendance";
-import { attendanceHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
+import { attendanceHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { groupSessionsByCategory, resolveCategoryTab, sessionCategoryTabs } from "@/lib/session-categories";
 import { formatDisplayDate } from "@/lib/time";
 
@@ -32,7 +33,10 @@ export async function CourseAttendanceView({
   categoryId?: string;
   selectedBatchId?: string;
 }) {
-  const { scope } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  if (portal === "teacher" && !hasAttendanceAccess(session.user.permissions)) {
+    redirect(firstTeacherCoursePath(courseId, session.user.permissions));
+  }
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },

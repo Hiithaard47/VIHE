@@ -13,13 +13,19 @@ const TABS = [
   { slug: "settings", label: "Settings" },
 ];
 
-export function CourseTabs({ courseId, canConfigure }: { courseId: string; canConfigure: boolean }) {
+export function CourseTabs({
+  courseId,
+  slugs,
+}: {
+  courseId: string;
+  slugs: string[];
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const batch = searchParams.get("batch");
   const query = batch ? `?batch=${batch}` : "";
   const base = `/teacher/courses/${courseId}`;
-  const tabs = canConfigure ? TABS : TABS.filter((tab) => tab.slug !== "schedule" && tab.slug !== "settings");
+  const tabs = TABS.filter((tab) => slugs.includes(tab.slug));
 
   return (
     <SubTabs
