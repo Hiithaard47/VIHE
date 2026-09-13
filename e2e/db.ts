@@ -26,6 +26,29 @@ export async function createTeacher(name: string, email: string, password: strin
   return createStaff(name, email, password, "Teacher", phone);
 }
 
+export async function createStaffWithPermissions(
+  name: string,
+  email: string,
+  password: string,
+  permissionKeys: string[],
+) {
+  const passwordHash = await bcrypt.hash(password, 10);
+  const permissions = await prisma.permission.findMany({ where: { key: { in: permissionKeys } } });
+  if (permissions.length !== permissionKeys.length) {
+    throw new Error(`Missing permission rows: ${permissionKeys.join(", ")}. Re-seed the test database.`);
+  }
+  const role = await prisma.role.create({
+    data: {
+      name: `Role ${email}`,
+      description: "e2e custom",
+      permissions: { create: permissions.map((permission) => ({ permissionId: permission.id })) },
+    },
+  });
+  return prisma.user.create({
+    data: { name, email, passwordHash, roles: { create: [{ roleId: role.id }] } },
+  });
+}
+
 export async function createCourse(name: string, code: string, teacherId?: string) {
   return prisma.course.create({
     data: {
