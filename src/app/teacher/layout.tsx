@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireAnyPermission } from "@/lib/rbac";
 import { hasCoursesRead, hasStudentsRead, TEACHER_PORTAL_PERMISSIONS } from "@/lib/permissions";
+import { TeacherNav } from "@/components/teacher-nav";
 import { UserMenu } from "@/components/user-menu";
 import { AppHeader } from "@/components/app-header";
 import { displayUserName } from "@/lib/user-name";
@@ -13,23 +13,12 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     <div className="min-h-screen">
       <AppHeader
         subtitle="Teacher"
-        right={
-          <nav className="flex items-center gap-5 text-sm">
-            {hasCoursesRead(perms) && (
-              <Link href="/teacher" className="text-white/70 hover:text-accent">
-                Courses
-              </Link>
-            )}
-            {hasStudentsRead(perms) && (
-              <Link href="/teacher/students" className="text-white/70 hover:text-accent">
-                Students
-              </Link>
-            )}
-            <UserMenu name={displayUserName(session.user)} accountHref="/teacher/account" />
-          </nav>
-        }
+        right={<UserMenu name={displayUserName(session.user)} accountHref="/teacher/account" />}
       />
-      <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+      <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6">
+        <TeacherNav showCourses={hasCoursesRead(perms)} showStudents={hasStudentsRead(perms)} />
+        <main className="flex-1">{children}</main>
+      </div>
     </div>
   );
 }

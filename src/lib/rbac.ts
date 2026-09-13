@@ -169,7 +169,10 @@ export async function canAccessCourse(session: Session, courseId: string) {
     });
     return Boolean(course);
   }
-  return canManageCourse(session, courseId);
+  const assignment = await prisma.batchTeacher.findFirst({
+    where: { teacherId: session.user.id, batch: { courseId } },
+  });
+  return Boolean(assignment);
 }
 
 // Server-action guard: redirects away if the signed-in user may not open

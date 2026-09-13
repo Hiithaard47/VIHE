@@ -4,6 +4,23 @@ import { createTeacher, createCourse, createSession, prisma } from "./db";
 import { startOfTodayUtc } from "../src/lib/time";
 
 test.describe("teacher: course visibility & session management", () => {
+  test("highlights the current section in the side nav", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(`Nav Teacher ${unique("t")}`, `${unique("teachernav")}@example.com`, password);
+
+    await login(page, teacher.email, password);
+    await expect(page).toHaveURL(/\/teacher/);
+
+    const nav = page.getByRole("navigation").filter({ hasText: "Courses" });
+    await expect(nav.getByRole("link", { name: "Courses" })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Students" })).not.toHaveAttribute("aria-current", "page");
+
+    await nav.getByRole("link", { name: "Students" }).click();
+    await expect(page).toHaveURL(/\/teacher\/students/);
+    await expect(nav.getByRole("link", { name: "Students" })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Courses" })).not.toHaveAttribute("aria-current", "page");
+  });
+
   test("sees only courses they are assigned to", async ({ page }) => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Course Teacher ${unique("t")}`, `${unique("courseview")}@example.com`, password);
@@ -13,17 +30,40 @@ test.describe("teacher: course visibility & session management", () => {
     await login(page, teacher.email, password);
     await expect(page).toHaveURL(/\/teacher/);
 
-    const mineCard = page.getByRole("article", { name: mine.name });
-    await expect(mineCard).toBeVisible();
-    await expect(mineCard.getByRole("link", { name: "Default" })).toBeVisible();
-    await expect(page.getByRole("article", { name: other.name })).toHaveCount(0);
+    const mineRow = page.locator("tr", { hasText: mine.name });
+    await expect(mineRow).toBeVisible();
+    await expect(mineRow.getByRole("link", { name: "Default" })).toBeVisible();
+    await expect(page.locator("tr", { hasText: other.name })).toHaveCount(0);
 
-    await mineCard.getByRole("link", { name: "Default" }).click();
+    await mineRow.getByRole("link", { name: "Default" }).click();
     await expect(page.getByText("New session")).toBeVisible();
     await expect(page.locator('button:has-text("Create session")')).toBeVisible();
 
     await page.goto(`/teacher/courses/${other.id}`);
     await expect(page).toHaveURL(/\/teacher$/);
+  });
+
+  test("lists archived assigned courses under Archived", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(`Archive Teacher ${unique("t")}`, `${unique("archivet")}@example.com`, password);
+    const active = await createCourse(`Active Course ${unique("c")}`, unique("ACT").toUpperCase(), teacher.id);
+    const archived = await createCourse(`Archived Course ${unique("c")}`, unique("ARV").toUpperCase(), teacher.id);
+    await prisma.course.update({ where: { id: archived.id }, data: { isActive: false } });
+
+    await login(page, teacher.email, password);
+    await page.goto("/teacher");
+
+    await expect(page.getByRole("link", { name: "Active", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("tr", { hasText: active.name })).toBeVisible();
+    await expect(page.locator("tr", { hasText: archived.name })).toHaveCount(0);
+
+    await page.getByRole("link", { name: "Archived", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Archived", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("tr", { hasText: archived.name })).toBeVisible();
+    await expect(page.locator("tr", { hasText: active.name })).toHaveCount(0);
+
+    await page.getByRole("link", { name: archived.name }).click();
+    await expect(page.getByText("This course is archived. An admin can restore it to make changes.")).toBeVisible();
   });
 
   test("sees sessions from every assigned batch", async ({ page }) => {
@@ -42,15 +82,15 @@ test.describe("teacher: course visibility & session management", () => {
 
     await login(page, teacher.email, password);
     await page.goto("/teacher");
-    const card = page.getByRole("article", { name: course.name });
-    await expect(card.getByRole("link", { name: "Default" })).toBeVisible();
-    await expect(card.getByRole("link", { name: "Evening" })).toBeVisible();
-    await card.getByRole("link", { name: "Default" }).click();
+    const row = page.locator("tr", { hasText: course.name });
+    await expect(row.getByRole("link", { name: "Default" })).toBeVisible();
+    await expect(row.getByRole("link", { name: "Evening" })).toBeVisible();
+    await row.getByRole("link", { name: "Default" }).click();
     await expect(page.getByText("Morning class")).toBeVisible();
     await expect(page.getByText("Evening class")).toHaveCount(0);
 
     await page.goto("/teacher");
-    await page.getByRole("article", { name: course.name }).getByRole("link", { name: "Evening" }).click();
+    await page.locator("tr", { hasText: course.name }).getByRole("link", { name: "Evening" }).click();
     await expect(page.getByText("Evening class")).toBeVisible();
     await expect(page.getByText("Morning class")).toHaveCount(0);
 
@@ -59,7 +99,7 @@ test.describe("teacher: course visibility & session management", () => {
     await expect(page.getByText("Evening class")).toBeVisible();
     await expect(page.getByText("15 Mar 2026 · Default")).toBeVisible();
     await expect(page.getByText("16 Mar 2026 · Evening")).toBeVisible();
-    await expect(page.getByLabel("Batch")).toBeVisible();
+    await expect(page.locator('select[name="batchId"]')).toBeVisible();
   });
 
   test("creates a session for an assigned course", async ({ page }) => {

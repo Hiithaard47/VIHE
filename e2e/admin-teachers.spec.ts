@@ -16,6 +16,17 @@ test.describe("admin: teachers", () => {
     await page.goto("/admin/teachers");
   });
 
+  test("highlights the current section in the side nav", async ({ page }) => {
+    const side = page.getByRole("navigation").filter({ hasText: "Dashboard" });
+    await expect(side.getByRole("link", { name: "Teachers" })).toHaveAttribute("aria-current", "page");
+    await expect(side.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current", "page");
+
+    await side.getByRole("link", { name: "Courses" }).click();
+    await expect(page).toHaveURL(/\/admin\/courses/);
+    await expect(side.getByRole("link", { name: "Courses" })).toHaveAttribute("aria-current", "page");
+    await expect(side.getByRole("link", { name: "Teachers" })).not.toHaveAttribute("aria-current", "page");
+  });
+
   test("creates a teacher user with the Teacher role", async ({ page }) => {
     const email = `${unique("teacher")}@example.com`;
     await page.getByRole("button", { name: "Add teacher" }).click();
