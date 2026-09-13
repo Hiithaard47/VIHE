@@ -1,7 +1,9 @@
-import { auth } from "@/auth";
 import { ListSearch } from "@/components/list-search";
 import { containsInsensitive, parseAdminListSearch } from "@/lib/admin-list";
+import { hasStudentsRead, TEACHER_PORTAL_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { requireAnyPermission } from "@/lib/rbac";
+import { redirect } from "next/navigation";
 
 const PATH = "/teacher/students";
 
@@ -10,8 +12,8 @@ export default async function TeacherStudentsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const session = await auth();
-  if (!session) return null;
+  const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
+  if (!hasStudentsRead(session.user.permissions)) redirect("/teacher");
 
   const { q: rawQ } = await searchParams;
   const q = parseAdminListSearch(rawQ);

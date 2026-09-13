@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { PERMISSIONS } from "@/lib/permissions";
+import { PERMISSIONS, TEACHER_PORTAL_PERMISSIONS } from "@/lib/permissions";
 
 export default async function Home() {
   const session = await auth();
@@ -11,7 +11,7 @@ export default async function Home() {
   if (permissions.includes(PERMISSIONS.USERS_MANAGE) || permissions.includes(PERMISSIONS.ROLES_MANAGE)) {
     redirect("/admin");
   }
-  if (permissions.includes(PERMISSIONS.SESSIONS_MANAGE) || permissions.includes(PERMISSIONS.ATTENDANCE_MARK)) {
+  if (TEACHER_PORTAL_PERMISSIONS.some((key) => permissions.includes(key))) {
     redirect("/teacher");
   }
 

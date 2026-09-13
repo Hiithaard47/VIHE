@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { auth } from "@/auth";
+import { hasCoursesRead, hasSessionsRead, hasStudentsRead, TEACHER_PORTAL_PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { requireAnyPermission } from "@/lib/rbac";
+import { redirect } from "next/navigation";
 
 export default async function TeacherHome() {
-  const session = await auth();
-  if (!session) return null;
+  const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
+  if (!hasCoursesRead(session.user.permissions) && !hasSessionsRead(session.user.permissions) && hasStudentsRead(session.user.permissions)) {
+    redirect("/teacher/students");
+  }
 
   const courses = await prisma.course.findMany({
     where: {
