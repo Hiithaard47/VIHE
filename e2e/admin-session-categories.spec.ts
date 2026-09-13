@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login, loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
+import { login, loginAsAdmin, signOut, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, createSession, createStudent, createTeacher, prisma } from "./db";
 
 test.describe("admin: session categories", () => {
@@ -92,7 +92,7 @@ test.describe("admin: session categories", () => {
     await page.getByRole("link", { name: "Archived" }).click();
     await expect(page.locator("tr", { hasText: name })).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}`);
     await expect(page.locator('select[name="categoryId"]')).not.toContainText(name);

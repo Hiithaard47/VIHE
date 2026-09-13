@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireAnyPermission } from "@/lib/rbac";
 import { hasCoursesRead, hasStudentsRead, TEACHER_PORTAL_PERMISSIONS } from "@/lib/permissions";
-import { SignOutButton } from "@/components/sign-out-button";
+import { UserMenu } from "@/components/user-menu";
 import { AppHeader } from "@/components/app-header";
+import { displayUserName } from "@/lib/user-name";
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
@@ -24,10 +25,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
                 Students
               </Link>
             )}
-            <Link href="/teacher/account" className="text-white/70 hover:text-accent">
-              Account
-            </Link>
-            <SignOutButton />
+            <UserMenu name={displayUserName(session.user)} accountHref="/teacher/account" />
           </nav>
         }
       />

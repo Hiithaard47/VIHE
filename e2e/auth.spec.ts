@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, login } from "./helpers";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, login, signOut } from "./helpers";
 
 test.describe("authentication & access control", () => {
   test("unauthenticated visitors are redirected to /login", async ({ page }) => {
@@ -26,8 +26,14 @@ test.describe("authentication & access control", () => {
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/admin/);
     await expect(page.getByText("Vihe Attendance")).toBeVisible();
+    await expect(page.getByRole("button", { name: /account menu for admin/i })).toBeVisible();
 
-    await page.click('button:has-text("Sign out")');
+    await page.getByRole("button", { name: /account menu for admin/i }).click();
+    await expect(page.getByRole("menuitem", { name: "Account" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await signOut(page);
     await expect(page).toHaveURL(/\/login/);
 
     // Session is really gone, not just a client-side redirect.

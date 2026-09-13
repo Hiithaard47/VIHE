@@ -23,6 +23,11 @@ export async function loginAsAdmin(page: Page) {
   await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 }
 
+export async function signOut(page: Page) {
+  await page.getByRole("button", { name: /account menu for/i }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+}
+
 // Triggers a server action (via `trigger`, e.g. a button click) and waits
 // for its redirect to land with a flash message, returning whether it was
 // a success or error banner.

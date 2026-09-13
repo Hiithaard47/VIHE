@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login, unique, waitForFlashAfter } from "./helpers";
+import { login, signOut, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, createStudent, createTeacher, prisma } from "./db";
 import { startOfTodayUtc } from "../src/lib/time";
 
@@ -43,7 +43,7 @@ test.describe("course assignments", () => {
     );
     await expect(page.getByRole("link", { name: new RegExp(title) })).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await login(page, studentEmail, studentPassword);
     await page.goto(`/student/courses/${course.id}/assignments`);
     await page.getByRole("link", { name: new RegExp(title) }).click();
@@ -54,7 +54,7 @@ test.describe("course assignments", () => {
     );
     await expect(page.getByText("Submitted")).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await login(page, teacher.email, teacherPassword);
     await page.goto(`/teacher/courses/${course.id}/assignments`);
     await page.getByRole("link", { name: new RegExp(title) }).click();
@@ -66,7 +66,7 @@ test.describe("course assignments", () => {
     expect(await waitForFlashAfter(page, () => row.getByRole("button", { name: "Save" }).click())).toBe("success");
     await expect(row.getByText("Graded")).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await login(page, studentEmail, studentPassword);
     await page.goto(`/student/courses/${course.id}/assignments`);
     await expect(page.getByText("Graded · 16/20")).toBeVisible();
@@ -104,7 +104,7 @@ test.describe("course assignments", () => {
       data: { dueDate: new Date(startOfTodayUtc().getTime() - 24 * 60 * 60 * 1000) },
     });
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await login(page, studentEmail, studentPassword);
     await page.goto(`/student/courses/${course.id}/assignments`);
     await page.getByRole("link", { name: new RegExp(title) }).click();

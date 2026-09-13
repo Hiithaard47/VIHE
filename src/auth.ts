@@ -60,6 +60,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.kind = "student";
         token.roles = [];
         token.permissions = [];
+        if (user.name) token.name = user.name;
+        if (user.email) token.email = user.email;
         return token;
       }
       if (token.kind === "student") return token;
@@ -68,6 +70,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (dbUser) {
           token.id = dbUser.id;
           token.kind = "staff";
+          token.name = dbUser.name;
+          if (dbUser.email) token.email = dbUser.email;
           const { roles, permissions } = await getUserPermissions(dbUser.id);
           token.roles = roles;
           token.permissions = permissions;
@@ -86,6 +90,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.kind = token.kind ?? "staff";
       session.user.roles = token.roles ?? [];
       session.user.permissions = token.permissions ?? [];
+      if (token.name) session.user.name = token.name;
+      if (token.email) session.user.email = token.email;
       return session;
     },
   },

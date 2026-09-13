@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
+import { loginAsAdmin, signOut, unique, waitForFlashAfter } from "./helpers";
 
 async function createTeacher(page: import("@playwright/test").Page, name: string, email: string) {
   await page.getByRole("button", { name: "Add teacher" }).click();
@@ -92,7 +92,7 @@ test.describe("admin: teachers", () => {
       "success",
     );
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await page.goto("/login");
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', "ResetPass123!");

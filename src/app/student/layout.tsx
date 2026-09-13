@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { SignOutButton } from "@/components/sign-out-button";
+import { UserMenu } from "@/components/user-menu";
 import { AppHeader } from "@/components/app-header";
 import { requireStudent } from "@/lib/rbac";
+import { displayUserName } from "@/lib/user-name";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
-  await requireStudent();
+  const session = await requireStudent();
 
   return (
     <div className="min-h-screen">
@@ -15,10 +16,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
             <Link href="/student" className="text-white/70 hover:text-accent">
               My courses
             </Link>
-            <Link href="/student/account" className="text-white/70 hover:text-accent">
-              Account
-            </Link>
-            <SignOutButton />
+            <UserMenu name={displayUserName(session.user)} accountHref="/student/account" />
           </nav>
         }
       />

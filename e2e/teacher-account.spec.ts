@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login, unique, waitForFlashAfter } from "./helpers";
+import { login, signOut, unique, waitForFlashAfter } from "./helpers";
 import { createTeacher } from "./db";
 
 test.describe("teacher: account password", () => {
@@ -17,7 +17,7 @@ test.describe("teacher: account password", () => {
       "success",
     );
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page);
     await page.goto("/login");
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', current);

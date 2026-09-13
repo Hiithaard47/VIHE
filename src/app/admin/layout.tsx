@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
-import { SignOutButton } from "@/components/sign-out-button";
+import { UserMenu } from "@/components/user-menu";
 import { AppHeader } from "@/components/app-header";
+import { displayUserName } from "@/lib/user-name";
 
 const NAV = [
   { href: "/admin", label: "Dashboard" },
@@ -14,7 +15,7 @@ const NAV = [
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAnyPermission([
+  const session = await requireAnyPermission([
     PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.ROLES_MANAGE,
     PERMISSIONS.COURSES_MANAGE,
@@ -25,14 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen">
       <AppHeader
         subtitle="Admin"
-        right={
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/admin/account" className="text-white/70 hover:text-accent">
-              Account
-            </Link>
-            <SignOutButton />
-          </nav>
-        }
+        right={<UserMenu name={displayUserName(session.user)} accountHref="/admin/account" />}
       />
       <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6">
         <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm">
