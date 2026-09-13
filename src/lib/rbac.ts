@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { flashUrl } from "@/lib/flash";
 import { resolveWorkspaceScope, type BatchScope } from "@/lib/batch-scope";
 import { courseHref, deniedCourseHref, type CoursePortal } from "@/lib/course-workspace";
-import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
+import { PERMISSIONS, TEACHER_PORTAL_PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { isStudentLoginExpired } from "@/lib/student-login";
 
 export const ARCHIVED_COURSE_MESSAGE = "This course is archived. An admin can restore it to make changes.";
@@ -98,21 +98,13 @@ export async function canAccessBatch(session: Session, batchId: string) {
 }
 
 export async function requireBatchAccess(batchId: string, portal: CoursePortal = "teacher") {
-  const session = await requireAnyPermission([
-    PERMISSIONS.SESSIONS_MANAGE,
-    PERMISSIONS.ATTENDANCE_MARK,
-    PERMISSIONS.ATTENDANCE_VIEW,
-  ]);
+  const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
   if (!(await canManageBatch(session, batchId))) redirect(deniedCourseHref(portal));
   return session;
 }
 
 export async function requireBatchView(batchId: string, portal: CoursePortal = "teacher") {
-  const session = await requireAnyPermission([
-    PERMISSIONS.SESSIONS_MANAGE,
-    PERMISSIONS.ATTENDANCE_MARK,
-    PERMISSIONS.ATTENDANCE_VIEW,
-  ]);
+  const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
   if (!(await canAccessBatch(session, batchId))) redirect(deniedCourseHref(portal));
   return session;
 }
@@ -177,11 +169,7 @@ export async function canAccessCourse(session: Session, courseId: string) {
 // Server-action guard: redirects away if the signed-in user may not open
 // this course. Admins can open any course; teachers need an assignment.
 export async function requireCourseAccess(courseId: string, portal: CoursePortal = "teacher") {
-  const session = await requireAnyPermission([
-    PERMISSIONS.SESSIONS_MANAGE,
-    PERMISSIONS.ATTENDANCE_MARK,
-    PERMISSIONS.ATTENDANCE_VIEW,
-  ]);
+  const session = await requireAnyPermission(TEACHER_PORTAL_PERMISSIONS);
 
   if (!(await canAccessCourse(session, courseId))) redirect(deniedCourseHref(portal));
 

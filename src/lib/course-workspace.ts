@@ -1,3 +1,5 @@
+import { hasAttendanceAccess, hasCoursesRead, hasSessionsRead, hasStudentsRead } from "@/lib/permissions";
+
 export type CoursePortal = "teacher" | "admin";
 
 const ADMIN_CLASSROOM = new Set(["sessions", "schedule", "roster", "attendance", "uploads", "assignments"]);
@@ -46,6 +48,28 @@ export function withBatchQuery(href: string, batchId?: string) {
 
 export function sessionHref(portal: CoursePortal, sessionId: string) {
   return portal === "admin" ? `/admin/sessions/${sessionId}` : `/teacher/sessions/${sessionId}`;
+}
+
+export function teacherCourseTabSlugs(permissions: readonly string[], canConfigure: boolean): string[] {
+  const slugs: string[] = [];
+  if (hasSessionsRead(permissions)) slugs.push("");
+  if (canConfigure) slugs.push("schedule");
+  if (hasStudentsRead(permissions)) slugs.push("roster");
+  if (hasAttendanceAccess(permissions)) slugs.push("attendance");
+  if (hasCoursesRead(permissions)) {
+    slugs.push("uploads", "assignments");
+  }
+  if (canConfigure) slugs.push("settings");
+  return slugs;
+}
+
+export function firstTeacherCoursePath(courseId: string, permissions: readonly string[]): string {
+  const base = `/teacher/courses/${courseId}`;
+  if (hasSessionsRead(permissions)) return base;
+  if (hasStudentsRead(permissions)) return `${base}/roster`;
+  if (hasAttendanceAccess(permissions)) return `${base}/attendance`;
+  if (hasCoursesRead(permissions)) return `${base}/uploads`;
+  return "/teacher";
 }
 
 export function deniedCourseHref(portal: CoursePortal) {

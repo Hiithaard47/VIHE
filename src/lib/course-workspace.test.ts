@@ -3,11 +3,14 @@ import {
   attendanceHref,
   courseHref,
   deniedCourseHref,
+  firstTeacherCoursePath,
   parseCoursePortal,
   safeWorkspaceReturnTo,
   sessionHref,
   sessionListHref,
+  teacherCourseTabSlugs,
 } from "@/lib/course-workspace";
+import { PERMISSIONS } from "@/lib/permissions";
 
 describe("course workspace paths", () => {
   it("keeps teacher sessions on the course root", () => {
@@ -41,5 +44,37 @@ describe("course workspace paths", () => {
       "/teacher/courses/c1/schedule?batch=b1",
     );
     expect(safeWorkspaceReturnTo("https://evil.example/admin", "/fallback")).toBe("/fallback");
+  });
+});
+
+describe("teacher course tabs", () => {
+  it("shows sessions only when sessions.read is implied", () => {
+    expect(teacherCourseTabSlugs([PERMISSIONS.SESSIONS_READ], false)).toEqual([""]);
+    expect(teacherCourseTabSlugs([PERMISSIONS.STUDENTS_READ], false)).toEqual(["roster"]);
+  });
+
+  it("shows schedule and settings only when configure is true", () => {
+    expect(teacherCourseTabSlugs([PERMISSIONS.COURSES_CONFIGURE, PERMISSIONS.SESSIONS_MANAGE], true)).toEqual([
+      "",
+      "schedule",
+      "uploads",
+      "assignments",
+      "settings",
+    ]);
+  });
+
+  it("adds roster when students.read is present", () => {
+    const slugs = teacherCourseTabSlugs(
+      [PERMISSIONS.COURSES_CONFIGURE, PERMISSIONS.SESSIONS_MANAGE, PERMISSIONS.STUDENTS_READ],
+      true,
+    );
+    expect(slugs).toContain("roster");
+  });
+
+  it("picks the first allowed course path", () => {
+    expect(firstTeacherCoursePath("c1", [PERMISSIONS.SESSIONS_READ])).toBe("/teacher/courses/c1");
+    expect(firstTeacherCoursePath("c1", [PERMISSIONS.STUDENTS_READ])).toBe("/teacher/courses/c1/roster");
+    expect(firstTeacherCoursePath("c1", [PERMISSIONS.ATTENDANCE_VIEW])).toBe("/teacher/courses/c1/attendance");
+    expect(firstTeacherCoursePath("c1", [PERMISSIONS.COURSES_READ])).toBe("/teacher/courses/c1/uploads");
   });
 });
