@@ -181,6 +181,7 @@ model BatchTeacher {
   teacher User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@id([batchId, teacherId])
+  @@index([teacherId])
   @@map("batch_teachers")
 }
 
@@ -215,6 +216,7 @@ model BatchEnrollment {
   student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@id([batchId, studentId])
+  @@index([studentId])
   @@map("batch_enrollments")
 }
 
@@ -251,6 +253,7 @@ model ClassSession {
   records   AttendanceRecord[]
   resources SessionResource[]
 
+  @@index([batchId, date, startMinute])
   @@map("class_sessions")
 }
 
@@ -267,6 +270,7 @@ model SessionResource {
   session    ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   uploadedBy User         @relation("SessionResourceUploadedBy", fields: [uploadedById], references: [id])
 
+  @@index([sessionId])
   @@map("session_resources")
 }
 
@@ -288,6 +292,7 @@ model Assignment {
   createdBy   User                     @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
   submissions AssignmentSubmission[]
 
+  @@index([batchId])
   @@map("assignments")
 }
 
@@ -310,6 +315,7 @@ model AssignmentSubmission {
   gradedBy   User?      @relation("AssignmentGradedBy", fields: [gradedById], references: [id])
 
   @@unique([assignmentId, studentId])
+  @@index([studentId])
   @@map("assignment_submissions")
 }
 
@@ -333,6 +339,7 @@ model AttendanceRecord {
   markedBy  User         @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
 
   @@unique([sessionId, studentId])
+  @@index([studentId])
   @@map("attendance_records")
 }
 
@@ -376,5 +383,6 @@ model StudentApplication {
   desiredCourse Course? @relation(fields: [desiredCourseId], references: [id])
   reviewedBy    User?   @relation("ApplicationReviewedBy", fields: [reviewedById], references: [id])
 
+  @@index([status, createdAt])
   @@map("student_applications")
 }
