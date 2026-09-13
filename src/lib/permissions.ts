@@ -1,5 +1,5 @@
-// Central permission registry. Add a key here + reseed to introduce a new
-// permission; the admin can then attach it to any role from /admin/roles.
+// Central permission registry. Add a key here + reseed to insert the row
+// and grant it on default roles if listed. Seed never removes grants.
 export const PERMISSIONS = {
   USERS_MANAGE: "users.manage",
   ROLES_MANAGE: "roles.manage",

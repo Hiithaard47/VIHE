@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:prod": "sh scripts/start-prod.sh",
     "lint": "eslint .",
     "prisma:generate": "prisma generate",
     "migrate": "prisma generate && prisma migrate dev",

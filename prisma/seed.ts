@@ -26,9 +26,10 @@ async function main() {
 
     const permissions = await prisma.permission.findMany({ where: { key: { in: roleDef.permissions } } });
 
-    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    // Grant defaults that are missing. Never strip grants an admin added.
     await prisma.rolePermission.createMany({
       data: permissions.map((p) => ({ roleId: role.id, permissionId: p.id })),
+      skipDuplicates: true,
     });
   }
 

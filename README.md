@@ -32,7 +32,7 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
    ```
    npm run db:migrate
    ```
-5. Seed permissions, default roles, and the admin user (`ADMIN_EMAIL` / `ADMIN_PASSWORD`):
+5. Seed missing permission rows, default roles, and the admin user (`ADMIN_EMAIL` / `ADMIN_PASSWORD`). Re-running seed does not strip role grants an admin already set:
    ```
    npm run db:seed
    ```
@@ -59,6 +59,40 @@ Teachers sign in the same way (credentials or Google, if an admin already create
 Students sign in with the email and portal password set by an admin, then download files from sessions in their batch.
 
 There is no self sign-up: a Google account only works if an admin has already created a matching `User` record for that email.
+
+## Deploy on AWS App Runner
+
+The app is a Docker image. On boot it runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
+
+**Before the service**
+
+1. RDS PostgreSQL 16 — database `vihe_app`, not public to the internet. Allow inbound 5432 from the App Runner VPC connector (or the service security group).
+2. Private S3 bucket for session files. IAM user with `s3:GetObject`, `PutObject`, `DeleteObject`, `HeadBucket` on that bucket.
+3. Push this repo to GitHub (or build/push the image to ECR).
+
+**Create the App Runner service**
+
+1. AWS Console → App Runner → Create service → **Source code** (GitHub) or **Container registry** (ECR).
+2. If source: repository + branch, deployment trigger automatic, configuration file `apprunner.yaml` (Docker runtime).
+3. If ECR: build for App Runner’s CPU (`docker build --platform linux/amd64 -t vihe-app .`), push, then point App Runner at the image. GitHub source builds amd64 for you.
+4. Port **8080**. Health check path **`/login`**.
+5. Environment variables (do not set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE`):
+
+```
+DATABASE_URL=postgresql://USER:PASS@RDS_HOST:5432/vihe_app?schema=public&sslmode=require
+AUTH_URL=https://YOUR_APPRUNNER_HOST
+AUTH_SECRET=<output of npx auth secret>
+ADMIN_EMAIL=you@your.org
+ADMIN_PASSWORD=<strong password>
+S3_REGION=ap-south-1
+S3_BUCKET=your-bucket
+S3_ACCESS_KEY=...
+S3_SECRET_KEY=...
+```
+
+After the first deploy, set `AUTH_URL` to the App Runner HTTPS URL (or custom domain) and deploy again so Auth.js cookies match. Optional Google: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and the callback `https://YOUR_HOST/api/auth/callback/google`.
+
+Never run `npm run db:clean` or `prisma migrate reset` against RDS.
 
 ## Testing
 
