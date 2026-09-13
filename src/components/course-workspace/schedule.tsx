@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCourseConfigure } from "@/lib/rbac";
@@ -65,26 +64,6 @@ export async function CourseScheduleView({
   const termStart = batch.termStart ? mondayOf(batch.termStart) : mondayOf(startOfTodayUtc());
 
   return (
-    <div className="flex flex-col gap-4">
-      {visible.length > 1 && (
-        <nav className="flex flex-wrap gap-2" aria-label="Batches">
-          {visible.map((item) => {
-            const active = item.id === batch.id;
-            return (
-              <Link
-                key={item.id}
-                href={scheduleHref(portal, courseId, undefined, item.id)}
-                aria-current={active ? "page" : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm ${
-                  active ? "bg-ink font-semibold text-accent" : "border border-hairline text-muted hover:text-ink"
-                }`}
-              >
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
     <ScheduleEditor
       courseId={courseId}
       portal={portal}
@@ -105,6 +84,5 @@ export async function CourseScheduleView({
       }))}
       returnTo={scheduleHref(portal, courseId, undefined, batch.id)}
     />
-    </div>
   );
 }
