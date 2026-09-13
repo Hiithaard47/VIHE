@@ -7,7 +7,7 @@ import { formatDisplayDate } from "@/lib/time";
 import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
 import { BatchField } from "@/components/course-workspace-fields";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
-import { hasCoursesRead } from "@/lib/permissions";
+import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
 export async function CourseAssignmentsView({
   courseId,
@@ -19,6 +19,7 @@ export async function CourseAssignmentsView({
   selectedBatchId?: string;
 }) {
   const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
   if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
@@ -43,7 +44,7 @@ export async function CourseAssignmentsView({
 
   return (
     <div className="flex flex-col gap-6">
-      {canManage && (
+      {canWrite && (
         <section>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Issue assignment</h2>
           <form action={createAssignment.bind(null, courseId, portal)} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">

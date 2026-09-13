@@ -5,7 +5,7 @@ import { sessionWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { deleteSessionResource } from "@/app/sessions/actions";
 import { courseHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
-import { hasCoursesRead } from "@/lib/permissions";
+import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 import { formatDisplayDate } from "@/lib/time";
 
 function formatSize(bytes: number) {
@@ -24,6 +24,7 @@ export async function CourseUploadsView({
   selectedBatchId?: string;
 }) {
   const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
   if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
@@ -47,7 +48,7 @@ export async function CourseUploadsView({
               <th className="px-4 py-2 font-medium">File</th>
               <th className="px-4 py-2 font-medium">Session</th>
               <th className="px-4 py-2 font-medium">Size</th>
-              {canManage && <th className="px-4 py-2" />}
+              {canWrite && <th className="px-4 py-2" />}
             </tr>
           </thead>
           <tbody>
@@ -66,7 +67,7 @@ export async function CourseUploadsView({
                   <p className="text-xs text-muted">{resource.session.name}</p>
                 </td>
                 <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
-                {canManage && (
+                {canWrite && (
                   <td className="px-4 py-3 text-right">
                     <form action={deleteSessionResource.bind(null, resource.session.id, resource.id, portal)}>
                       <input type="hidden" name="returnTo" value={returnTo} />
@@ -80,7 +81,7 @@ export async function CourseUploadsView({
             ))}
             {resources.length === 0 && (
               <tr>
-                <td colSpan={canManage ? 4 : 3} className="px-4 py-3 text-sm text-muted">
+                <td colSpan={canWrite ? 4 : 3} className="px-4 py-3 text-sm text-muted">
                   No files uploaded for this course yet.
                 </td>
               </tr>

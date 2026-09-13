@@ -8,6 +8,7 @@ import {
   hasSessionsManage,
   hasStudentsRead,
   hasAttendanceAccess,
+  hasWorkspaceWrite,
   TEACHER_PORTAL_PERMISSIONS,
 } from "@/lib/permissions";
 
@@ -66,5 +67,16 @@ describe("permission registry", () => {
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.STUDENTS_READ);
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.SESSIONS_MANAGE);
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.ATTENDANCE_VIEW);
+  });
+
+  it("treats manage, configure, and mark as workspace writes", () => {
+    expect(hasWorkspaceWrite([PERMISSIONS.SESSIONS_MANAGE])).toBe(true);
+    expect(hasWorkspaceWrite([PERMISSIONS.COURSES_CONFIGURE])).toBe(true);
+    expect(hasWorkspaceWrite([PERMISSIONS.COURSES_MANAGE])).toBe(true);
+    expect(hasWorkspaceWrite([PERMISSIONS.ATTENDANCE_MARK])).toBe(true);
+    expect(hasWorkspaceWrite([PERMISSIONS.SESSIONS_READ])).toBe(false);
+    expect(hasWorkspaceWrite([PERMISSIONS.COURSES_READ])).toBe(false);
+    expect(hasWorkspaceWrite([PERMISSIONS.STUDENTS_READ])).toBe(false);
+    expect(hasWorkspaceWrite([PERMISSIONS.ATTENDANCE_VIEW])).toBe(false);
   });
 });

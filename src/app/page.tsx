@@ -8,7 +8,12 @@ export default async function Home() {
   if (session.user.kind === "student") redirect("/student");
 
   const permissions = session.user.permissions;
-  if (permissions.includes(PERMISSIONS.USERS_MANAGE) || permissions.includes(PERMISSIONS.ROLES_MANAGE)) {
+  if (
+    permissions.includes(PERMISSIONS.USERS_MANAGE) ||
+    permissions.includes(PERMISSIONS.ROLES_MANAGE) ||
+    permissions.includes(PERMISSIONS.COURSES_MANAGE) ||
+    permissions.includes(PERMISSIONS.STUDENTS_MANAGE)
+  ) {
     redirect("/admin");
   }
   if (TEACHER_PORTAL_PERMISSIONS.some((key) => permissions.includes(key))) {

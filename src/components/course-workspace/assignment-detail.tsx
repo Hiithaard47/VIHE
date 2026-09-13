@@ -7,7 +7,7 @@ import { formatDisplayDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
 import { deleteAssignment, gradeSubmission } from "@/app/teacher/courses/[courseId]/assignments/actions";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
-import { hasCoursesRead } from "@/lib/permissions";
+import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
 export async function CourseAssignmentDetailView({
   courseId,
@@ -21,6 +21,7 @@ export async function CourseAssignmentDetailView({
   selectedBatchId?: string;
 }) {
   const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
   if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
@@ -58,7 +59,7 @@ export async function CourseAssignmentDetailView({
             {assignment.fileName}
           </a>
         </p>
-        {canManage && (
+        {canWrite && (
           <form action={deleteAssignment.bind(null, courseId, assignment.id, portal)} className="mt-3">
             <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
               Remove assignment
@@ -101,7 +102,7 @@ export async function CourseAssignmentDetailView({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {canManage && submission ? (
+                      {canWrite && submission ? (
                         <form
                           action={gradeSubmission.bind(null, courseId, assignment.id, student.id, portal)}
                           className="flex flex-col gap-2 sm:flex-row sm:items-center"

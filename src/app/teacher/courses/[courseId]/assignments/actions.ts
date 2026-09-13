@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
 import { assertWritableBatch } from "@/lib/batch-scope";
 import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
+import { hasWorkspaceWrite } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
 import { parseDateInput } from "@/lib/time";
 import { deleteObject, isStorageConfigured } from "@/lib/storage";
@@ -18,7 +19,7 @@ function assignmentsPath(courseId: string, portal: CoursePortal, batchId?: strin
 async function requireAssignmentManage(courseId: string, portalArg: CoursePortal) {
   const portal = parseCoursePortal(portalArg);
   const session = await requireCourseAccess(courseId, portal);
-  if (!(await canManageCourse(session, courseId))) {
+  if (!(await canManageCourse(session, courseId)) || !hasWorkspaceWrite(session.user.permissions)) {
     redirect(flashUrl(assignmentsPath(courseId, portal), "error", "You cannot manage assignments for this course."));
   }
   return { session, portal };

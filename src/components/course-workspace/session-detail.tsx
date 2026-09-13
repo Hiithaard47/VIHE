@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canManageBatch, requireBatchView } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
-import { PERMISSIONS } from "@/lib/permissions";
+import { hasWorkspaceWrite, PERMISSIONS } from "@/lib/permissions";
 import { STATUS_OPTIONS } from "@/lib/attendance";
 import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
@@ -101,7 +101,7 @@ export async function SessionDetailView({
         <SessionResources
           sessionId={sessionId}
           resources={classSession.resources}
-          canManage={canManage}
+          canManage={canManage && hasWorkspaceWrite(session.user.permissions)}
           portal={portal}
         />
       )}

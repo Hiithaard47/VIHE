@@ -90,3 +90,27 @@ export const TEACHER_PORTAL_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.ATTENDANCE_MARK,
   PERMISSIONS.ATTENDANCE_VIEW,
 ];
+
+export const SESSION_VIEW_PERMISSIONS: PermissionKey[] = [
+  PERMISSIONS.SESSIONS_READ,
+  PERMISSIONS.SESSIONS_MANAGE,
+  PERMISSIONS.ATTENDANCE_MARK,
+  PERMISSIONS.ATTENDANCE_VIEW,
+];
+
+export const BATCH_ACCESS_PERMISSIONS: PermissionKey[] = [
+  PERMISSIONS.SESSIONS_MANAGE,
+  PERMISSIONS.ATTENDANCE_MARK,
+  PERMISSIONS.ATTENDANCE_VIEW,
+  PERMISSIONS.COURSES_CONFIGURE,
+  PERMISSIONS.COURSES_MANAGE,
+];
+
+export function hasWorkspaceWrite(permissions: readonly string[]) {
+  return (
+    hasSessionsManage(permissions) ||
+    permissions.includes(PERMISSIONS.COURSES_CONFIGURE) ||
+    permissions.includes(PERMISSIONS.COURSES_MANAGE) ||
+    permissions.includes(PERMISSIONS.ATTENDANCE_MARK)
+  );
+}
