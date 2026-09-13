@@ -76,7 +76,15 @@ The app is a Docker image. On boot it runs `prisma migrate deploy`, additive see
 2. If source: repository + branch, deployment trigger automatic, configuration file `apprunner.yaml` (Docker runtime).
 3. If ECR: build for App Runner’s CPU (`docker build --platform linux/amd64 -t vihe-app .`), push, then point App Runner at the image. GitHub source builds amd64 for you.
 4. Port **8080**. Health check path **`/login`**.
-5. Environment variables (do not set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE`):
+5. Auto scaling: **Min size 2**, max 4 (or whatever you want above 2). Console: service → Configuration → Auto scaling. Or after the service exists:
+
+```
+AWS_REGION=ap-south-1 SERVICE_ARN=arn:aws:apprunner:…:service/vihe-app/… \
+  sh scripts/apprunner-min-size.sh
+```
+
+Both instances use the same RDS, S3, `AUTH_SECRET`, and `AUTH_URL`. You pay for two instances even when idle.
+6. Environment variables (do not set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE`):
 
 ```
 DATABASE_URL=postgresql://USER:PASS@RDS_HOST:5432/vihe_app?schema=public&sslmode=require

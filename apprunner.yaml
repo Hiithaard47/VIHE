@@ -1,6 +1,9 @@
 version: 1.0
 runtime: docker
 
+# Instance count is not set here. Use App Runner auto scaling Min size = 2
+# (console or scripts/apprunner-min-size.sh).
+
 run:
   network:
     port: 8080
