@@ -66,3 +66,8 @@ export function isAtRisk(percent: number | null, policy: AttendancePolicy): bool
   if (percent === null || policy.minAttendancePercent === null) return false;
   return percent < policy.minAttendancePercent;
 }
+
+export function statusLetter(status?: StatusValue | null) {
+  const option = STATUS_OPTIONS.find((item) => item.value === status);
+  return option ? option.label[0] : "—";
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attendanceHref,
   courseHref,
   deniedCourseHref,
   parseCoursePortal,
@@ -21,6 +22,10 @@ describe("course workspace paths", () => {
     expect(courseHref("admin", "c1", "roster", "b1")).toBe("/admin/courses/c1/batches/b1/roster");
     expect(courseHref("admin", "c1", "roster")).toBe("/admin/courses/c1");
     expect(sessionListHref("admin", "c1", "cls", "b1")).toBe("/admin/courses/c1/batches/b1/sessions?category=cls");
+    expect(attendanceHref("teacher", "c1", "cls", "b1")).toBe("/teacher/courses/c1/attendance?batch=b1&category=cls");
+    expect(attendanceHref("admin", "c1", "cls", "b1")).toBe(
+      "/admin/courses/c1/batches/b1/attendance?category=cls",
+    );
     expect(sessionHref("admin", "s1")).toBe("/admin/sessions/s1");
     expect(deniedCourseHref("admin")).toBe("/admin/courses");
   });

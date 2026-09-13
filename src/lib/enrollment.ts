@@ -5,6 +5,17 @@ import { applyDefaultLoginExpiry } from "@/lib/student-login";
 
 type EnrollmentTransaction = Prisma.TransactionClient;
 
+export function alreadyEnrolledInCourseMessage(batchName: string) {
+  return `This student is already enrolled in ${batchName}.`;
+}
+
+export class AlreadyEnrolledInCourseError extends Error {
+  constructor(public batchName: string) {
+    super(alreadyEnrolledInCourseMessage(batchName));
+    this.name = "AlreadyEnrolledInCourseError";
+  }
+}
+
 export function otherBatchEnrollmentWhere(args: {
   studentId: string;
   courseId: string;
@@ -21,19 +32,33 @@ async function enrollStudentInBatchWithClient(
   studentId: string,
   batchId: string,
   tx: EnrollmentTransaction,
+  options?: { replaceExisting?: boolean },
 ) {
   const batch = await tx.courseBatch.findUniqueOrThrow({
     where: { id: batchId },
     select: { id: true, courseId: true },
   });
-
-  await tx.batchEnrollment.deleteMany({
+  const sibling = await tx.batchEnrollment.findFirst({
     where: otherBatchEnrollmentWhere({
       studentId,
       courseId: batch.courseId,
       exceptBatchId: batch.id,
     }),
+    select: { batch: { select: { name: true } } },
   });
+  if (sibling && !options?.replaceExisting) {
+    throw new AlreadyEnrolledInCourseError(sibling.batch.name);
+  }
+
+  if (sibling) {
+    await tx.batchEnrollment.deleteMany({
+      where: otherBatchEnrollmentWhere({
+        studentId,
+        courseId: batch.courseId,
+        exceptBatchId: batch.id,
+      }),
+    });
+  }
   await tx.batchEnrollment.upsert({
     where: { batchId_studentId: { batchId: batch.id, studentId } },
     create: { batchId, studentId },
@@ -46,10 +71,11 @@ export async function enrollStudentInBatch(
   studentId: string,
   batchId: string,
   tx?: EnrollmentTransaction,
+  options?: { replaceExisting?: boolean },
 ) {
-  if (tx) return enrollStudentInBatchWithClient(studentId, batchId, tx);
+  if (tx) return enrollStudentInBatchWithClient(studentId, batchId, tx, options);
   return prisma.$transaction((transaction) =>
-    enrollStudentInBatchWithClient(studentId, batchId, transaction),
+    enrollStudentInBatchWithClient(studentId, batchId, transaction, options),
   );
 }
 

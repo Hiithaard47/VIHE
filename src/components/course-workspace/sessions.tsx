@@ -11,6 +11,7 @@ import {
   resolveCategoryTab,
   sessionCategoryTabs,
 } from "@/lib/session-categories";
+import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate } from "@/lib/time";
 import { createSession } from "@/app/teacher/courses/[courseId]/actions";
 
@@ -142,6 +143,9 @@ export async function CourseSessionsView({
                   <p className="font-medium text-ink">{item.name}</p>
                   <p className="text-xs text-muted">
                     {formatDisplayDate(item.date)}
+                    {item.startMinute != null && item.endMinute != null
+                      ? ` · ${formatTime(item.startMinute)}–${formatTime(item.endMinute)}`
+                      : ""}
                     {showBatchName ? ` · ${item.batchName}` : ""}
                   </p>
                 </>
@@ -166,6 +170,8 @@ export async function CourseSessionsView({
                       <SessionActionsMenu
                         sessionId={item.id}
                         date={item.date.toISOString()}
+                        startMinute={item.startMinute}
+                        endMinute={item.endMinute}
                         returnTo={listHref}
                         attendanceHref={sessionHref(portal, item.id)}
                         canChangeDate={isFutureSessionDate(item.date)}

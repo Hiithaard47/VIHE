@@ -184,7 +184,7 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
       for (const { courseId, batchId } of batchSelections) {
         if (batchId) {
           await validateBatchSelection(tx, studentId, courseId, batchId);
-          await enrollStudentInBatch(studentId, batchId, tx);
+          await enrollStudentInBatch(studentId, batchId, tx, { replaceExisting: true });
         } else {
           await tx.batchEnrollment.deleteMany({
             where: { studentId, batch: { courseId } },

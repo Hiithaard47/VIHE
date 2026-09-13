@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
 import { createTeacher, createCourse, createStudent, createSession, prisma } from "./db";
+import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
 
 test.describe("teacher: roster", () => {
   test("shows attendance percentage and flags a student below the threshold", async ({ page }) => {
@@ -104,6 +105,43 @@ test.describe("teacher: roster", () => {
     );
     expect(removed).toBe("success");
     await expect(page.locator("tr", { hasText: student.name })).toHaveCount(0);
+  });
+
+  test("rejects enrolling a student who is already in another batch of the course", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(
+      `Twin Batch Teacher ${unique("t")}`,
+      `${unique("twinbatch")}@example.com`,
+      password,
+    );
+    const course = await createCourse(`Twin Batch Course ${unique("c")}`, unique("TWB").toUpperCase(), teacher.id);
+    const evening = await prisma.courseBatch.create({
+      data: {
+        courseId: course.id,
+        name: "Evening",
+        teachers: { create: [{ teacherId: teacher.id }] },
+      },
+    });
+    const student = await createStudent(
+      `Twin Batch Student ${unique("s")}`,
+      unique("TBS").toUpperCase(),
+      course.batches[0].id,
+    );
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}/roster?batch=${evening.id}`);
+    await page.getByRole("button", { name: "Add student" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByPlaceholder(/Search by name/).fill(student.name);
+    await dialog.getByRole("option", { name: new RegExp(student.name) }).click();
+    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Add student" }).click())).toBe(
+      "error",
+    );
+    await expect(page.getByText(`This student is already enrolled in ${DEFAULT_BATCH_NAME}.`)).toBeVisible();
+    await expect.poll(() => prisma.batchEnrollment.count({ where: { studentId: student.id, batchId: evening.id } })).toBe(0);
+    await expect
+      .poll(() => prisma.batchEnrollment.count({ where: { studentId: student.id, batchId: course.batches[0].id } }))
+      .toBe(1);
   });
 
   test("does not offer enrolment to a teacher who is not assigned", async ({ page }) => {

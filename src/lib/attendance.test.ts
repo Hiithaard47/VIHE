@@ -4,6 +4,7 @@ import {
   countsAsAttended,
   emptyTally,
   isAtRisk,
+  statusLetter,
   type AttendancePolicy,
   type StatusTally,
 } from "@/lib/attendance";
@@ -68,5 +69,16 @@ describe("isAtRisk", () => {
 
   it("is false when there is no percentage to judge", () => {
     expect(isAtRisk(null, lenient)).toBe(false);
+  });
+});
+
+describe("statusLetter", () => {
+  it("maps each status to its first letter and blanks to an em dash", () => {
+    expect(statusLetter("PRESENT")).toBe("P");
+    expect(statusLetter("ABSENT")).toBe("A");
+    expect(statusLetter("LATE")).toBe("L");
+    expect(statusLetter("EXCUSED")).toBe("E");
+    expect(statusLetter(null)).toBe("—");
+    expect(statusLetter(undefined)).toBe("—");
   });
 });

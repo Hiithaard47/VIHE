@@ -6,6 +6,7 @@ import { FlashBanner } from "@/components/flash-banner";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { PERMISSIONS } from "@/lib/permissions";
 import { STATUS_OPTIONS } from "@/lib/attendance";
+import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
 import { SessionResources } from "@/components/session-resources";
 import { markAttendance } from "@/app/sessions/actions";
@@ -69,12 +70,17 @@ export async function SessionDetailView({
             <h1 className="font-heading text-lg font-semibold text-ink">{classSession.name}</h1>
             <p className="text-sm text-muted">
               {classSession.category.name} · {formatDisplayDate(classSession.date)}
+              {classSession.startMinute != null && classSession.endMinute != null
+                ? ` · ${formatTime(classSession.startMinute)}–${formatTime(classSession.endMinute)}`
+                : ""}
             </p>
           </div>
           {(canChangeDate || canRemove) && (
             <SessionActionsMenu
               sessionId={sessionId}
               date={classSession.date.toISOString()}
+              startMinute={classSession.startMinute}
+              endMinute={classSession.endMinute}
               returnTo={selfHref}
               deleteReturnTo={courseHref(portal, classSession.batch.course.id, "", classSession.batch.id)}
               canChangeDate={canChangeDate}

@@ -9,6 +9,8 @@ import type { CoursePortal } from "@/lib/course-workspace";
 export function SessionActionsMenu({
   sessionId,
   date,
+  startMinute,
+  endMinute,
   returnTo,
   attendanceHref,
   canChangeDate,
@@ -18,6 +20,8 @@ export function SessionActionsMenu({
 }: {
   sessionId: string;
   date: string;
+  startMinute: number | null;
+  endMinute: number | null;
   returnTo: string;
   attendanceHref?: string;
   canChangeDate: boolean;
@@ -90,7 +94,7 @@ export function SessionActionsMenu({
               className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-canvas"
               onClick={openChangeDate}
             >
-              Change date
+              Change date or time
             </button>
           )}
           {canRemove && (
@@ -116,7 +120,7 @@ export function SessionActionsMenu({
           <div className="flex flex-col gap-4 p-4">
             <div className="flex items-start justify-between gap-3">
               <h2 id={titleId} className="font-heading text-base font-semibold">
-                Change date
+                Change date or time
               </h2>
               <button
                 type="button"
@@ -126,7 +130,14 @@ export function SessionActionsMenu({
                 Cancel
               </button>
             </div>
-            <ChangeSessionDateForm sessionId={sessionId} date={new Date(date)} returnTo={returnTo} portal={portal} />
+            <ChangeSessionDateForm
+              sessionId={sessionId}
+              date={new Date(date)}
+              startMinute={startMinute}
+              endMinute={endMinute}
+              returnTo={returnTo}
+              portal={portal}
+            />
           </div>
         </dialog>
       )}

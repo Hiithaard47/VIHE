@@ -48,6 +48,7 @@ export function ScheduleEditor({
   const [weekCount, setWeekCount] = useState(initialWeekCount);
   const [week, setWeek] = useState(1);
   const [addDate, setAddDate] = useState<Date | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -99,31 +100,27 @@ export function ScheduleEditor({
     }, 400);
   }
 
-  function addSlot(formData: FormData) {
-    if (!addDate || !batchId) return;
+  async function addSlot(formData: FormData) {
+    if (!addDate || !batchId) return false;
     const times = parseMeetingTimes(String(formData.get("startTime") ?? ""), String(formData.get("endTime") ?? ""));
     const name = String(formData.get("name") ?? "").trim();
     const categoryId = String(formData.get("categoryId") ?? "").trim();
-    if (!times || !name || !categoryId) return;
-    startTransition(async () => {
-      setStatus("saving");
-      setError(null);
-      const result = await createScheduleSession(courseId, portal, {
-        batchId,
-        date: toDateInputValue(addDate),
-        name,
-        categoryId,
-        startTime: String(formData.get("startTime") ?? ""),
-        endTime: String(formData.get("endTime") ?? ""),
-      });
-      if ("error" in result) {
-        setStatus("error");
-        setError(result.error);
-        return;
-      }
-      setStatus("saved");
-      router.refresh();
+    if (!times || !name || !categoryId) return false;
+    setAddError(null);
+    const result = await createScheduleSession(courseId, portal, {
+      batchId,
+      date: toDateInputValue(addDate),
+      name,
+      categoryId,
+      startTime: String(formData.get("startTime") ?? ""),
+      endTime: String(formData.get("endTime") ?? ""),
     });
+    if ("error" in result) {
+      setAddError(result.error);
+      return false;
+    }
+    router.refresh();
+    return true;
   }
 
   function removeCard(card: WeekGridCard) {
@@ -155,22 +152,19 @@ export function ScheduleEditor({
     const weekday = nextFreeWeekday(occupied, from.getUTCDay(), card.startMinute);
     const target = weekday == null ? undefined : days.find((item) => item.getUTCDay() === weekday);
     if (!target || !isFutureSessionDate(target)) {
-      setStatus("error");
-      setError("Every other day already has a meeting at this time.");
+      setAddError("Every other day already has a meeting at this time.");
       return;
     }
     startTransition(async () => {
-      setStatus("saving");
+      setAddError(null);
       const result = await duplicateOneOffSession(courseId, portal, {
         sessionId: card.sessionId!,
         date: toDateInputValue(target),
       });
       if ("error" in result) {
-        setStatus("error");
-        setError(result.error);
+        setAddError(result.error);
         return;
       }
-      setStatus("saved");
       router.refresh();
     });
   }
@@ -213,7 +207,7 @@ export function ScheduleEditor({
                 className="w-20 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
               />
             </label>
-            <p aria-live="polite" className="text-xs text-muted">
+            <p aria-live="polite" className={`text-xs ${status === "error" ? "text-red-700" : "text-muted"}`}>
               {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : error}
             </p>
           </div>
@@ -232,7 +226,10 @@ export function ScheduleEditor({
           days={days}
           cards={cards}
           addLabel="+ Add"
-          onAdd={(day) => setAddDate(day)}
+          onAdd={(day) => {
+            setAddError(null);
+            setAddDate(day);
+          }}
           canAdd={(day) => isFutureSessionDate(day)}
           onRemove={removeCard}
           onDuplicate={duplicateCard}
@@ -240,6 +237,11 @@ export function ScheduleEditor({
           canDrop={(day) => isFutureSessionDate(day)}
           today={startOfTodayUtc()}
         />
+        {addError && addDate === null && (
+          <p role="alert" className="mt-2 text-sm text-red-700">
+            {addError}
+          </p>
+        )}
       </div>
 
       <AddWeekSessionDialog
@@ -250,6 +252,7 @@ export function ScheduleEditor({
         submitLabel="Add"
         defaultCategoryId={categories[0]?.id ?? ""}
         categories={categories}
+        error={addError}
         onLocalSubmit={addSlot}
         onClose={() => setAddDate(null)}
       />

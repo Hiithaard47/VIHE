@@ -182,4 +182,34 @@ test.describe("teacher: week schedule", () => {
     await expect(card.getByRole("button", { name: "Duplicate" })).toHaveCount(0);
     await expect(card).not.toHaveAttribute("draggable", "true");
   });
+
+  test("shows an error when adding a second meeting at the same time", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(`Clash Teacher ${unique("t")}`, `${unique("clashteacher")}@example.com`, password);
+    const course = await createCourse(`Clash Course ${unique("c")}`, unique("CLH").toUpperCase(), teacher.id);
+    const klass = await defaultSessionCategory();
+    const batchId = course.batches[0].id;
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.getByLabel("Term start").fill("2026-09-14");
+    await page.getByLabel("Weeks").fill("2");
+
+    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    const add = page.getByRole("dialog", { name: "Add meeting" });
+    await add.getByLabel("Name").fill("Chapter 1");
+    await add.locator('select[name="categoryId"]').selectOption({ label: klass.name });
+    await add.getByRole("button", { name: "Add" }).click();
+    await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
+
+    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    const clash = page.getByRole("dialog", { name: "Add meeting" });
+    await clash.getByLabel("Name").fill("Chapter 1 again");
+    await clash.locator('select[name="categoryId"]').selectOption({ label: klass.name });
+    await clash.getByRole("button", { name: "Add" }).click();
+    await expect(clash.getByText("That day already has a session at this time.")).toBeVisible();
+    await expect(page.locator("p[aria-live]")).not.toHaveText("That day already has a session at this time.");
+    await expect(clash).toBeVisible();
+    await expect.poll(() => prisma.classSession.count({ where: { batchId } })).toBe(1);
+  });
 });

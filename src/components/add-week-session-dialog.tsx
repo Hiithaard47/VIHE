@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDisplayDate, toDateInputValue } from "@/lib/time";
 
 export function AddWeekSessionDialog({
@@ -10,6 +10,7 @@ export function AddWeekSessionDialog({
   submitLabel,
   defaultCategoryId,
   categories,
+  error,
   onLocalSubmit,
   onClose,
 }: {
@@ -19,10 +20,12 @@ export function AddWeekSessionDialog({
   submitLabel: string;
   defaultCategoryId: string;
   categories: { id: string; name: string }[];
-  onLocalSubmit: (formData: FormData) => void;
+  error?: string | null;
+  onLocalSubmit: (formData: FormData) => boolean | Promise<boolean>;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const node = dialog.current;
@@ -39,10 +42,15 @@ export function AddWeekSessionDialog({
       className="fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-hairline bg-card p-0 text-ink shadow-lg backdrop:bg-ink/40"
     >
       <form
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          onLocalSubmit(new FormData(event.currentTarget));
-          onClose();
+          setBusy(true);
+          try {
+            const ok = await onLocalSubmit(new FormData(event.currentTarget));
+            if (ok) onClose();
+          } finally {
+            setBusy(false);
+          }
         }}
         className="flex flex-col gap-4 p-4"
       >
@@ -106,7 +114,16 @@ export function AddWeekSessionDialog({
             />
           </label>
         </div>
-        <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+        {error && (
+          <p role="alert" className="text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={busy}
+          className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent disabled:opacity-60"
+        >
           {submitLabel}
         </button>
       </form>

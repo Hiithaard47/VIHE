@@ -30,6 +30,15 @@ export function scheduleHref(portal: CoursePortal, courseId: string, batchId?: s
   return courseHref(portal, courseId, "schedule", batchId);
 }
 
+export function attendanceHref(portal: CoursePortal, courseId: string, categoryId?: string, batchId?: string) {
+  const path = courseHref(portal, courseId, "attendance", batchId);
+  const [pathname, existing] = path.split("?");
+  const params = new URLSearchParams(existing);
+  if (categoryId) params.set("category", categoryId);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 export function withBatchQuery(href: string, batchId?: string) {
   if (!batchId) return href;
   return href.includes("?") ? `${href}&batch=${batchId}` : `${href}?batch=${batchId}`;

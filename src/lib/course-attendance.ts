@@ -25,6 +25,21 @@ export function tallyFor(tallies: StudentCategoryTallies, studentId: string, cat
   return tallies.get(studentId)?.get(categoryId) ?? emptyTally();
 }
 
+export type AttendanceMarks = Map<string, Map<string, StatusValue>>;
+
+export function recordMark(marks: AttendanceMarks, studentId: string, sessionId: string, status: StatusValue) {
+  let bySession = marks.get(studentId);
+  if (!bySession) {
+    bySession = new Map();
+    marks.set(studentId, bySession);
+  }
+  bySession.set(sessionId, status);
+}
+
+export function statusAt(marks: AttendanceMarks, studentId: string, sessionId: string): StatusValue | null {
+  return marks.get(studentId)?.get(sessionId) ?? null;
+}
+
 export async function loadAttendanceTallies(courseId: string, scope: BatchScope) {
   const records = await prisma.attendanceRecord.findMany({
     where: { session: { ...sessionWhere(courseId, scope), date: { lte: startOfTodayUtc() } } },
@@ -44,4 +59,27 @@ export async function loadCourseAttendanceCategories(courseId: string, scope: Ba
     orderBy: { name: "asc" },
     select: { id: true, name: true, minAttendancePercent: true },
   });
+}
+
+export async function loadAttendanceMatrix(courseId: string, scope: BatchScope) {
+  const sessions = await prisma.classSession.findMany({
+    where: sessionWhere(courseId, scope),
+    orderBy: [{ date: "asc" }, { startMinute: "asc" }],
+    select: {
+      id: true,
+      date: true,
+      name: true,
+      category: { select: { id: true, name: true } },
+      records: { select: { studentId: true, status: true } },
+    },
+  });
+
+  const marks: AttendanceMarks = new Map();
+  for (const session of sessions) {
+    for (const record of session.records) {
+      recordMark(marks, record.studentId, session.id, record.status);
+    }
+  }
+
+  return { sessions, marks };
 }

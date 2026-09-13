@@ -134,14 +134,15 @@ test.describe("teacher: course visibility & session management", () => {
     await page.goto(`/teacher/courses/${course.id}`);
 
     await page.getByRole("button", { name: "Session actions" }).click();
-    await page.getByRole("menuitem", { name: "Change date" }).click();
-    const dialog = page.getByRole("dialog", { name: "Change date" });
+    await page.getByRole("menuitem", { name: "Change date or time" }).click();
+    const dialog = page.getByRole("dialog", { name: "Change date or time" });
     await dialog.locator('input[type="date"]').fill("2026-12-01");
+    await dialog.locator('input[name="startTime"]').fill("14:00");
+    await dialog.locator('input[name="endTime"]').fill("15:30");
 
-    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Save date" }).click())).toBe(
-      "success",
-    );
+    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Save" }).click())).toBe("success");
     await expect(page.getByText("1 Dec 2026")).toBeVisible();
+    await expect(page.getByText("14:00–15:30")).toBeVisible();
     await expect(page.getByText("20 Nov 2026")).toHaveCount(0);
   });
 
@@ -157,7 +158,7 @@ test.describe("teacher: course visibility & session management", () => {
 
     await page.getByRole("button", { name: "Session actions" }).first().click();
     await expect(page.getByRole("menuitem", { name: "Mark attendance" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Change date" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Change date or time" })).toHaveCount(0);
     await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
   });
 

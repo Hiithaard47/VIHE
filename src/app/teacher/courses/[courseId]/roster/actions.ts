@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireCourseConfigure, requireBatchConfigure } from "@/lib/rbac";
 import { flashUrl } from "@/lib/flash";
 import { assertWritableBatch } from "@/lib/batch-scope";
-import { enrollStudentInBatch, unenrollStudentFromBatch } from "@/lib/enrollment";
+import { AlreadyEnrolledInCourseError, enrollStudentInBatch, unenrollStudentFromBatch } from "@/lib/enrollment";
 import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
 
 const studentSchema = z.object({ studentId: z.string().min(1, "Pick a student.") });
@@ -25,7 +25,14 @@ export async function enrollStudent(courseId: string, portalArg: CoursePortal, f
   if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to that batch."));
   await requireBatchConfigure(batchId, portal);
 
-  await enrollStudentInBatch(parsed.data.studentId, batchId);
+  try {
+    await enrollStudentInBatch(parsed.data.studentId, batchId);
+  } catch (err) {
+    if (err instanceof AlreadyEnrolledInCourseError) {
+      redirect(flashUrl(path, "error", err.message));
+    }
+    throw err;
+  }
 
   revalidatePath(path);
   redirect(flashUrl(path, "success", "Student enrolled."));

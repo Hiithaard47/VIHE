@@ -5,9 +5,16 @@ export default async function CourseAttendancePage({
   searchParams,
 }: {
   params: Promise<{ courseId: string }>;
-  searchParams: Promise<{ batch?: string }>;
+  searchParams: Promise<{ batch?: string; category?: string }>;
 }) {
   const { courseId } = await params;
-  const { batch } = await searchParams;
-  return <CourseAttendanceView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
+  const { batch, category } = await searchParams;
+  return (
+    <CourseAttendanceView
+      courseId={courseId}
+      portal="teacher"
+      categoryId={category}
+      selectedBatchId={batch}
+    />
+  );
 }

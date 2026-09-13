@@ -11,6 +11,7 @@ import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
 import { sanitizeFileName, validateResourceFile } from "@/lib/session-resources";
 import { sessionResourceUploadError } from "@/lib/session-categories";
 import { isAttendanceLocked } from "@/lib/attendance-lock";
+import { parseMeetingTimes } from "@/lib/schedule";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc } from "@/lib/time";
 import { courseHref, parseCoursePortal, safeWorkspaceReturnTo, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
@@ -29,7 +30,7 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   const path = safeWorkspaceReturnTo(formData.get("returnTo"), fallback);
 
   if (!isFutureSessionDate(classSession.date)) {
-    redirect(flashUrl(path, "error", "Only future sessions can change date."));
+    redirect(flashUrl(path, "error", "Only future sessions can change date or time."));
   }
 
   const nextDate = parseDateInput(String(formData.get("date") ?? ""));
@@ -37,13 +38,29 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   if (nextDate.getTime() < startOfTodayUtc().getTime()) {
     redirect(flashUrl(path, "error", "Pick today or a future date."));
   }
+  const times = parseMeetingTimes(String(formData.get("startTime") ?? ""), String(formData.get("endTime") ?? ""));
+  if (!times) redirect(flashUrl(path, "error", "Pick a valid start and end time."));
 
-  await prisma.classSession.update({ where: { id: sessionId }, data: { date: nextDate } });
+  const clash = await prisma.classSession.findFirst({
+    where: {
+      batchId: classSession.batchId,
+      date: nextDate,
+      startMinute: times.startMinute,
+      id: { not: sessionId },
+    },
+    select: { id: true },
+  });
+  if (clash) redirect(flashUrl(path, "error", "That day already has a session at this time."));
+
+  await prisma.classSession.update({
+    where: { id: sessionId },
+    data: { date: nextDate, startMinute: times.startMinute, endMinute: times.endMinute },
+  });
 
   revalidatePath(path);
   revalidatePath(courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
   revalidatePath(fallback);
-  redirect(flashUrl(path, "success", "Session date updated."));
+  redirect(flashUrl(path, "success", "Session updated."));
 }
 
 export async function markAttendance(sessionId: string, portalArg: CoursePortal, formData: FormData) {
