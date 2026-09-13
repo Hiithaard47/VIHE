@@ -1,6 +1,13 @@
 import { CourseRosterView } from "@/components/course-workspace/roster";
 
-export default async function CourseRosterPage({ params }: { params: Promise<{ courseId: string }> }) {
+export default async function CourseRosterPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ batch?: string }>;
+}) {
   const { courseId } = await params;
-  return <CourseRosterView courseId={courseId} portal="teacher" />;
+  const { batch } = await searchParams;
+  return <CourseRosterView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
 }

@@ -40,7 +40,7 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   await prisma.classSession.update({ where: { id: sessionId }, data: { date: nextDate } });
 
   revalidatePath(path);
-  revalidatePath(courseHref(portal, classSession.batch.courseId));
+  revalidatePath(courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
   revalidatePath(fallback);
   redirect(flashUrl(path, "success", "Session date updated."));
 }
@@ -146,4 +146,64 @@ export async function deleteSessionResource(sessionId: string, resourceId: strin
   revalidatePath(path);
   revalidatePath(returnTo);
   redirect(flashUrl(returnTo, "success", "File removed."));
+}
+
+export async function deleteSession(sessionId: string, portalArg: CoursePortal, formData: FormData) {
+  const portal = parseCoursePortal(portalArg);
+  const classSession = await prisma.classSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: { batchId: true, date: true, batch: { select: { courseId: true } }, _count: { select: { records: true } } },
+  });
+  await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
+  await requireBatchAccess(classSession.batchId, portal);
+  const path = safeWorkspaceReturnTo(formData.get("returnTo"), courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
+  if (classSession._count.records > 0) {
+    redirect(flashUrl(path, "error", "Cannot remove a session that has attendance."));
+  }
+  await prisma.classSession.delete({ where: { id: sessionId } });
+  revalidatePath(path);
+  revalidatePath(courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
+  redirect(flashUrl(path, "success", "Session removed."));
+}
+
+export async function moveSession(sessionId: string, portalArg: CoursePortal, formData: FormData) {
+  const portal = parseCoursePortal(portalArg);
+  await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
+  const classSession = await prisma.classSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: {
+      batchId: true,
+      date: true,
+      startMinute: true,
+      batch: { select: { courseId: true } },
+      _count: { select: { records: true } },
+    },
+  });
+  await requireBatchAccess(classSession.batchId, portal);
+  const path = safeWorkspaceReturnTo(formData.get("returnTo"), courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
+  if (classSession._count.records > 0) {
+    redirect(flashUrl(path, "error", "Cannot move a session that has attendance."));
+  }
+  if (!isFutureSessionDate(classSession.date)) {
+    redirect(flashUrl(path, "error", "Cannot change a session on or before today."));
+  }
+  const nextDate = parseDateInput(String(formData.get("date") ?? ""));
+  if (!nextDate) redirect(flashUrl(path, "error", "Pick a valid date."));
+  if (!isFutureSessionDate(nextDate)) {
+    redirect(flashUrl(path, "error", "Cannot move a session onto today or a past day."));
+  }
+  const clash = await prisma.classSession.findFirst({
+    where: {
+      batchId: classSession.batchId,
+      date: nextDate,
+      startMinute: classSession.startMinute,
+      id: { not: sessionId },
+    },
+    select: { id: true },
+  });
+  if (clash) redirect(flashUrl(path, "error", "That day already has a session at this time."));
+  await prisma.classSession.update({ where: { id: sessionId }, data: { date: nextDate } });
+  revalidatePath(path);
+  revalidatePath(courseHref(portal, classSession.batch.courseId, "", classSession.batchId));
+  redirect(flashUrl(path, "success", "Session moved."));
 }

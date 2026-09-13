@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDisplayDate, isFutureSessionDate, isPastDueDate, parseDateInput, sessionTiming, startOfTodayUtc, toDateInputValue } from "@/lib/time";
+import { formatDayHeading, formatDisplayDate, formatWeekRange, isFutureSessionDate, isPastDueDate, parseDateInput, sessionTiming, startOfTodayUtc, toDateInputValue } from "@/lib/time";
 
 // TZ is pinned to America/New_York in vitest.config.mts. This ensures the tests
 // remain hermetic and discriminate between local and UTC getters, catching a
@@ -67,5 +67,13 @@ describe("formatDisplayDate", () => {
   it("renders day month year without a leading zero", () => {
     expect(formatDisplayDate(new Date("2026-09-12T00:00:00.000Z"))).toBe("12 Sept 2026");
     expect(formatDisplayDate(new Date("2026-12-01T00:00:00.000Z"))).toBe("1 Dec 2026");
+  });
+});
+
+describe("week labels", () => {
+  it("renders a day heading and a Monday–Sunday range", () => {
+    expect(formatDayHeading(new Date("2026-08-31T00:00:00.000Z"))).toBe("Mon 31");
+    expect(formatWeekRange(new Date("2026-08-31T00:00:00.000Z"))).toBe("31 Aug – 6 Sept 2026");
+    expect(formatWeekRange(new Date("2026-09-07T00:00:00.000Z"))).toBe("7–13 Sept 2026");
   });
 });

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import { narrowAssignedBatches, resolveTeacherBatchesForCourse } from "@/lib/enrollment";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { BatchField } from "@/components/course-workspace-fields";
 import { sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
@@ -19,10 +19,12 @@ export async function CourseSessionsView({
   courseId,
   portal,
   categoryId,
+  selectedBatchId,
 }: {
   courseId: string;
   portal: CoursePortal;
   categoryId?: string;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
 
@@ -37,7 +39,7 @@ export async function CourseSessionsView({
             id: true,
             name: true,
             sessions: {
-              orderBy: { date: "desc" },
+              orderBy: [{ date: "asc" }, { startMinute: "asc" }],
               include: { category: { select: { id: true, name: true } }, _count: { select: { records: true } } },
             },
           },
@@ -53,11 +55,14 @@ export async function CourseSessionsView({
   if (!course) notFound();
 
   const canManage = await canManageCourse(session, courseId);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
-  const visibleBatches = course.batches.filter((batch) => !batchId || batch.id === batchId);
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
+  const visibleBatches = course.batches.filter((batch) => assignedIds.length === 0 || assignedIds.includes(batch.id));
   const sessions = visibleBatches
     .flatMap((batch) => batch.sessions.map((item) => ({ ...item, batchName: batch.name })))
-    .sort((a, b) => b.date.getTime() - a.date.getTime());
+    .sort((a, b) => a.date.getTime() - b.date.getTime() || (a.startMinute ?? 0) - (b.startMinute ?? 0));
   const groups = groupSessionsByCategory(sessions);
   const tabs = sessionCategoryTabs(groups);
   const selected = resolveCategoryTab(tabs, categoryId);
@@ -68,7 +73,7 @@ export async function CourseSessionsView({
     categories.find((category) => category.name === DEFAULT_SESSION_CATEGORY_NAME)?.id ??
     categories[0]?.id ??
     "";
-  const listHref = sessionListHref(portal, courseId, selected?.id);
+  const listHref = sessionListHref(portal, courseId, selected?.id, undefined, selectedBatchId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,7 +125,7 @@ export async function CourseSessionsView({
               return (
                 <Link
                   key={tab.id}
-                  href={sessionListHref(portal, courseId, tab.id)}
+                  href={sessionListHref(portal, courseId, tab.id, undefined, selectedBatchId)}
                   aria-current={active ? "page" : undefined}
                   className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
                     active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
@@ -170,6 +175,7 @@ export async function CourseSessionsView({
                         returnTo={listHref}
                         attendanceHref={sessionHref(portal, item.id)}
                         canChangeDate={isFutureSessionDate(item.date)}
+                        canRemove={item._count.records === 0}
                         portal={portal}
                       />
                     )}

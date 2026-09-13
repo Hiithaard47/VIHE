@@ -24,13 +24,21 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
    ```
    npm install
    ```
-4. Create the database schema:
+4. Create the database schema (local; may prompt to create a migration):
    ```
-   npx prisma migrate dev --name init
+   npm run migrate
    ```
-5. Seed permissions, default roles, and the admin user:
+   On CI or a host that only applies existing migrations:
+   ```
+   npm run db:migrate
+   ```
+5. Seed permissions, default roles, and the admin user (`ADMIN_EMAIL` / `ADMIN_PASSWORD`):
    ```
    npm run db:seed
+   ```
+   Or one shot: apply migrations, seed admin, and production-build:
+   ```
+   npm run ci
    ```
 6. Run the app:
    ```
@@ -38,7 +46,13 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
    ```
 7. Sign in at `/login` with `ADMIN_EMAIL`/`ADMIN_PASSWORD`, then use `/admin/teachers` to create teacher accounts and assign roles, `/admin/courses` to add courses and assign teachers, `/admin/students` to add students and enroll them, and `/admin/roles` to adjust the permission matrix.
 
-The Postgres container persists data in a named Docker volume (`vihe-app-db-data`) across restarts. `docker compose down -v` wipes it if you want a clean slate (re-run steps 4–5 after).
+The Postgres container persists data in a named Docker volume (`vihe-app-db-data`) across restarts. To wipe **data** and re-apply migrations with an empty schema (no seed):
+
+```
+npm run db:clean
+```
+
+That drops `DATABASE_URL` and is not reversible. `docker compose down -v` also wipes the volume; re-run migrate + seed after.
 
 Teachers sign in the same way (credentials or Google, if an admin already created their account) and land on `/teacher`, where they can open an assigned course, create a class session, mark attendance, and upload PDF/image files for that session.
 

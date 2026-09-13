@@ -7,6 +7,12 @@ const TABS = [
   { slug: "", label: "Overview" },
   { slug: "teachers", label: "Teachers" },
   { slug: "students", label: "Students" },
+  { slug: "sessions", label: "Sessions" },
+  { slug: "schedule", label: "Schedule" },
+  { slug: "roster", label: "Roster" },
+  { slug: "attendance", label: "Attendance" },
+  { slug: "uploads", label: "Uploads" },
+  { slug: "assignments", label: "Assignments" },
 ];
 
 export function AdminBatchTabs({ courseId, batchId }: { courseId: string; batchId: string }) {

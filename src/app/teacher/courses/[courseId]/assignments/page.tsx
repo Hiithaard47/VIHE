@@ -1,6 +1,13 @@
 import { CourseAssignmentsView } from "@/components/course-workspace/assignments";
 
-export default async function TeacherAssignmentsPage({ params }: { params: Promise<{ courseId: string }> }) {
+export default async function TeacherAssignmentsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ batch?: string }>;
+}) {
   const { courseId } = await params;
-  return <CourseAssignmentsView courseId={courseId} portal="teacher" />;
+  const { batch } = await searchParams;
+  return <CourseAssignmentsView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
 }

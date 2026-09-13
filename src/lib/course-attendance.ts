@@ -24,12 +24,18 @@ export function tallyFor(tallies: StudentCategoryTallies, studentId: string, cat
   return tallies.get(studentId)?.get(categoryId) ?? emptyTally();
 }
 
-export async function loadAttendanceTallies(courseId: string, batchId: string | null) {
+function attendanceSessionWhere(courseId: string, batchIds: string | readonly string[] | null) {
+  const ids = batchIds == null ? [] : typeof batchIds === "string" ? [batchIds] : [...batchIds];
+  const date = { lte: startOfTodayUtc() };
+  if (ids.length === 0) return { batch: { courseId }, date };
+  if (ids.length === 1) return { batchId: ids[0], date };
+  return { batchId: { in: ids }, date };
+}
+
+export async function loadAttendanceTallies(courseId: string, batchIds: string | readonly string[] | null) {
   const records = await prisma.attendanceRecord.findMany({
     where: {
-      session: batchId
-        ? { batchId, date: { lte: startOfTodayUtc() } }
-        : { batch: { courseId }, date: { lte: startOfTodayUtc() } },
+      session: attendanceSessionWhere(courseId, batchIds),
     },
     select: { studentId: true, status: true, session: { select: { categoryId: true } } },
   });
@@ -41,11 +47,20 @@ export async function loadAttendanceTallies(courseId: string, batchId: string | 
   return tallies;
 }
 
-export async function loadCourseAttendanceCategories(courseId: string, batchId: string | null) {
+export async function loadCourseAttendanceCategories(
+  courseId: string,
+  batchIds: string | readonly string[] | null,
+) {
+  const ids = batchIds == null ? [] : typeof batchIds === "string" ? [batchIds] : [...batchIds];
   return prisma.sessionCategory.findMany({
     where: {
       sessions: {
-        some: batchId ? { batchId } : { batch: { courseId } },
+        some:
+          ids.length === 0
+            ? { batch: { courseId } }
+            : ids.length === 1
+              ? { batchId: ids[0] }
+              : { batchId: { in: ids } },
       },
     },
     orderBy: { name: "asc" },

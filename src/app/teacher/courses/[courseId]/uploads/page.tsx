@@ -1,6 +1,13 @@
 import { CourseUploadsView } from "@/components/course-workspace/uploads";
 
-export default async function CourseUploadsPage({ params }: { params: Promise<{ courseId: string }> }) {
+export default async function CourseUploadsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ batch?: string }>;
+}) {
   const { courseId } = await params;
-  return <CourseUploadsView courseId={courseId} portal="teacher" />;
+  const { batch } = await searchParams;
+  return <CourseUploadsView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
 }

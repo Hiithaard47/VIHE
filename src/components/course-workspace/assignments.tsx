@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import {
+  narrowAssignedBatches,
+  resolveTeacherBatchesForCourse,
+  scopedSessionWhere,
+  visibleBatchesWhere,
+} from "@/lib/enrollment";
 import { formatDisplayDate } from "@/lib/time";
 import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
 import { BatchField } from "@/components/course-workspace-fields";
@@ -10,16 +15,21 @@ import { courseHref, type CoursePortal } from "@/lib/course-workspace";
 export async function CourseAssignmentsView({
   courseId,
   portal,
+  selectedBatchId,
 }: {
   courseId: string;
   portal: CoursePortal;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
   const canManage = await canManageCourse(session, courseId);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
 
   const assignments = await prisma.assignment.findMany({
-    where: batchId ? { batchId } : { batch: { courseId } },
+    where: scopedSessionWhere(courseId, assignedIds),
     include: {
       _count: { select: { submissions: true } },
       submissions: { select: { marks: true } },
@@ -28,7 +38,7 @@ export async function CourseAssignmentsView({
     orderBy: { createdAt: "desc" },
   });
   const writableBatches = await prisma.courseBatch.findMany({
-    where: batchId ? { id: batchId } : { courseId, isActive: true },
+    where: { courseId, ...visibleBatchesWhere(assignedIds) },
     select: { id: true, name: true },
     orderBy: [{ name: "asc" }, { createdAt: "asc" }],
   });
@@ -87,7 +97,7 @@ export async function CourseAssignmentsView({
             return (
               <Link
                 key={assignment.id}
-                href={courseHref(portal, courseId, `assignments/${assignment.id}`)}
+                href={courseHref(portal, courseId, `assignments/${assignment.id}`, selectedBatchId)}
                 className="rounded-lg border border-hairline bg-card p-4 hover:border-accent-dark"
               >
                 <p className="font-medium text-ink">{assignment.title}</p>

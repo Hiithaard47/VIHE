@@ -1,6 +1,6 @@
-import { CourseUploadsView } from "@/components/course-workspace/uploads";
+import { redirectToAdminBatchWorkspace } from "@/lib/admin-batch";
 
 export default async function AdminCourseUploadsPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
-  return <CourseUploadsView courseId={courseId} portal="admin" />;
+  await redirectToAdminBatchWorkspace(courseId, "uploads");
 }

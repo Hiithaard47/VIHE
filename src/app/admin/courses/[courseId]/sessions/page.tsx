@@ -1,4 +1,4 @@
-import { CourseSessionsView } from "@/components/course-workspace/sessions";
+import { redirectToAdminBatchWorkspace } from "@/lib/admin-batch";
 
 export default async function AdminCourseSessionsPage({
   params,
@@ -9,5 +9,5 @@ export default async function AdminCourseSessionsPage({
 }) {
   const { courseId } = await params;
   const { category } = await searchParams;
-  return <CourseSessionsView courseId={courseId} portal="admin" categoryId={category} />;
+  await redirectToAdminBatchWorkspace(courseId, "sessions", { category });
 }

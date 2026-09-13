@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import { narrowAssignedBatches, resolveTeacherBatchesForCourse, scopedSessionWhere } from "@/lib/enrollment";
 import { formatDisplayDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
 import { deleteAssignment, gradeSubmission } from "@/app/teacher/courses/[courseId]/assignments/actions";
@@ -12,17 +12,22 @@ export async function CourseAssignmentDetailView({
   courseId,
   assignmentId,
   portal,
+  selectedBatchId,
 }: {
   courseId: string;
   assignmentId: string;
   portal: CoursePortal;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
   const canManage = await canManageCourse(session, courseId);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batch: { courseId }, ...(batchId ? { batchId } : {}) },
+    where: { id: assignmentId, batch: { courseId }, ...scopedSessionWhere(courseId, assignedIds) },
     include: {
       batch: {
         include: {
@@ -35,7 +40,7 @@ export async function CourseAssignmentDetailView({
   if (!assignment) notFound();
 
   const submissionByStudent = new Map(assignment.submissions.map((item) => [item.studentId, item]));
-  const listHref = courseHref(portal, courseId, "assignments");
+  const listHref = courseHref(portal, courseId, "assignments", selectedBatchId);
 
   return (
     <div className="flex flex-col gap-6">

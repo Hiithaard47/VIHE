@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCourseAccess } from "@/lib/rbac";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import { narrowAssignedBatches, resolveTeacherBatchesForCourse, visibleBatchesWhere } from "@/lib/enrollment";
 import {
   attendancePercent,
   categoryAttendancePolicy,
@@ -13,12 +13,17 @@ import type { CoursePortal } from "@/lib/course-workspace";
 export async function CourseAttendanceView({
   courseId,
   portal,
+  selectedBatchId,
 }: {
   courseId: string;
   portal: CoursePortal;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -26,7 +31,7 @@ export async function CourseAttendanceView({
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       batches: {
-        where: batchId ? { id: batchId } : { isActive: true },
+        where: visibleBatchesWhere(assignedIds),
         include: { enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } } },
       },
     },
@@ -34,8 +39,8 @@ export async function CourseAttendanceView({
   if (!course) notFound();
 
   const [categories, tallies] = await Promise.all([
-    loadCourseAttendanceCategories(courseId, batchId),
-    loadAttendanceTallies(courseId, batchId),
+    loadCourseAttendanceCategories(courseId, assignedIds.length ? assignedIds : null),
+    loadAttendanceTallies(courseId, assignedIds.length ? assignedIds : null),
   ]);
 
   const rows = course.batches

@@ -24,6 +24,11 @@ export function sessionDateUtc(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+export function addUtcDays(date: Date, days: number): Date {
+  const utc = sessionDateUtc(date);
+  return new Date(Date.UTC(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate() + days));
+}
+
 export function isFutureSessionDate(date: Date, now = new Date()): boolean {
   return sessionDateUtc(date).getTime() > startOfTodayUtc(now).getTime();
 }
@@ -46,6 +51,29 @@ const DISPLAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", 
 export function formatDisplayDate(date: Date): string {
   const utc = sessionDateUtc(date);
   return `${utc.getUTCDate()} ${DISPLAY_MONTHS[utc.getUTCMonth()]} ${utc.getUTCFullYear()}`;
+}
+
+const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export function formatDayHeading(date: Date): string {
+  const utc = sessionDateUtc(date);
+  return `${WEEKDAYS_SHORT[utc.getUTCDay()]} ${utc.getUTCDate()}`;
+}
+
+export function formatWeekRange(monday: Date): string {
+  const start = sessionDateUtc(monday);
+  const end = addUtcDays(start, 6);
+  const startMonth = DISPLAY_MONTHS[start.getUTCMonth()];
+  const endMonth = DISPLAY_MONTHS[end.getUTCMonth()];
+  const startYear = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+  if (startMonth === endMonth && startYear === endYear) {
+    return `${start.getUTCDate()}–${end.getUTCDate()} ${startMonth} ${startYear}`;
+  }
+  if (startYear === endYear) {
+    return `${start.getUTCDate()} ${startMonth} – ${end.getUTCDate()} ${endMonth} ${endYear}`;
+  }
+  return `${start.getUTCDate()} ${startMonth} ${startYear} – ${end.getUTCDate()} ${endMonth} ${endYear}`;
 }
 
 export function toDateInputValue(date: Date): string {

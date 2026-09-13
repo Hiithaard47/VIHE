@@ -38,8 +38,9 @@ export async function SessionDetailView({
 
   const session = await requireBatchView(classSession.batch.id, portal);
   const canManage = await canManageBatch(session, classSession.batch.id);
-  const canChangeDate =
-    canManage && session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE) && isFutureSessionDate(classSession.date);
+  const canManageSession = canManage && session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE);
+  const canChangeDate = canManageSession && isFutureSessionDate(classSession.date);
+  const canRemove = canManageSession && classSession.records.length === 0;
 
   const recordByStudent = new Map(classSession.records.map((record) => [record.studentId, record]));
   const students = classSession.batch.enrollments.map(({ student }) => ({
@@ -60,7 +61,7 @@ export async function SessionDetailView({
     <div className="flex flex-col gap-6">
       <FlashBanner />
       <div>
-        <Link href={courseHref(portal, classSession.batch.course.id)} className="text-sm text-muted">
+        <Link href={courseHref(portal, classSession.batch.course.id, "", classSession.batch.id)} className="text-sm text-muted">
           &larr; {classSession.batch.course.name}
         </Link>
         <div className="flex items-start justify-between gap-3">
@@ -70,12 +71,14 @@ export async function SessionDetailView({
               {classSession.category.name} · {formatDisplayDate(classSession.date)}
             </p>
           </div>
-          {canChangeDate && (
+          {(canChangeDate || canRemove) && (
             <SessionActionsMenu
               sessionId={sessionId}
               date={classSession.date.toISOString()}
               returnTo={selfHref}
-              canChangeDate
+              deleteReturnTo={courseHref(portal, classSession.batch.course.id, "", classSession.batch.id)}
+              canChangeDate={canChangeDate}
+              canRemove={canRemove}
               portal={portal}
             />
           )}

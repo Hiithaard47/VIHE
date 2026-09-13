@@ -13,15 +13,53 @@ test.describe("teacher: course visibility & session management", () => {
     await login(page, teacher.email, password);
     await expect(page).toHaveURL(/\/teacher/);
 
-    await expect(page.locator("a", { hasText: mine.name })).toBeVisible();
-    await expect(page.locator("a", { hasText: other.name })).toHaveCount(0);
+    const mineCard = page.getByRole("article", { name: mine.name });
+    await expect(mineCard).toBeVisible();
+    await expect(mineCard.getByRole("link", { name: "Default" })).toBeVisible();
+    await expect(page.getByRole("article", { name: other.name })).toHaveCount(0);
 
-    await page.locator("a", { hasText: mine.name }).click();
+    await mineCard.getByRole("link", { name: "Default" }).click();
     await expect(page.getByText("New session")).toBeVisible();
     await expect(page.locator('button:has-text("Create session")')).toBeVisible();
 
     await page.goto(`/teacher/courses/${other.id}`);
     await expect(page).toHaveURL(/\/teacher$/);
+  });
+
+  test("sees sessions from every assigned batch", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(`Multi Batch Teacher ${unique("t")}`, `${unique("multibatch")}@example.com`, password);
+    const course = await createCourse(`Multi Batch Course ${unique("c")}`, unique("MBC").toUpperCase(), teacher.id);
+    const evening = await prisma.courseBatch.create({
+      data: {
+        courseId: course.id,
+        name: "Evening",
+        teachers: { create: [{ teacherId: teacher.id }] },
+      },
+    });
+    await createSession(course.batches[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Morning class");
+    await createSession(evening.id, teacher.id, new Date("2026-03-16T00:00:00.000Z"), "Evening class");
+
+    await login(page, teacher.email, password);
+    await page.goto("/teacher");
+    const card = page.getByRole("article", { name: course.name });
+    await expect(card.getByRole("link", { name: "Default" })).toBeVisible();
+    await expect(card.getByRole("link", { name: "Evening" })).toBeVisible();
+    await card.getByRole("link", { name: "Default" }).click();
+    await expect(page.getByText("Morning class")).toBeVisible();
+    await expect(page.getByText("Evening class")).toHaveCount(0);
+
+    await page.goto("/teacher");
+    await page.getByRole("article", { name: course.name }).getByRole("link", { name: "Evening" }).click();
+    await expect(page.getByText("Evening class")).toBeVisible();
+    await expect(page.getByText("Morning class")).toHaveCount(0);
+
+    await page.goto(`/teacher/courses/${course.id}`);
+    await expect(page.getByText("Morning class")).toBeVisible();
+    await expect(page.getByText("Evening class")).toBeVisible();
+    await expect(page.getByText("15 Mar 2026 · Default")).toBeVisible();
+    await expect(page.getByText("16 Mar 2026 · Evening")).toBeVisible();
+    await expect(page.getByLabel("Batch")).toBeVisible();
   });
 
   test("creates a session for an assigned course", async ({ page }) => {
@@ -120,5 +158,19 @@ test.describe("teacher: course visibility & session management", () => {
     await page.getByRole("button", { name: "Session actions" }).first().click();
     await expect(page.getByRole("menuitem", { name: "Mark attendance" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Change date" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+  });
+
+  test("removes an unmarked session from the list", async ({ page }) => {
+    const password = "TeacherPass123!";
+    const teacher = await createTeacher(`Delete Teacher ${unique("t")}`, `${unique("deleteteacher")}@example.com`, password);
+    const course = await createCourse(`Delete Course ${unique("c")}`, unique("DEL").toUpperCase(), teacher.id);
+    await createSession(course.batches[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"), "Chapter 4");
+
+    await login(page, teacher.email, password);
+    await page.goto(`/teacher/courses/${course.id}`);
+    await page.getByRole("button", { name: "Session actions" }).click();
+    expect(await waitForFlashAfter(page, () => page.getByRole("menuitem", { name: "Remove" }).click())).toBe("success");
+    await expect(page.getByText("Chapter 4")).toHaveCount(0);
   });
 });

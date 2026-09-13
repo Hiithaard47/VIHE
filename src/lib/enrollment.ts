@@ -76,22 +76,57 @@ export async function findStudentCourseEnrollment(studentId: string, courseId: s
   });
 }
 
-export async function resolveTeacherBatchForCourse(teacherId: string, courseId: string) {
-  const row = await prisma.batchTeacher.findFirst({
+export function pickWritableBatch(
+  assignedIds: readonly string[],
+  requestedBatchId?: string | null,
+  fallbackBatchId?: string | null,
+) {
+  if (assignedIds.length > 0) {
+    if (requestedBatchId && assignedIds.includes(requestedBatchId)) return requestedBatchId;
+    return assignedIds[0] ?? null;
+  }
+  return requestedBatchId || fallbackBatchId || null;
+}
+
+export function visibleBatchesWhere(assignedIds: readonly string[]) {
+  return assignedIds.length > 0 ? { id: { in: [...assignedIds] } } : { isActive: true };
+}
+
+export function narrowAssignedBatches(assignedIds: readonly string[], selectedBatchId?: string | null) {
+  if (selectedBatchId && (assignedIds.length === 0 || assignedIds.includes(selectedBatchId))) {
+    return [selectedBatchId];
+  }
+  return [...assignedIds];
+}
+
+export function scopedSessionWhere(courseId: string, assignedIds: readonly string[]) {
+  if (assignedIds.length === 0) return { batch: { courseId } };
+  if (assignedIds.length === 1) return { batchId: assignedIds[0] };
+  return { batchId: { in: [...assignedIds] } };
+}
+
+export async function resolveTeacherBatchesForCourse(teacherId: string, courseId: string) {
+  const rows = await prisma.batchTeacher.findMany({
     where: { teacherId, batch: { courseId, isActive: true } },
     orderBy: { batch: { createdAt: "asc" } },
     select: { batchId: true },
   });
-  return row?.batchId ?? null;
+  return rows.map((row) => row.batchId);
+}
+
+export async function resolveTeacherBatchForCourse(teacherId: string, courseId: string) {
+  const assigned = await resolveTeacherBatchesForCourse(teacherId, courseId);
+  return assigned[0] ?? null;
 }
 
 export async function resolveWritableBatch(courseId: string, teacherId: string, requestedBatchId?: string | null) {
-  const assignedBatchId = await resolveTeacherBatchForCourse(teacherId, courseId);
-  if (assignedBatchId) return assignedBatchId;
+  const assignedIds = await resolveTeacherBatchesForCourse(teacherId, courseId);
+  const chosen = pickWritableBatch(assignedIds, requestedBatchId);
+  if (assignedIds.length > 0) return chosen;
 
-  if (requestedBatchId) {
+  if (chosen) {
     const requested = await prisma.courseBatch.findFirst({
-      where: { id: requestedBatchId, courseId, isActive: true },
+      where: { id: chosen, courseId, isActive: true },
       select: { id: true },
     });
     return requested?.id ?? null;

@@ -13,13 +13,14 @@ const studentSchema = z.object({ studentId: z.string().min(1, "Pick a student.")
 export async function enrollStudent(courseId: string, portalArg: CoursePortal, formData: FormData) {
   const portal = parseCoursePortal(portalArg);
   const session = await requireCourseConfigure(courseId, portal);
-  const path = courseHref(portal, courseId, "roster");
+  const requestedBatchId = String(formData.get("batchId") ?? "") || null;
+  const path = courseHref(portal, courseId, "roster", requestedBatchId ?? undefined);
 
   const parsed = studentSchema.safeParse({ studentId: formData.get("studentId") });
   if (!parsed.success) {
     redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   }
-  const batchId = await resolveWritableBatch(courseId, session.user.id, String(formData.get("batchId") ?? "") || null);
+  const batchId = await resolveWritableBatch(courseId, session.user.id, requestedBatchId);
   if (!batchId) redirect(flashUrl(path, "error", "No batch is available."));
   await requireBatchConfigure(batchId, portal);
 
@@ -32,13 +33,14 @@ export async function enrollStudent(courseId: string, portalArg: CoursePortal, f
 export async function unenrollStudent(courseId: string, portalArg: CoursePortal, formData: FormData) {
   const portal = parseCoursePortal(portalArg);
   const session = await requireCourseConfigure(courseId, portal);
-  const path = courseHref(portal, courseId, "roster");
+  const requestedBatchId = String(formData.get("batchId") ?? "") || null;
+  const path = courseHref(portal, courseId, "roster", requestedBatchId ?? undefined);
 
   const parsed = studentSchema.safeParse({ studentId: formData.get("studentId") });
   if (!parsed.success) {
     redirect(flashUrl(path, "error", parsed.error.issues[0]?.message ?? "Invalid input"));
   }
-  const batchId = await resolveWritableBatch(courseId, session.user.id, String(formData.get("batchId") ?? "") || null);
+  const batchId = await resolveWritableBatch(courseId, session.user.id, requestedBatchId);
   if (!batchId) redirect(flashUrl(path, "error", "No batch is available."));
   await requireBatchConfigure(batchId, portal);
 

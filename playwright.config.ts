@@ -36,6 +36,7 @@ export default defineConfig({
       ...process.env,
       DATABASE_URL: TEST_DATABASE_URL,
       AUTH_URL: E2E_ORIGIN,
+      NEXT_DIST_DIR: ".next-e2e",
     },
   },
 });

@@ -52,7 +52,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await teacherDialog.getByPlaceholder(/Search by name/).fill(teacherOne);
   await teacherDialog.getByRole("option", { name: new RegExp(teacherOne) }).click();
   expect(await waitForFlashAfter(page, () => teacherDialog.getByRole("button", { name: "Add teacher" }).click())).toBe("success");
-  await expect(page.getByRole("cell", { name: teacherOne })).toBeVisible();
+  await expect(page.getByRole("cell", { name: teacherOne, exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
   await page.getByRole("link", { name: "Evening" }).click();
@@ -62,7 +62,15 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await eveningTeacherDialog.getByPlaceholder(/Search by name/).fill(teacherTwo);
   await eveningTeacherDialog.getByRole("option", { name: new RegExp(teacherTwo) }).click();
   expect(await waitForFlashAfter(page, () => eveningTeacherDialog.getByRole("button", { name: "Add teacher" }).click())).toBe("success");
-  await expect(page.getByRole("cell", { name: teacherTwo })).toBeVisible();
+  await expect(page.getByRole("cell", { name: teacherTwo, exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Add teacher" }).click();
+  const sharedTeacherDialog = page.getByRole("dialog");
+  await sharedTeacherDialog.getByPlaceholder(/Search by name/).fill(teacherOne);
+  await sharedTeacherDialog.getByRole("option", { name: new RegExp(teacherOne) }).click();
+  expect(await waitForFlashAfter(page, () => sharedTeacherDialog.getByRole("button", { name: "Add teacher" }).click())).toBe("success");
+  await expect(page.getByRole("cell", { name: teacherOne, exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: teacherTwo, exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
   await page.getByRole("link", { name: "Morning" }).click();

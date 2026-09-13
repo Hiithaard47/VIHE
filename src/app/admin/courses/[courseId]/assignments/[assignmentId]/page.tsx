@@ -1,4 +1,5 @@
-import { CourseAssignmentDetailView } from "@/components/course-workspace/assignment-detail";
+import { notFound, redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminCourseAssignmentDetailPage({
   params,
@@ -6,5 +7,10 @@ export default async function AdminCourseAssignmentDetailPage({
   params: Promise<{ courseId: string; assignmentId: string }>;
 }) {
   const { courseId, assignmentId } = await params;
-  return <CourseAssignmentDetailView courseId={courseId} assignmentId={assignmentId} portal="admin" />;
+  const assignment = await prisma.assignment.findFirst({
+    where: { id: assignmentId, batch: { courseId } },
+    select: { batchId: true },
+  });
+  if (!assignment) notFound();
+  redirect(`/admin/courses/${courseId}/batches/${assignment.batchId}/assignments/${assignmentId}`);
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import { narrowAssignedBatches, resolveTeacherBatchesForCourse, scopedSessionWhere } from "@/lib/enrollment";
 import { deleteSessionResource } from "@/app/teacher/sessions/[sessionId]/actions";
 import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { formatDisplayDate } from "@/lib/time";
@@ -15,17 +15,22 @@ function formatSize(bytes: number) {
 export async function CourseUploadsView({
   courseId,
   portal,
+  selectedBatchId,
 }: {
   courseId: string;
   portal: CoursePortal;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
   const canManage = await canManageCourse(session, courseId);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
-  const returnTo = courseHref(portal, courseId, "uploads");
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
+  const returnTo = courseHref(portal, courseId, "uploads", selectedBatchId);
 
   const resources = await prisma.sessionResource.findMany({
-    where: { session: batchId ? { batchId } : { batch: { courseId } } },
+    where: { session: scopedSessionWhere(courseId, assignedIds) },
     include: { session: { select: { id: true, date: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });

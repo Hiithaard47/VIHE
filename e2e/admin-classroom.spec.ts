@@ -15,6 +15,10 @@ test.describe("admin: classroom", () => {
 
     await loginAsAdmin(page);
     await page.goto(`/admin/courses/${course.id}`);
+    await expect(page.getByRole("link", { name: "Sessions", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Details", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Policy", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Default" }).click();
     await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Roster", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Attendance", exact: true })).toBeVisible();

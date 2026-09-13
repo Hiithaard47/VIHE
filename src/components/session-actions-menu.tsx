@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChangeSessionDateForm } from "@/components/change-session-date-form";
+import { deleteSession } from "@/app/teacher/sessions/[sessionId]/actions";
 import type { CoursePortal } from "@/lib/course-workspace";
 
 export function SessionActionsMenu({
@@ -11,6 +12,8 @@ export function SessionActionsMenu({
   returnTo,
   attendanceHref,
   canChangeDate,
+  canRemove = false,
+  deleteReturnTo,
   portal,
 }: {
   sessionId: string;
@@ -18,6 +21,8 @@ export function SessionActionsMenu({
   returnTo: string;
   attendanceHref?: string;
   canChangeDate: boolean;
+  canRemove?: boolean;
+  deleteReturnTo?: string;
   portal: CoursePortal;
 }) {
   const [open, setOpen] = useState(false);
@@ -87,6 +92,18 @@ export function SessionActionsMenu({
             >
               Change date
             </button>
+          )}
+          {canRemove && (
+            <form action={deleteSession.bind(null, sessionId, portal)}>
+              <input type="hidden" name="returnTo" value={deleteReturnTo ?? returnTo} />
+              <button
+                type="submit"
+                role="menuitem"
+                className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-canvas"
+              >
+                Remove
+              </button>
+            </form>
           )}
         </div>
       )}

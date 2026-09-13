@@ -10,20 +10,25 @@ import { loadAttendanceTallies, loadCourseAttendanceCategories, tallyFor } from 
 import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { BatchField } from "@/components/course-workspace-fields";
 import { enrollStudent, unenrollStudent } from "@/app/teacher/courses/[courseId]/roster/actions";
-import { resolveTeacherBatchForCourse } from "@/lib/enrollment";
+import { narrowAssignedBatches, resolveTeacherBatchesForCourse, visibleBatchesWhere } from "@/lib/enrollment";
 import { contactKeywords } from "@/lib/admin-list";
 import type { CoursePortal } from "@/lib/course-workspace";
 
 export async function CourseRosterView({
   courseId,
   portal,
+  selectedBatchId,
 }: {
   courseId: string;
   portal: CoursePortal;
+  selectedBatchId?: string;
 }) {
   const session = await requireCourseAccess(courseId, portal);
   const canConfigure = await canConfigureCourse(session, courseId);
-  const batchId = await resolveTeacherBatchForCourse(session.user.id, courseId);
+  const assignedIds = narrowAssignedBatches(
+    await resolveTeacherBatchesForCourse(session.user.id, courseId),
+    selectedBatchId,
+  );
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -31,7 +36,7 @@ export async function CourseRosterView({
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       batches: {
-        where: batchId ? { id: batchId } : { isActive: true },
+        where: visibleBatchesWhere(assignedIds),
         select: {
           id: true,
           name: true,
@@ -43,8 +48,8 @@ export async function CourseRosterView({
   if (!course) notFound();
 
   const [categories, tallies] = await Promise.all([
-    loadCourseAttendanceCategories(courseId, batchId),
-    loadAttendanceTallies(courseId, batchId),
+    loadCourseAttendanceCategories(courseId, assignedIds.length ? assignedIds : null),
+    loadAttendanceTallies(courseId, assignedIds.length ? assignedIds : null),
   ]);
 
   const rows = course.batches.flatMap((batch) =>
