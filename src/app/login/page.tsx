@@ -86,22 +86,6 @@ function LoginForm() {
             </button>
           </form>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-muted">
-            <div className="h-px flex-1 bg-hairline" />
-            or
-            <div className="h-px flex-1 bg-hairline" />
-          </div>
-
-          <button
-            onClick={() => signIn("google", { callbackUrl })}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-hairline px-3 py-2 text-sm font-medium text-ink"
-          >
-            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-canvas text-[10px] font-bold text-muted">
-              G
-            </span>
-            Continue with Google
-          </button>
-
           <p className="mt-5 text-center text-xs text-muted">
             Teachers and students sign in here. Ask an admin for an account.
           </p>
