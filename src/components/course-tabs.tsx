@@ -1,18 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { SubTabs } from "@/components/sub-tabs";
 
-const BASE_TABS = [
+const TABS = [
   { slug: "", label: "Sessions" },
+  { slug: "schedule", label: "Schedule" },
   { slug: "roster", label: "Roster" },
   { slug: "attendance", label: "Attendance" },
   { slug: "uploads", label: "Uploads" },
   { slug: "assignments", label: "Assignments" },
+  { slug: "settings", label: "Settings" },
 ];
-const CONFIG_TABS = [{ slug: "settings", label: "Settings" }];
-
-const SCHEDULE_TAB = { slug: "schedule", label: "Schedule" };
 
 export function CourseTabs({ courseId, canConfigure }: { courseId: string; canConfigure: boolean }) {
   const pathname = usePathname();
@@ -20,31 +19,13 @@ export function CourseTabs({ courseId, canConfigure }: { courseId: string; canCo
   const batch = searchParams.get("batch");
   const query = batch ? `?batch=${batch}` : "";
   const base = `/teacher/courses/${courseId}`;
-  const tabs = canConfigure
-    ? [BASE_TABS[0], SCHEDULE_TAB, ...BASE_TABS.slice(1), ...CONFIG_TABS]
-    : BASE_TABS;
+  const tabs = canConfigure ? TABS : TABS.filter((tab) => tab.slug !== "schedule" && tab.slug !== "settings");
 
   return (
-    <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
-      {tabs.map((tab) => {
-        const href = `${tab.slug ? `${base}/${tab.slug}` : base}${query}`;
-        const path = tab.slug ? `${base}/${tab.slug}` : base;
-        const active = tab.slug ? pathname.startsWith(path) : pathname === base;
-        return (
-          <Link
-            key={tab.slug || "sessions"}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
-              active
-                ? "border-ink font-semibold text-ink"
-                : "border-transparent text-muted hover:text-ink"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SubTabs
+      tabs={tabs}
+      hrefFor={(slug) => `${slug ? `${base}/${slug}` : base}${query}`}
+      isActive={(slug) => (slug ? pathname.startsWith(`${base}/${slug}`) : pathname === base)}
+    />
   );
 }

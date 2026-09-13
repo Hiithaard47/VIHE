@@ -89,7 +89,7 @@ test.describe("teacher: roster", () => {
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);
 
-    await expect(page.getByText("No students enrolled in this course yet.")).toBeVisible();
+    await expect(page.getByText("No students enrolled in this batch yet.")).toBeVisible();
 
     await page.getByRole("button", { name: "Add student" }).click();
     const dialog = page.getByRole("dialog");

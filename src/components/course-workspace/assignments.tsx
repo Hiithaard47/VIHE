@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import {
-  narrowAssignedBatches,
-  resolveTeacherBatchesForCourse,
-  scopedSessionWhere,
-  visibleBatchesWhere,
-} from "@/lib/enrollment";
+import { batchWhere, sessionWhere } from "@/lib/batch-scope";
+import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
 import { BatchField } from "@/components/course-workspace-fields";
@@ -21,27 +16,24 @@ export async function CourseAssignmentsView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const session = await requireCourseAccess(courseId, portal);
-  const canManage = await canManageCourse(session, courseId);
-  const assignedIds = narrowAssignedBatches(
-    await resolveTeacherBatchesForCourse(session.user.id, courseId),
-    selectedBatchId,
-  );
+  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
 
-  const assignments = await prisma.assignment.findMany({
-    where: scopedSessionWhere(courseId, assignedIds),
+  const [assignments, writableBatches] = await Promise.all([
+    prisma.assignment.findMany({
+    where: sessionWhere(courseId, scope),
     include: {
       _count: { select: { submissions: true } },
       submissions: { select: { marks: true } },
       batch: { select: { name: true, _count: { select: { enrollments: true } } } },
     },
     orderBy: { createdAt: "desc" },
-  });
-  const writableBatches = await prisma.courseBatch.findMany({
-    where: { courseId, ...visibleBatchesWhere(assignedIds) },
-    select: { id: true, name: true },
-    orderBy: [{ name: "asc" }, { createdAt: "asc" }],
-  });
+    }),
+    prisma.courseBatch.findMany({
+      where: { courseId, ...batchWhere(scope) },
+      select: { id: true, name: true },
+      orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
   const showBatchName = new Set(assignments.map((item) => item.batch.name)).size > 1;
 
   return (

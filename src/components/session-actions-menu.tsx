@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChangeSessionDateForm } from "@/components/change-session-date-form";
-import { deleteSession } from "@/app/teacher/sessions/[sessionId]/actions";
+import { deleteSession } from "@/app/sessions/actions";
 import type { CoursePortal } from "@/lib/course-workspace";
 
 export function SessionActionsMenu({

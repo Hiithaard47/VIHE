@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { narrowAssignedBatches, resolveTeacherBatchesForCourse } from "@/lib/enrollment";
+import { loadCourseWorkspace } from "@/lib/rbac";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { BatchField } from "@/components/course-workspace-fields";
 import { sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
@@ -26,7 +25,7 @@ export async function CourseSessionsView({
   categoryId?: string;
   selectedBatchId?: string;
 }) {
-  const session = await requireCourseAccess(courseId, portal);
+  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
 
   const [course, categories] = await Promise.all([
     prisma.course.findUnique({
@@ -54,12 +53,7 @@ export async function CourseSessionsView({
   ]);
   if (!course) notFound();
 
-  const canManage = await canManageCourse(session, courseId);
-  const assignedIds = narrowAssignedBatches(
-    await resolveTeacherBatchesForCourse(session.user.id, courseId),
-    selectedBatchId,
-  );
-  const visibleBatches = course.batches.filter((batch) => assignedIds.length === 0 || assignedIds.includes(batch.id));
+  const visibleBatches = course.batches.filter((batch) => scope.kind === "all" || scope.ids.includes(batch.id));
   const sessions = visibleBatches
     .flatMap((batch) => batch.sessions.map((item) => ({ ...item, batchName: batch.name })))
     .sort((a, b) => a.date.getTime() - b.date.getTime() || (a.startMinute ?? 0) - (b.startMinute ?? 0));
@@ -73,7 +67,7 @@ export async function CourseSessionsView({
     categories.find((category) => category.name === DEFAULT_SESSION_CATEGORY_NAME)?.id ??
     categories[0]?.id ??
     "";
-  const listHref = sessionListHref(portal, courseId, selected?.id, undefined, selectedBatchId);
+  const listHref = sessionListHref(portal, courseId, selected?.id, selectedBatchId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,7 +119,7 @@ export async function CourseSessionsView({
               return (
                 <Link
                   key={tab.id}
-                  href={sessionListHref(portal, courseId, tab.id, undefined, selectedBatchId)}
+                  href={sessionListHref(portal, courseId, tab.id, selectedBatchId)}
                   aria-current={active ? "page" : undefined}
                   className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
                     active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"

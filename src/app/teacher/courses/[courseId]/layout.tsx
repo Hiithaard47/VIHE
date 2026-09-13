@@ -6,7 +6,7 @@ import { canConfigureCourse, requireCourseAccess } from "@/lib/rbac";
 import { CourseTabs } from "@/components/course-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { TeacherCourseHeading } from "@/components/teacher-course-heading";
-import { resolveTeacherBatchesForCourse } from "@/lib/enrollment";
+import { resolveCourseScope } from "@/lib/batch-scope";
 
 export default async function CourseLayout({
   children,
@@ -31,9 +31,9 @@ export default async function CourseLayout({
   if (!course) notFound();
 
   const canConfigure = await canConfigureCourse(session, courseId);
-  const assignedIds = await resolveTeacherBatchesForCourse(session.user.id, courseId);
+  const scope = await resolveCourseScope(session, courseId);
   const headingBatches = course.batches
-    .filter((batch) => assignedIds.length === 0 || assignedIds.includes(batch.id))
+    .filter((batch) => scope?.kind === "all" || Boolean(scope?.ids.includes(batch.id)))
     .map((batch) => ({ id: batch.id, name: batch.name, enrolled: batch._count.enrollments }));
 
   return (

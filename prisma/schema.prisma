@@ -136,11 +136,6 @@ model Course {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Schedule. Null bounds mean the course is unscheduled: manual sessions
-  // only, which is exactly the behaviour of every pre-existing row.
-  startDate DateTime?
-  endDate   DateTime?
-
   // Attendance policy. Late/Excused apply to every category on the course.
   // Per-category min % lives on SessionCategory.
   defaultStatus           AttendanceStatus @default(PRESENT)
@@ -158,22 +153,6 @@ model Course {
   @@map("courses")
 }
 
-model CourseScheduleSlot {
-  id          String @id @default(cuid())
-  batchId     String
-  categoryId  String
-  weekday     Int    // 0 = Sunday … 6 = Saturday
-  startMinute Int    // wall-clock minutes from midnight, e.g. 1080 = 18:00
-  endMinute   Int
-  name        String
-
-  batch    CourseBatch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  category SessionCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-
-  @@unique([batchId, weekday, startMinute])
-  @@map("course_schedule_slots")
-}
-
 model CourseBatch {
   id        String    @id @default(cuid())
   courseId  String
@@ -186,9 +165,8 @@ model CourseBatch {
 
   course        Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
   teachers      BatchTeacher[]
-  enrollments   BatchEnrollment[]
-  scheduleSlots CourseScheduleSlot[]
-  sessions      ClassSession[]
+  enrollments BatchEnrollment[]
+  sessions    ClassSession[]
   assignments   Assignment[]
 
   @@unique([courseId, name])
@@ -251,7 +229,6 @@ model SessionCategory {
   updatedAt             DateTime @updatedAt
 
   sessions ClassSession[]
-  slots    CourseScheduleSlot[]
 
   @@map("session_categories")
 }
@@ -265,12 +242,8 @@ model ClassSession {
   createdById String
   createdAt   DateTime @default(now())
 
-  startMinute Int?    // copied from the slot at generation time
+  startMinute Int?
   endMinute   Int?
-  // Provenance, deliberately NOT a foreign key: a slot can be deleted while
-  // its already-marked sessions must survive. Null = hand-created and never
-  // auto-removed; set = generated and eligible for regeneration.
-  slotId      String?
 
   batch      CourseBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
   category  SessionCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)

@@ -18,7 +18,6 @@ export type WeekGridCard = {
   canRemove: boolean;
   canDrag: boolean;
   canDuplicate?: boolean;
-  actions?: React.ReactNode;
 };
 
 export function WeekGrid({
@@ -166,7 +165,7 @@ function WeekCard({
       ) : (
         <div>{body}</div>
       )}
-      {(onRemove || onDuplicate || card.actions) && (
+      {(onRemove || onDuplicate) && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
           {onDuplicate && (
             <button
@@ -186,7 +185,6 @@ function WeekCard({
               Remove
             </button>
           )}
-          {card.actions}
         </div>
       )}
     </article>

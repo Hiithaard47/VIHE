@@ -1,10 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { assertStudentLoginAllowed, canAccessBatch } from "@/lib/rbac";
-import { deniedCourseHref } from "@/lib/course-workspace";
-import { PERMISSIONS } from "@/lib/permissions";
-import { isStorageConfigured, presignedDownloadUrl } from "@/lib/storage";
+import { assertBatchFileAccess, redirectToStoredFile } from "@/lib/file-access";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const session = await auth();
@@ -22,13 +19,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sub
   });
   if (!submission) notFound();
 
-  if (session.user.kind === "student") {
-    await assertStudentLoginAllowed(session.user.id);
-    if (submission.studentId !== session.user.id) notFound();
-  } else if (!(await canAccessBatch(session, submission.assignment.batchId))) {
-    redirect(deniedCourseHref(session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE) ? "admin" : "teacher"));
-  }
-
-  if (!isStorageConfigured()) notFound();
-  redirect(await presignedDownloadUrl(submission.storageKey, submission.fileName));
+  await assertBatchFileAccess(session, submission.assignment.batchId, submission.studentId);
+  await redirectToStoredFile(submission.storageKey, submission.fileName);
 }

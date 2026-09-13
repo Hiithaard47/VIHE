@@ -8,7 +8,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { STATUS_OPTIONS } from "@/lib/attendance";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
 import { SessionResources } from "@/components/session-resources";
-import { markAttendance } from "@/app/teacher/sessions/[sessionId]/actions";
+import { markAttendance } from "@/app/sessions/actions";
 import { AttendanceForm } from "@/app/teacher/sessions/[sessionId]/attendance-form";
 import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
@@ -123,7 +123,7 @@ export async function SessionDetailView({
               {students.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-4 py-3 text-sm text-muted">
-                    No students enrolled in this course yet.
+                    No students enrolled in this batch yet.
                   </td>
                 </tr>
               )}

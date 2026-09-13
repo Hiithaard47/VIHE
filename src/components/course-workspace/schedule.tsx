@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { batchWhere, resolveWorkspaceScope } from "@/lib/batch-scope";
 import { requireCourseConfigure } from "@/lib/rbac";
-import { resolveTeacherBatchesForCourse } from "@/lib/enrollment";
 import { scheduleHref, type CoursePortal } from "@/lib/course-workspace";
 import { mondayOf } from "@/lib/schedule";
 import { startOfTodayUtc, toDateInputValue } from "@/lib/time";
@@ -17,14 +17,15 @@ export async function CourseScheduleView({
   selectedBatchId?: string;
 }) {
   const session = await requireCourseConfigure(courseId, portal);
-  const assignedIds = await resolveTeacherBatchesForCourse(session.user.id, courseId);
+  const scope = await resolveWorkspaceScope(session, courseId, selectedBatchId);
+  if (!scope) notFound();
 
   const [course, categories] = await Promise.all([
     prisma.course.findUnique({
       where: { id: courseId },
       select: {
         batches: {
-          where: { isActive: true },
+          where: batchWhere(scope),
           orderBy: { name: "asc" },
           select: {
             id: true,
@@ -55,8 +56,8 @@ export async function CourseScheduleView({
   ]);
   if (!course) notFound();
 
-  const visible = course.batches.filter((batch) => assignedIds.length === 0 || assignedIds.includes(batch.id));
-  const batch = visible.find((item) => item.id === selectedBatchId) ?? visible[0];
+  const batch =
+    course.batches.find((item) => item.id === selectedBatchId) ?? course.batches[0];
   if (!batch) {
     return <p className="text-sm text-muted">Assign a batch before setting a schedule.</p>;
   }
@@ -82,7 +83,7 @@ export async function CourseScheduleView({
         categoryName: item.category.name,
         markedCount: item._count.records,
       }))}
-      returnTo={scheduleHref(portal, courseId, undefined, batch.id)}
+      returnTo={scheduleHref(portal, courseId, batch.id)}
     />
   );
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { resolveWritableBatch } from "@/lib/enrollment";
+import { assertWritableBatch } from "@/lib/batch-scope";
 import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
 import { flashUrl } from "@/lib/flash";
 import { parseDateInput } from "@/lib/time";
@@ -27,9 +27,9 @@ async function requireAssignmentManage(courseId: string, portalArg: CoursePortal
 export async function createAssignment(courseId: string, portalArg: CoursePortal, formData: FormData) {
   const { session, portal } = await requireAssignmentManage(courseId, portalArg);
   const requestedBatchId = String(formData.get("batchId") ?? "") || null;
-  const batchId = await resolveWritableBatch(courseId, session.user.id, requestedBatchId);
-  const path = assignmentsPath(courseId, portal, batchId);
-  if (!batchId) redirect(flashUrl(assignmentsPath(courseId, portal, requestedBatchId), "error", "You are not assigned to a batch."));
+  const batchId = await assertWritableBatch(session, courseId, requestedBatchId);
+  const path = assignmentsPath(courseId, portal, batchId ?? requestedBatchId);
+  if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to that batch."));
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect(flashUrl(path, "error", "Title is required."));

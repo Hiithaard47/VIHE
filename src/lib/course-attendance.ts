@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { emptyTally, type StatusTally, type StatusValue } from "@/lib/attendance";
+import { type BatchScope, sessionWhere } from "@/lib/batch-scope";
 import { startOfTodayUtc } from "@/lib/time";
 
 export type StudentCategoryTallies = Map<string, Map<string, StatusTally>>;
@@ -24,19 +25,9 @@ export function tallyFor(tallies: StudentCategoryTallies, studentId: string, cat
   return tallies.get(studentId)?.get(categoryId) ?? emptyTally();
 }
 
-function attendanceSessionWhere(courseId: string, batchIds: string | readonly string[] | null) {
-  const ids = batchIds == null ? [] : typeof batchIds === "string" ? [batchIds] : [...batchIds];
-  const date = { lte: startOfTodayUtc() };
-  if (ids.length === 0) return { batch: { courseId }, date };
-  if (ids.length === 1) return { batchId: ids[0], date };
-  return { batchId: { in: ids }, date };
-}
-
-export async function loadAttendanceTallies(courseId: string, batchIds: string | readonly string[] | null) {
+export async function loadAttendanceTallies(courseId: string, scope: BatchScope) {
   const records = await prisma.attendanceRecord.findMany({
-    where: {
-      session: attendanceSessionWhere(courseId, batchIds),
-    },
+    where: { session: { ...sessionWhere(courseId, scope), date: { lte: startOfTodayUtc() } } },
     select: { studentId: true, status: true, session: { select: { categoryId: true } } },
   });
 
@@ -47,22 +38,9 @@ export async function loadAttendanceTallies(courseId: string, batchIds: string |
   return tallies;
 }
 
-export async function loadCourseAttendanceCategories(
-  courseId: string,
-  batchIds: string | readonly string[] | null,
-) {
-  const ids = batchIds == null ? [] : typeof batchIds === "string" ? [batchIds] : [...batchIds];
+export async function loadCourseAttendanceCategories(courseId: string, scope: BatchScope) {
   return prisma.sessionCategory.findMany({
-    where: {
-      sessions: {
-        some:
-          ids.length === 0
-            ? { batch: { courseId } }
-            : ids.length === 1
-              ? { batchId: ids[0] }
-              : { batchId: { in: ids } },
-      },
-    },
+    where: { sessions: { some: sessionWhere(courseId, scope) } },
     orderBy: { name: "asc" },
     select: { id: true, name: true, minAttendancePercent: true },
   });

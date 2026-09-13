@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { narrowAssignedBatches, resolveTeacherBatchesForCourse, scopedSessionWhere } from "@/lib/enrollment";
+import { sessionWhere } from "@/lib/batch-scope";
+import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
 import { deleteAssignment, gradeSubmission } from "@/app/teacher/courses/[courseId]/assignments/actions";
@@ -19,15 +19,10 @@ export async function CourseAssignmentDetailView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const session = await requireCourseAccess(courseId, portal);
-  const canManage = await canManageCourse(session, courseId);
-  const assignedIds = narrowAssignedBatches(
-    await resolveTeacherBatchesForCourse(session.user.id, courseId),
-    selectedBatchId,
-  );
+  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batch: { courseId }, ...scopedSessionWhere(courseId, assignedIds) },
+    where: { id: assignmentId, ...sessionWhere(courseId, scope) },
     include: {
       batch: {
         include: {

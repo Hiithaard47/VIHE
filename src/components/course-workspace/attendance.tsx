@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireCourseAccess } from "@/lib/rbac";
-import { narrowAssignedBatches, resolveTeacherBatchesForCourse, visibleBatchesWhere } from "@/lib/enrollment";
+import { batchWhere } from "@/lib/batch-scope";
+import { loadCourseWorkspace } from "@/lib/rbac";
 import {
   attendancePercent,
   categoryAttendancePolicy,
@@ -19,11 +19,7 @@ export async function CourseAttendanceView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const session = await requireCourseAccess(courseId, portal);
-  const assignedIds = narrowAssignedBatches(
-    await resolveTeacherBatchesForCourse(session.user.id, courseId),
-    selectedBatchId,
-  );
+  const { scope } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -31,7 +27,7 @@ export async function CourseAttendanceView({
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
       batches: {
-        where: visibleBatchesWhere(assignedIds),
+        where: batchWhere(scope),
         include: { enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } } },
       },
     },
@@ -39,8 +35,8 @@ export async function CourseAttendanceView({
   if (!course) notFound();
 
   const [categories, tallies] = await Promise.all([
-    loadCourseAttendanceCategories(courseId, assignedIds.length ? assignedIds : null),
-    loadAttendanceTallies(courseId, assignedIds.length ? assignedIds : null),
+    loadCourseAttendanceCategories(courseId, scope),
+    loadAttendanceTallies(courseId, scope),
   ]);
 
   const rows = course.batches
@@ -116,7 +112,7 @@ export async function CourseAttendanceView({
             {rows.length === 0 && (
               <tr>
                 <td colSpan={(showBatchName ? 3 : 2) + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
-                  No students enrolled in this course yet.
+                  No students enrolled in this batch yet.
                 </td>
               </tr>
             )}

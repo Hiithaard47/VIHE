@@ -1,10 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { assertStudentLoginAllowed, canAccessBatch } from "@/lib/rbac";
-import { deniedCourseHref } from "@/lib/course-workspace";
-import { PERMISSIONS } from "@/lib/permissions";
-import { isStorageConfigured, presignedDownloadUrl } from "@/lib/storage";
+import { assertBatchFileAccess, redirectToStoredFile } from "@/lib/file-access";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ assignmentId: string }> }) {
   const session = await auth();
@@ -17,16 +14,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   });
   if (!assignment) notFound();
 
-  if (session.user.kind === "student") {
-    await assertStudentLoginAllowed(session.user.id);
-    const enrolled = await prisma.batchEnrollment.findUnique({
-      where: { batchId_studentId: { batchId: assignment.batchId, studentId: session.user.id } },
-    });
-    if (!enrolled) notFound();
-  } else if (!(await canAccessBatch(session, assignment.batchId))) {
-    redirect(deniedCourseHref(session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE) ? "admin" : "teacher"));
-  }
-
-  if (!isStorageConfigured()) notFound();
-  redirect(await presignedDownloadUrl(assignment.storageKey, assignment.fileName));
+  await assertBatchFileAccess(session, assignment.batchId);
+  await redirectToStoredFile(assignment.storageKey, assignment.fileName);
 }

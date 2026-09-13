@@ -3,11 +3,11 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createScheduleSession, duplicateOneOffSession, saveSchedule } from "@/app/teacher/courses/[courseId]/schedule/actions";
-import { deleteSession, moveSession } from "@/app/teacher/sessions/[sessionId]/actions";
+import { deleteSession, moveSession } from "@/app/sessions/actions";
 import { AddWeekSessionDialog } from "@/components/add-week-session-dialog";
 import { WeekGrid, type WeekGridCard } from "@/components/week-grid";
 import { WeekNavigator } from "@/components/week-navigator";
-import type { CoursePortal } from "@/lib/course-workspace";
+import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { clampWeek, daysOfWeek, mondayOf, nextFreeWeekday, parseMeetingTimes, weekStart } from "@/lib/schedule";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc, toDateInputValue } from "@/lib/time";
 
@@ -52,8 +52,6 @@ export function ScheduleEditor({
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const saveTimer = useRef<number | null>(null);
-  const saveQueue = useRef<{ term: string; weeks: number } | null>(null);
-  const saving = useRef(false);
 
   const monday = mondayOf(new Date(`${termStart}T00:00:00.000Z`));
   const safeCount = Math.min(52, Math.max(1, weekCount || 1));
@@ -73,35 +71,23 @@ export function ScheduleEditor({
     endMinute: item.endMinute,
     date: item.date,
     markedCount: item.markedCount,
-    href: sessionHrefFor(portal, item.id),
+    href: sessionHref(portal, item.id),
     canRemove: item.markedCount === 0 && isEditableSessionDate(item.date),
     canDrag: item.markedCount === 0 && isEditableSessionDate(item.date),
     canDuplicate: item.startMinute != null && isEditableSessionDate(item.date),
   }));
 
-  function persist(nextTerm = termStart, nextWeeks = safeCount) {
+  function persistSoon(nextTerm: string, nextWeeks: number) {
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveQueue.current = { term: nextTerm, weeks: nextWeeks };
-    startTransition(() => {
-      void flushSaves();
-    });
-  }
-
-  async function flushSaves() {
-    if (saving.current) return;
-    saving.current = true;
-    setStatus("saving");
-    setError(null);
-    try {
-      while (saveQueue.current) {
-        const job = saveQueue.current;
-        saveQueue.current = null;
+    saveTimer.current = window.setTimeout(() => {
+      startTransition(async () => {
+        setStatus("saving");
+        setError(null);
         const result = await saveSchedule(courseId, portal, {
           batchId,
-          termStart: job.term,
-          weekCount: job.weeks,
+          termStart: nextTerm,
+          weekCount: nextWeeks,
         });
-        if (saveQueue.current) continue;
         if ("error" in result) {
           setStatus("error");
           setError(result.error);
@@ -109,16 +95,8 @@ export function ScheduleEditor({
         }
         setStatus("saved");
         router.refresh();
-      }
-    } finally {
-      saving.current = false;
-      if (saveQueue.current) void flushSaves();
-    }
-  }
-
-  function persistSoon(nextTerm: string, nextWeeks: number) {
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => persist(nextTerm, nextWeeks), 400);
+      });
+    }, 400);
   }
 
   function addSlot(formData: FormData) {
@@ -272,16 +250,11 @@ export function ScheduleEditor({
         submitLabel="Add"
         defaultCategoryId={categories[0]?.id ?? ""}
         categories={categories}
-        batches={[]}
         onLocalSubmit={addSlot}
         onClose={() => setAddDate(null)}
       />
     </div>
   );
-}
-
-function sessionHrefFor(portal: CoursePortal, sessionId: string) {
-  return portal === "admin" ? `/admin/sessions/${sessionId}` : `/teacher/sessions/${sessionId}`;
 }
 
 function isEditableSessionDate(value: string) {

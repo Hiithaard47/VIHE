@@ -1,4 +1,4 @@
-import { deleteSessionResource, uploadSessionResource } from "@/app/teacher/sessions/[sessionId]/actions";
+import { deleteSessionResource, uploadSessionResource } from "@/app/sessions/actions";
 import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 export function SessionResources({

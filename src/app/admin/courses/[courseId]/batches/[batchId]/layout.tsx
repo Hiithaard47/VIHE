@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBatchTabs } from "@/components/admin-batch-tabs";
+import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
@@ -28,6 +29,7 @@ export default async function AdminBatchLayout({
 
   return (
     <div className="flex flex-col gap-5">
+      <FlashBanner />
       <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
         <Link href="/admin/courses" className="hover:text-ink">
           Courses

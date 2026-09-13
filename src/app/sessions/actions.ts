@@ -10,6 +10,7 @@ import { flashUrl } from "@/lib/flash";
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
 import { sanitizeFileName, validateResourceFile } from "@/lib/session-resources";
 import { sessionResourceUploadError } from "@/lib/session-categories";
+import { isAttendanceLocked } from "@/lib/attendance-lock";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc } from "@/lib/time";
 import { courseHref, parseCoursePortal, safeWorkspaceReturnTo, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
@@ -50,9 +51,16 @@ export async function markAttendance(sessionId: string, portalArg: CoursePortal,
 
   const classSession = await prisma.classSession.findUniqueOrThrow({
     where: { id: sessionId },
-    select: { batchId: true },
+    select: {
+      batchId: true,
+      date: true,
+      batch: { select: { course: { select: { lockAfterDays: true } } } },
+    },
   });
   await requireBatchAccess(classSession.batchId, parseCoursePortal(portalArg));
+  if (isAttendanceLocked(classSession.date, classSession.batch.course.lockAfterDays)) {
+    redirect(flashUrl(sessionHref(parseCoursePortal(portalArg), sessionId), "error", "Attendance is locked for this session."));
+  }
 
   const enrollments = await prisma.batchEnrollment.findMany({
     where: { batchId: classSession.batchId },

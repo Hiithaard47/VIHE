@@ -1,4 +1,4 @@
-import { updateSessionDate } from "@/app/teacher/sessions/[sessionId]/actions";
+import { updateSessionDate } from "@/app/sessions/actions";
 import { startOfTodayUtc, toDateInputValue } from "@/lib/time";
 import type { CoursePortal } from "@/lib/course-workspace";
 

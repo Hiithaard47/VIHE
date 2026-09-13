@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { AdminCourseTabs } from "@/components/admin-course-tabs";
 
 export function AdminCourseChrome({
@@ -19,9 +18,6 @@ export function AdminCourseChrome({
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  if (pathname.includes("/batches/")) return children;
-
   return (
     <>
       <div className="flex items-start justify-between gap-3">

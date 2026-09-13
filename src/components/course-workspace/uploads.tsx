@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { narrowAssignedBatches, resolveTeacherBatchesForCourse, scopedSessionWhere } from "@/lib/enrollment";
-import { deleteSessionResource } from "@/app/teacher/sessions/[sessionId]/actions";
+import { sessionWhere } from "@/lib/batch-scope";
+import { loadCourseWorkspace } from "@/lib/rbac";
+import { deleteSessionResource } from "@/app/sessions/actions";
 import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { formatDisplayDate } from "@/lib/time";
 
@@ -21,16 +21,11 @@ export async function CourseUploadsView({
   portal: CoursePortal;
   selectedBatchId?: string;
 }) {
-  const session = await requireCourseAccess(courseId, portal);
-  const canManage = await canManageCourse(session, courseId);
-  const assignedIds = narrowAssignedBatches(
-    await resolveTeacherBatchesForCourse(session.user.id, courseId),
-    selectedBatchId,
-  );
+  const { scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
   const returnTo = courseHref(portal, courseId, "uploads", selectedBatchId);
 
   const resources = await prisma.sessionResource.findMany({
-    where: { session: scopedSessionWhere(courseId, assignedIds) },
+    where: { session: sessionWhere(courseId, scope) },
     include: { session: { select: { id: true, date: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });

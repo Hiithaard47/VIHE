@@ -4,18 +4,20 @@ import { AddBatchDialog } from "@/components/add-batch-dialog";
 
 export default async function AdminCourseBatchesPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { isActive: true },
-  });
-  const batches = await prisma.courseBatch.findMany({
-    where: { courseId },
-    include: {
-      teachers: { include: { teacher: true } },
-      enrollments: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const [course, batches] = await Promise.all([
+    prisma.course.findUnique({
+      where: { id: courseId },
+      select: { isActive: true },
+    }),
+    prisma.courseBatch.findMany({
+      where: { courseId },
+      include: {
+        teachers: { include: { teacher: true } },
+        enrollments: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">

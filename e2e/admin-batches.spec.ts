@@ -74,7 +74,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
 
   await page.getByRole("link", { name: courseName }).click();
   await page.getByRole("link", { name: "Morning" }).click();
-  await page.getByRole("main").getByRole("link", { name: "Students" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await page.getByRole("button", { name: "Add student" }).click();
   const rosterStudentDialog = page.getByRole("dialog");
   await rosterStudentDialog.getByPlaceholder(/Search by name/).fill(studentName);
@@ -86,7 +86,7 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
 
   await page.getByRole("link", { name: courseName }).click();
   await page.getByRole("link", { name: "Evening" }).click();
-  await page.getByRole("main").getByRole("link", { name: "Students" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await expect(page.getByText("No students enrolled in this batch yet.")).toBeVisible();
   await expect(page.locator("tbody").getByText(studentName)).toHaveCount(0);
 });

@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SubTabs } from "@/components/sub-tabs";
 
 const TABS = [
   { slug: "", label: "Overview" },
   { slug: "teachers", label: "Teachers" },
-  { slug: "students", label: "Students" },
   { slug: "sessions", label: "Sessions" },
   { slug: "schedule", label: "Schedule" },
   { slug: "roster", label: "Roster" },
@@ -20,23 +19,10 @@ export function AdminBatchTabs({ courseId, batchId }: { courseId: string; batchI
   const base = `/admin/courses/${courseId}/batches/${batchId}`;
 
   return (
-    <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
-      {TABS.map((tab) => {
-        const href = tab.slug ? `${base}/${tab.slug}` : base;
-        const active = tab.slug ? pathname.startsWith(href) : pathname === base;
-        return (
-          <Link
-            key={tab.slug || "overview"}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
-              active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SubTabs
+      tabs={TABS}
+      hrefFor={(slug) => (slug ? `${base}/${slug}` : base)}
+      isActive={(slug) => (slug ? pathname.startsWith(`${base}/${slug}`) : pathname === base)}
+    />
   );
 }

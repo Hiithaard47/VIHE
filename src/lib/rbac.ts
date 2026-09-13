@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { flashUrl } from "@/lib/flash";
+import { resolveWorkspaceScope, type BatchScope } from "@/lib/batch-scope";
 import { courseHref, deniedCourseHref, type CoursePortal } from "@/lib/course-workspace";
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 import { isStudentLoginExpired } from "@/lib/student-login";
@@ -38,10 +39,6 @@ export async function getUserPermissions(userId: string): Promise<{ roles: strin
   }
 
   return { roles: [...roles], permissions: [...permissions] };
-}
-
-export function can(userPermissions: string[], permission: PermissionKey): boolean {
-  return userPermissions.includes(permission);
 }
 
 // Server-component/server-action guard: redirects to /login when signed
@@ -221,4 +218,24 @@ export async function requireCourseConfigure(courseId: string, portal: CoursePor
   if (!(await canConfigureCourse(session, courseId))) redirect(courseHref(portal, courseId));
 
   return session;
+}
+
+export async function loadCourseWorkspace(
+  courseId: string,
+  portal: CoursePortal,
+  selectedBatchId?: string,
+): Promise<{
+  session: Session;
+  scope: BatchScope;
+  canManage: boolean;
+  canConfigure: boolean;
+}> {
+  const session = await requireCourseAccess(courseId, portal);
+  const scope = await resolveWorkspaceScope(session, courseId, selectedBatchId);
+  if (!scope) redirect(deniedCourseHref(portal));
+  const [canManage, canConfigure] = await Promise.all([
+    canManageCourse(session, courseId),
+    canConfigureCourse(session, courseId),
+  ]);
+  return { session, scope, canManage, canConfigure };
 }

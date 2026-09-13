@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { BatchField } from "@/components/course-workspace-fields";
 import { formatDisplayDate, toDateInputValue } from "@/lib/time";
 
 export function AddWeekSessionDialog({
@@ -11,10 +10,6 @@ export function AddWeekSessionDialog({
   submitLabel,
   defaultCategoryId,
   categories,
-  batches,
-  week,
-  extraFields,
-  action,
   onLocalSubmit,
   onClose,
 }: {
@@ -24,11 +19,7 @@ export function AddWeekSessionDialog({
   submitLabel: string;
   defaultCategoryId: string;
   categories: { id: string; name: string }[];
-  batches: { id: string; name: string }[];
-  week?: number;
-  extraFields?: React.ReactNode;
-  action?: (formData: FormData) => void | Promise<void>;
-  onLocalSubmit?: (formData: FormData) => void;
+  onLocalSubmit: (formData: FormData) => void;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -48,16 +39,11 @@ export function AddWeekSessionDialog({
       className="fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-hairline bg-card p-0 text-ink shadow-lg backdrop:bg-ink/40"
     >
       <form
-        action={action}
-        onSubmit={
-          onLocalSubmit
-            ? (event) => {
-                event.preventDefault();
-                onLocalSubmit(new FormData(event.currentTarget));
-                onClose();
-              }
-            : undefined
-        }
+        onSubmit={(event) => {
+          event.preventDefault();
+          onLocalSubmit(new FormData(event.currentTarget));
+          onClose();
+        }}
         className="flex flex-col gap-4 p-4"
       >
         <div className="flex items-start justify-between gap-3">
@@ -74,8 +60,6 @@ export function AddWeekSessionDialog({
             <input type="hidden" name="date" value={toDateInputValue(date)} />
           </>
         )}
-        <BatchField batches={batches} />
-        {week ? <input type="hidden" name="week" value={week} /> : null}
         <label className="flex flex-col gap-1 text-sm text-ink">
           Name
           <input
@@ -122,7 +106,6 @@ export function AddWeekSessionDialog({
             />
           </label>
         </div>
-        {extraFields}
         <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
           {submitLabel}
         </button>

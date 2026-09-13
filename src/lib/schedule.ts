@@ -1,31 +1,5 @@
 import { addUtcDays, sessionDateUtc, startOfTodayUtc } from "@/lib/time";
 
-export type ScheduleSlot = {
-  id: string;
-  weekday: number;
-  startMinute: number;
-  endMinute: number;
-  name: string;
-  categoryId: string;
-};
-
-export type Meeting = {
-  date: Date;
-  slotId: string;
-  startMinute: number;
-  endMinute: number;
-  name: string;
-  categoryId: string;
-};
-
-export type ExistingSession = {
-  id: string;
-  date: Date;
-  startMinute: number | null;
-  slotId: string | null;
-  recordCount: number;
-};
-
 export function mondayOf(date: Date): Date {
   const day = sessionDateUtc(date);
   const weekday = day.getUTCDay();
@@ -101,56 +75,3 @@ export function formatTime(minute: number): string {
   return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
-export function generateMeetings(windowStart: Date, windowEnd: Date, slots: ScheduleSlot[]): Meeting[] {
-  const start = sessionDateUtc(windowStart);
-  const end = sessionDateUtc(windowEnd);
-  if (end.getTime() < start.getTime()) return [];
-  const meetings: Meeting[] = [];
-  for (let day = start; day.getTime() <= end.getTime(); day = addUtcDays(day, 1)) {
-    const weekday = day.getUTCDay();
-    for (const slot of slots) {
-      if (slot.weekday !== weekday) continue;
-      meetings.push({
-        date: day,
-        slotId: slot.id,
-        startMinute: slot.startMinute,
-        endMinute: slot.endMinute,
-        name: slot.name,
-        categoryId: slot.categoryId,
-      });
-    }
-  }
-  return meetings;
-}
-
-function meetingKey(date: Date, startMinute: number) {
-  return `${sessionDateUtc(date).toISOString()}|${startMinute}`;
-}
-
-export function isProtectedSession(session: ExistingSession, today: Date): boolean {
-  if (session.recordCount > 0) return true;
-  if (session.slotId == null) return true;
-  return sessionDateUtc(session.date).getTime() <= sessionDateUtc(today).getTime();
-}
-
-export function diffSchedule(existing: ExistingSession[], desired: Meeting[], today: Date) {
-  const desiredKeys = new Set(desired.map((item) => meetingKey(item.date, item.startMinute)));
-  const existingByKey = new Map(existing.map((item) => [meetingKey(item.date, item.startMinute ?? -1), item]));
-
-  const create = desired.filter((item) => !existingByKey.has(meetingKey(item.date, item.startMinute)));
-  const remove = existing.filter((item) => {
-    if (isProtectedSession(item, today)) return false;
-    if (item.startMinute == null) return !desiredKeys.has(meetingKey(item.date, -1));
-    return !desiredKeys.has(meetingKey(item.date, item.startMinute));
-  });
-  const keep = existing.filter((item) => !remove.some((row) => row.id === item.id));
-  return { create, remove, keep };
-}
-
-export function applyWindow(termStart: Date, weekCount: number, today: Date, firstApply: boolean) {
-  const start = mondayOf(termStart);
-  const end = termEnd(termStart, weekCount);
-  if (firstApply) return { start, end };
-  const tomorrow = addUtcDays(sessionDateUtc(today), 1);
-  return { start: start.getTime() > tomorrow.getTime() ? start : tomorrow, end };
-}

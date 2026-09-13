@@ -40,7 +40,7 @@ test.describe("admin: classroom", () => {
       "success",
     );
 
-    await page.goto(`/admin/courses/${course.id}/roster`);
+    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/roster`);
     await expect(page.getByText(student.name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Add student" })).toBeVisible();
 
