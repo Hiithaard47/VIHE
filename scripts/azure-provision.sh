@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provision Vihe App on Azure (australiaeast by default):
+# Provision Vihe App on Azure (centralindia / Mumbai by default):
 #   Resource group, ACR, Postgres Flexible Server, Blob Storage, Container Apps.
 #
 # Prerequisites:
@@ -21,7 +21,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-REGION="${AZURE_LOCATION:-australiaeast}"
+REGION="${AZURE_LOCATION:-centralindia}"
 RG="${AZURE_RG:-rg-vihe-app}"
 APP_NAME="${AZURE_APP_NAME:-vihe-app}"
 ENV_NAME="${AZURE_CAE_NAME:-cae-vihe}"
