@@ -7,6 +7,7 @@ async function createTeacher(page: import("@playwright/test").Page, name: string
   await dialog.getByLabel("Full name").fill(name);
   await dialog.getByLabel("Email").fill(email);
   await dialog.getByLabel("Temporary password").fill("TempPass123!");
+  await dialog.locator('label:has-text("Teacher") input[type="checkbox"]').check();
   return waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create teacher" }).click());
 }
 
