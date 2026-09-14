@@ -64,7 +64,7 @@ There is no self sign-up: a Google account only works if an admin has already cr
 
 Primary production path. The app image runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
 
-**Prerequisites:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`brew install azure-cli`), `az login`, an **Enabled** subscription, and **Docker Desktop** running for the first image build (ACR Tasks are often blocked on new subscriptions).
+**Prerequisites:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`brew install azure-cli`), `az login`, an **Enabled** subscription. The app image is built and pushed by **GitHub Actions** (Docker Desktop optional; set `SKIP_LOCAL_BUILD=0` only for a local build).
 
 ### First-time provision
 

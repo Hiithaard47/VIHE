@@ -1,10 +1,13 @@
-# Build linux/amd64 image → push ACR → update Azure Container App.
-# One-time Azure bootstrap stays in scripts/azure-provision.sh.
+# Build linux/amd64 image → push ACR → update Azure Container App (if present) → GitHub Release.
+# One-time Azure bootstrap stays in scripts/azure-provision.sh (infra only; image via this workflow).
 #
 # Required GitHub Actions secrets:
 #   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
 # Variables (optional):
 #   AZURE_RG, AZURE_APP_NAME, AZURE_ACR_NAME
+#
+# Each successful deploy creates a GitHub Release (tag r<N>-<sha7>).
+# Azure Portal: match image tag, revision suffix, or env RELEASE_TAG / GIT_SHA.
 
 name: Deploy
 
@@ -19,20 +22,20 @@ concurrency:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 env:
-  AZURE_RG: ${{ vars.AZURE_RG || 'rg-vihe-app' }}
+  AZURE_RG: ${{ vars.AZURE_RG || 'rg-vihe-mumbai' }}
   AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME || 'vihe-app' }}
   AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
 
 jobs:
   deploy:
-    name: Build, push, deploy
+    name: Build, push, deploy, release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -61,13 +64,23 @@ jobs:
           echo "name=$ACR_NAME" >> "$GITHUB_OUTPUT"
           echo "login_server=$LOGIN_SERVER" >> "$GITHUB_OUTPUT"
 
-      - name: Set image tags
+      - name: Set release metadata
         id: meta
         run: |
+          set -euo pipefail
           SHORT_SHA="${GITHUB_SHA::7}"
-          echo "image_tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "image_uri=${{ steps.acr.outputs.login_server }}/${{ env.AZURE_APP_NAME }}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "image_uri_latest=${{ steps.acr.outputs.login_server }}/${{ env.AZURE_APP_NAME }}:latest" >> "$GITHUB_OUTPUT"
+          RELEASE_TAG="r${{ github.run_number }}-${SHORT_SHA}"
+          REVISION_SUFFIX="$(echo "$RELEASE_TAG" | tr '[:upper:]' '[:lower:]' | cut -c1-20)"
+          LOGIN="${{ steps.acr.outputs.login_server }}"
+          APP="${{ env.AZURE_APP_NAME }}"
+          {
+            echo "short_sha=$SHORT_SHA"
+            echo "release_tag=$RELEASE_TAG"
+            echo "revision_suffix=$REVISION_SUFFIX"
+            echo "image_uri=${LOGIN}/${APP}:${RELEASE_TAG}"
+            echo "image_uri_sha=${LOGIN}/${APP}:sha-${SHORT_SHA}"
+            echo "image_uri_latest=${LOGIN}/${APP}:latest"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -83,18 +96,67 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.image_uri }}
+            ${{ steps.meta.outputs.image_uri_sha }}
             ${{ steps.meta.outputs.image_uri_latest }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update Container App image
+      - name: Update Container App (if exists)
+        id: app
         run: |
           set -euo pipefail
+          RELEASE_TAG="${{ steps.meta.outputs.release_tag }}"
+          SHORT_SHA="${{ steps.meta.outputs.short_sha }}"
+          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/${RELEASE_TAG}"
+          if ! az containerapp show --name "$AZURE_APP_NAME" --resource-group "$AZURE_RG" >/dev/null 2>&1; then
+            echo "Container App '$AZURE_APP_NAME' not in '$AZURE_RG' yet — image pushed; create app with azure-provision.sh app-update"
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          az containerapp ingress update \
+            --name "$AZURE_APP_NAME" \
+            --resource-group "$AZURE_RG" \
+            --target-port 8080 \
+            --output none 2>/dev/null || true
           az containerapp update \
             --name "$AZURE_APP_NAME" \
             --resource-group "$AZURE_RG" \
             --image "${{ steps.meta.outputs.image_uri }}" \
+            --revision-suffix "${{ steps.meta.outputs.revision_suffix }}" \
+            --set-env-vars \
+              "RELEASE_TAG=$RELEASE_TAG" \
+              "GIT_SHA=$SHORT_SHA" \
+              "GIT_COMMIT=${{ github.sha }}" \
+              "RELEASE_URL=$RELEASE_URL" \
+              "PORT=8080" \
             --output none
           FQDN="$(az containerapp show --name "$AZURE_APP_NAME" --resource-group "$AZURE_RG" --query properties.configuration.ingress.fqdn -o tsv)"
-          echo "Deployed ${{ steps.meta.outputs.image_uri }}"
-          echo "URL https://${FQDN}"
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+          echo "Deployed release $RELEASE_TAG → https://${FQDN}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.release_tag }}"
+          BODY="$(cat <<EOF
+          ## Deploy ${TAG}
+
+          - **Commit:** [\`${{ steps.meta.outputs.short_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          - **Image:** \`${{ steps.meta.outputs.image_uri }}\`
+          - **Workflow run:** [${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - **Container App updated:** ${{ steps.app.outputs.updated }}
+
+          Match in Azure Portal → Container App → Revisions / env \`RELEASE_TAG\`.
+          EOF
+          )"
+          BODY="$(printf '%s\n' "$BODY" | sed 's/^[[:space:]]*//')"
+          gh release create "$TAG" \
+            --title "Release ${TAG}" \
+            --notes "$BODY" \
+            --target "${{ github.sha }}"
