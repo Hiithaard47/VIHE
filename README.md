@@ -15,11 +15,11 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
 ## Setup
 
 1. Copy `.env.example` to `.env`. The default `DATABASE_URL` matches the Postgres started by `docker-compose.yml` below — change it if you're pointing at a different database. Set `AUTH_SECRET` (`npx auth secret`), and optionally `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` for Google sign-in. Set `ADMIN_EMAIL`/`ADMIN_PASSWORD` for the bootstrap admin account.
-2. Start local Postgres and MinIO:
+2. Start local Postgres and Azurite:
    ```
    docker compose up -d
    ```
-   MinIO is the local S3 stand-in (`http://localhost:9000`, console `http://localhost:9001`). Local uses `S3_*` (+ optional `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE`). Azure production uses `AZURE_STORAGE_CONNECTION_STRING` instead.
+   Azurite is the local Azure Blob emulator (`http://127.0.0.1:10000`). Local and production both use `AZURE_STORAGE_CONNECTION_STRING` (+ optional `AZURE_STORAGE_CONTAINER`).
 3. Install dependencies:
    ```
    npm install
@@ -98,11 +98,6 @@ export GITHUB_REPO=parmod-arora/vihe-app
 The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) builds `linux/amd64`, pushes to ACR (`sha-<commit>` + `latest`), and updates the Container App image. Migrations still run on container start.
 
 Local image refresh: `./scripts/azure-provision.sh build-push` then `./scripts/azure-provision.sh app-update`.
-
-### AWS (legacy)
-
-AWS ECS Express scripts remain under `scripts/aws-provision.sh` but are not the primary path (org SCPs blocked Fargate on the trial account). Prefer Azure unless you have a clean AWS account without restrictive SCPs.
-
 
 ## Testing
 
