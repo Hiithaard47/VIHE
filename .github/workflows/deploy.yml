@@ -6,9 +6,12 @@
 # Variables (optional):
 #   AZURE_RG, AZURE_APP_NAME, AZURE_ACR_NAME
 #
-# Releases use SemVer tags (vMAJOR.MINOR.PATCH).
-# - push to main → patch bump from latest v* tag (or package.json if none)
-# - workflow_dispatch → choose patch / minor / major
+# Production release (SemVer vMAJOR.MINOR.PATCH) only when:
+# - workflow_dispatch (manual; choose patch / minor / major), or
+# - push to main with both:
+#   1) a feat/fix commit (conventional), and
+#   2) app runtime path changes (src/, prisma/, package.json, Dockerfile, …)
+# Bump from commits: fix→patch, feat→minor, breaking (!)→major.
 # Azure Portal: match image tag, revision suffix, or env RELEASE_TAG / GIT_SHA.
 
 name: Deploy
@@ -38,8 +41,107 @@ env:
   AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
 
 jobs:
+  should-release:
+    name: Gate production release
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.gate.outputs.release }}
+      bump: ${{ steps.gate.outputs.bump }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether to release
+        id: gate
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=${{ github.event.inputs.bump || 'patch' }}" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — releasing"
+            exit 0
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
+            RANGE="${{ github.sha }}"
+            COMMITS="$(git log -1 --format=%s "$RANGE")"
+            FILES="$(git show --pretty='' --name-only "$RANGE")"
+          else
+            RANGE="${BEFORE}..${{ github.sha }}"
+            COMMITS="$(git log --format=%s "$RANGE")"
+            FILES="$(git diff --name-only "$BEFORE" "${{ github.sha }}")"
+          fi
+
+          echo "Commit subjects in range:"
+          printf '%s\n' "$COMMITS"
+          echo "Changed files:"
+          printf '%s\n' "$FILES"
+
+          APP_CHANGE=false
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            case "$file" in
+              src/*|prisma/*|public/*|scripts/start-prod.sh|package.json|package-lock.json|Dockerfile|Dockerfile.*|next.config.*|next.config.js|next.config.mjs|next.config.ts|auth.ts|middleware.ts)
+                APP_CHANGE=true
+                break
+                ;;
+            esac
+          done <<< "$FILES"
+
+          HAS_FIX=false
+          HAS_FEAT=false
+          HAS_BREAKING=false
+          while IFS= read -r subject; do
+            [[ -z "$subject" ]] && continue
+            if printf '%s\n' "$subject" | grep -Eq '^(feat|fix|perf)(\([^)]+\))?!:' \
+              || printf '%s\n' "$subject" | grep -Eq '^BREAKING[- ]CHANGE:'; then
+              HAS_BREAKING=true
+            fi
+            if printf '%s\n' "$subject" | grep -Eq '^feat(\([^)]+\))?(!)?:'; then
+              HAS_FEAT=true
+            elif printf '%s\n' "$subject" | grep -Eq '^(fix|perf)(\([^)]+\))?(!)?:'; then
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+
+          if [[ "$APP_CHANGE" != true ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "bump=patch" >> "$GITHUB_OUTPUT"
+            echo "Skip: no app runtime path changes"
+            exit 0
+          fi
+
+          if [[ "$HAS_BREAKING" == true ]]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=major" >> "$GITHUB_OUTPUT"
+            echo "Release: breaking change → major"
+            exit 0
+          fi
+          if [[ "$HAS_FEAT" == true ]]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=minor" >> "$GITHUB_OUTPUT"
+            echo "Release: feat → minor"
+            exit 0
+          fi
+          if [[ "$HAS_FIX" == true ]]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=patch" >> "$GITHUB_OUTPUT"
+            echo "Release: fix/perf → patch"
+            exit 0
+          fi
+
+          echo "release=false" >> "$GITHUB_OUTPUT"
+          echo "bump=patch" >> "$GITHUB_OUTPUT"
+          echo "Skip: no feat/fix/perf commit in push"
+
   deploy:
     name: Build, push, deploy, release
+    needs: should-release
+    if: needs.should-release.outputs.release == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -80,7 +182,7 @@ jobs:
           set -euo pipefail
           git fetch --tags --force
 
-          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          BUMP="${{ needs.should-release.outputs.bump }}"
           LATEST="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1 || true)"
 
           if [[ -z "$LATEST" ]]; then
