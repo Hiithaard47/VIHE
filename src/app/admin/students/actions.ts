@@ -8,9 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
-import { enrollStudentInBatch } from "@/lib/enrollment";
-import { DEFAULT_BATCH_NAME } from "@/lib/batches";
-import { isBatchAssignableToCourse } from "@/lib/batch-access";
+import { enrollStudentInCourse } from "@/lib/enrollment";
 import bcrypt from "bcryptjs";
 import { parseDateInput } from "@/lib/time";
 
@@ -34,16 +32,23 @@ const detailsSchema = z.object({
   loginExpiresAt: z.string().optional().default(""),
 });
 
-function getBatchSelections(formData: FormData) {
+function getCourseSelections(formData: FormData) {
+  const visible = formData.getAll("visibleCourse").filter((value): value is string => typeof value === "string");
+  if (visible.length > 0) {
+    return visible.map((courseId) => ({
+      courseId,
+      enrolled: formData.get(`course-${courseId}`) === "on",
+    }));
+  }
   return Array.from(formData.entries())
-    .filter(([key]) => key.startsWith("batch-"))
+    .filter(([key]) => key.startsWith("course-"))
     .map(([key, value]) => ({
-      courseId: key.slice("batch-".length),
-      batchId: String(value),
+      courseId: key.slice("course-".length),
+      enrolled: value === "on",
     }));
 }
 
-class InvalidBatchSelectionError extends Error {}
+class InvalidCourseSelectionError extends Error {}
 
 async function requireActiveStudent(studentId: string, path: string) {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { isActive: true } });
@@ -51,26 +56,37 @@ async function requireActiveStudent(studentId: string, path: string) {
   if (!student.isActive) redirect(flashUrl(path, "error", "This student is archived. Restore to make changes."));
 }
 
-async function validateBatchSelection(
-  tx: Prisma.TransactionClient,
-  studentId: string | undefined,
-  courseId: string,
-  batchId: string,
-) {
-  const batch = await tx.courseBatch.findUnique({
-    where: { id: batchId },
-    select: { id: true, courseId: true, isActive: true, course: { select: { isActive: true } } },
+async function assertEnrollableCourse(tx: Prisma.TransactionClient, courseId: string) {
+  const course = await tx.course.findUnique({
+    where: { id: courseId },
+    select: { isActive: true },
   });
-  if (!batch?.course.isActive || !isBatchAssignableToCourse(batch, courseId)) {
-    if (!studentId || !batch) throw new InvalidBatchSelectionError();
+  if (!course?.isActive) throw new InvalidCourseSelectionError();
+}
 
-    const existingEnrollment = await tx.batchEnrollment.findUnique({
-      where: { batchId_studentId: { batchId, studentId } },
-    });
-    if (!existingEnrollment || batch.courseId !== courseId) {
-      throw new InvalidBatchSelectionError();
-    }
+async function syncCourseEnrollment(
+  tx: Prisma.TransactionClient,
+  studentId: string,
+  courseId: string,
+  enrolled: boolean,
+) {
+  if (!enrolled) {
+    await tx.courseEnrollment.deleteMany({ where: { studentId, courseId } });
+    return;
   }
+  const course = await tx.course.findUnique({
+    where: { id: courseId },
+    select: { isActive: true },
+  });
+  if (!course) throw new InvalidCourseSelectionError();
+  if (course.isActive) {
+    await enrollStudentInCourse(studentId, courseId, tx);
+    return;
+  }
+  const existing = await tx.courseEnrollment.findUnique({
+    where: { courseId_studentId: { courseId, studentId } },
+  });
+  if (!existing) throw new InvalidCourseSelectionError();
 }
 
 export async function createStudent(formData: FormData) {
@@ -87,7 +103,7 @@ export async function createStudent(formData: FormData) {
   const { name, rollNumber, email, phone, password } = parsed.data;
   if (password && password.length < 8) redirect(flashUrl(PATH, "error", "Portal password must be at least 8 characters."));
   const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
-  const batchSelections = getBatchSelections(formData);
+  const courseSelections = getCourseSelections(formData);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -100,20 +116,16 @@ export async function createStudent(formData: FormData) {
           passwordHash,
         },
       });
-      for (const { courseId, batchId } of batchSelections) {
-        if (batchId) {
-          await validateBatchSelection(tx, student.id, courseId, batchId);
-          await enrollStudentInBatch(student.id, batchId, tx);
-        } else {
-          await tx.batchEnrollment.deleteMany({
-            where: { studentId: student.id, batch: { courseId } },
-          });
+      for (const { courseId, enrolled } of courseSelections) {
+        if (enrolled) {
+          await assertEnrollableCourse(tx, courseId);
+          await enrollStudentInCourse(student.id, courseId, tx);
         }
       }
     });
   } catch (err) {
-    if (err instanceof InvalidBatchSelectionError) {
-      redirect(flashUrl(PATH, "error", "Select an active batch belonging to the selected course."));
+    if (err instanceof InvalidCourseSelectionError) {
+      redirect(flashUrl(PATH, "error", "Select an active course to enroll in."));
     }
     if (isUniqueConstraintError(err)) {
       redirect(flashUrl(PATH, "error", "That roll number or email is already in use."));
@@ -177,24 +189,17 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
   const path = `/admin/students/${studentId}`;
   await requireActiveStudent(studentId, path);
 
-  const batchSelections = getBatchSelections(formData);
+  const courseSelections = getCourseSelections(formData);
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const { courseId, batchId } of batchSelections) {
-        if (batchId) {
-          await validateBatchSelection(tx, studentId, courseId, batchId);
-          await enrollStudentInBatch(studentId, batchId, tx, { replaceExisting: true });
-        } else {
-          await tx.batchEnrollment.deleteMany({
-            where: { studentId, batch: { courseId } },
-          });
-        }
+      for (const { courseId, enrolled } of courseSelections) {
+        await syncCourseEnrollment(tx, studentId, courseId, enrolled);
       }
     });
   } catch (err) {
-    if (err instanceof InvalidBatchSelectionError) {
-      redirect(flashUrl(PATH, "error", "Select an active batch belonging to the selected course."));
+    if (err instanceof InvalidCourseSelectionError) {
+      redirect(flashUrl(path, "error", "Select an active course to enroll in."));
     }
     throw err;
   }
@@ -240,12 +245,7 @@ export async function approveApplication(applicationId: string, formData: FormDa
         data: { name: application.name, email: application.email, phone: application.phone, rollNumber },
       });
       if (application.desiredCourseId) {
-        const batch = await tx.courseBatch.upsert({
-          where: { courseId_name: { courseId: application.desiredCourseId, name: DEFAULT_BATCH_NAME } },
-          create: { courseId: application.desiredCourseId, name: DEFAULT_BATCH_NAME },
-          update: {},
-        });
-        await enrollStudentInBatch(student.id, batch.id, tx);
+        await enrollStudentInCourse(student.id, application.desiredCourseId, tx);
       }
       await tx.studentApplication.update({
         where: { id: applicationId },

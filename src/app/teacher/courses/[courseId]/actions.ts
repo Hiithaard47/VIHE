@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireActiveCourse, requireCourseAccess, requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
-import { assertWritableBatch } from "@/lib/batch-scope";
+import { assertWritableSubject } from "@/lib/subject-scope";
 import { insertSession } from "@/lib/session-write";
 import { courseHref, parseCoursePortal, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
 import { parseDateInput } from "@/lib/time";
@@ -17,8 +17,8 @@ export async function createSession(courseId: string, portalArg: CoursePortal, f
   const portal = parseCoursePortal(portalArg);
   await requireCourseAccess(courseId, portal);
   const categoryHint = String(formData.get("categoryId") ?? "").trim() || undefined;
-  const batchHint = String(formData.get("batchId") ?? "").trim() || undefined;
-  const path = sessionListHref(portal, courseId, categoryHint, batchHint);
+  const subjectHint = String(formData.get("subjectId") ?? "").trim() || undefined;
+  const path = sessionListHref(portal, courseId, categoryHint, subjectHint);
   await requireActiveCourse(courseId, path);
   const date = parseDateInput(String(formData.get("date") ?? ""));
   if (!date) redirect(flashUrl(path, "error", "Pick a valid date."));
@@ -28,15 +28,15 @@ export async function createSession(courseId: string, portalArg: CoursePortal, f
     ? await prisma.sessionCategory.findFirst({ where: { id: categoryHint, isActive: true }, select: { id: true } })
     : null;
   if (!category) redirect(flashUrl(path, "error", "Pick a session category."));
-  const batchId = await assertWritableBatch(session, courseId, String(formData.get("batchId") ?? "") || null);
-  if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to that batch."));
+  const subjectId = await assertWritableSubject(session, courseId, String(formData.get("subjectId") ?? "") || null);
+  if (!subjectId) redirect(flashUrl(path, "error", "You are not assigned to that subject."));
   const startRaw = String(formData.get("startTime") ?? "").trim();
   const endRaw = String(formData.get("endTime") ?? "").trim();
   const times = startRaw || endRaw ? parseMeetingTimes(startRaw, endRaw) : null;
   if ((startRaw || endRaw) && !times) redirect(flashUrl(path, "error", "Pick a valid start and end time."));
 
   const created = await insertSession({
-    batchId,
+    subjectId,
     categoryId: category.id,
     date,
     name,
@@ -46,6 +46,6 @@ export async function createSession(courseId: string, portalArg: CoursePortal, f
   });
   if ("error" in created) redirect(flashUrl(path, "error", created.error));
 
-  revalidatePath(courseHref(portal, courseId, "", batchId));
-  redirect(flashUrl(sessionListHref(portal, courseId, category.id, batchHint), "success", "Session created."));
+  revalidatePath(courseHref(portal, courseId, "", subjectId));
+  redirect(flashUrl(sessionListHref(portal, courseId, category.id, subjectHint), "success", "Session created."));
 }

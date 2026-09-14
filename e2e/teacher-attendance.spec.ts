@@ -11,15 +11,15 @@ test.describe("teacher: attendance matrix", () => {
       password,
     );
     const course = await createCourse(`Matrix Course ${unique("c")}`, unique("MTX").toUpperCase(), teacher.id);
-    const student = await createStudent(`Matrix Student ${unique("s")}`, unique("MS").toUpperCase(), course.batches[0].id);
+    const student = await createStudent(`Matrix Student ${unique("s")}`, unique("MS").toUpperCase(), course.id);
     const present = await createSession(
-      course.batches[0].id,
+      course.subjects[0].id,
       teacher.id,
       new Date("2026-02-01T00:00:00.000Z"),
       "Chapter 1",
     );
     const absent = await createSession(
-      course.batches[0].id,
+      course.subjects[0].id,
       teacher.id,
       new Date("2026-02-03T00:00:00.000Z"),
       "Chapter 2",
@@ -29,7 +29,7 @@ test.describe("teacher: attendance matrix", () => {
     });
     const templeSession = await prisma.classSession.create({
       data: {
-        batchId: course.batches[0].id,
+        subjectId: course.subjects[0].id,
         categoryId: temple.id,
         date: new Date("2026-02-02T00:00:00.000Z"),
         name: "Evening kirtana",

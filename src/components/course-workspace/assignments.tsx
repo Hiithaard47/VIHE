@@ -1,46 +1,47 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { batchWhere, sessionWhere } from "@/lib/batch-scope";
+import { subjectWhere, sessionWhere } from "@/lib/subject-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
-import { BatchField } from "@/components/course-workspace-fields";
+import { SubjectField } from "@/components/course-workspace-fields";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
 import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
 export async function CourseAssignmentsView({
   courseId,
   portal,
-  selectedBatchId,
+  selectedSubjectId,
 }: {
   courseId: string;
   portal: CoursePortal;
-  selectedBatchId?: string;
+  selectedSubjectId?: string;
 }) {
-  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
   const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
   if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
 
-  const [assignments, writableBatches] = await Promise.all([
+  const [assignments, writableSubjects, enrollmentCount] = await Promise.all([
     prisma.assignment.findMany({
     where: sessionWhere(courseId, scope),
     include: {
       _count: { select: { submissions: true } },
       submissions: { select: { marks: true } },
-      batch: { select: { name: true, _count: { select: { enrollments: true } } } },
+      subject: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
     }),
-    prisma.courseBatch.findMany({
-      where: { courseId, ...batchWhere(scope) },
+    prisma.courseSubject.findMany({
+      where: { courseId, ...subjectWhere(scope) },
       select: { id: true, name: true },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }],
     }),
+    prisma.courseEnrollment.count({ where: { courseId } }),
   ]);
-  const showBatchName = new Set(assignments.map((item) => item.batch.name)).size > 1;
+  const showSubjectName = new Set(assignments.map((item) => item.subject.name)).size > 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +49,7 @@ export async function CourseAssignmentsView({
         <section>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Issue assignment</h2>
           <form action={createAssignment.bind(null, courseId, portal)} className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
-            <BatchField batches={writableBatches} />
+            <SubjectField subjects={writableSubjects} />
             <label className="flex flex-col gap-1 text-sm text-ink">
               Title
               <input name="title" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
@@ -95,14 +96,14 @@ export async function CourseAssignmentsView({
             return (
               <Link
                 key={assignment.id}
-                href={courseHref(portal, courseId, `assignments/${assignment.id}`, selectedBatchId)}
+                href={courseHref(portal, courseId, `assignments/${assignment.id}`, selectedSubjectId)}
                 className="rounded-lg border border-hairline bg-card p-4 hover:border-accent-dark"
               >
                 <p className="font-medium text-ink">{assignment.title}</p>
                 <p className="text-xs text-muted">
-                  {showBatchName ? `${assignment.batch.name} · ` : ""}
+                  {showSubjectName ? `${assignment.subject.name} · ` : ""}
                   {assignment.dueDate ? `Due ${formatDisplayDate(assignment.dueDate)} · ` : ""}
-                  {assignment._count.submissions}/{assignment.batch._count.enrollments} submitted · {graded} graded
+                  {assignment._count.submissions}/{enrollmentCount} submitted · {graded} graded
                 </p>
               </Link>
             );

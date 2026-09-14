@@ -133,7 +133,7 @@ export function AttendanceForm({
             {students.length === 0 && (
               <tr>
                 <td colSpan={3} className="px-4 py-3 text-sm text-muted">
-                  No students enrolled in this batch yet.
+                  No students enrolled in this course yet.
                 </td>
               </tr>
             )}

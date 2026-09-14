@@ -10,9 +10,9 @@ async function setUpSessionWithRoster() {
     password,
   );
   const course = await createCourse(`Attendance Course ${unique("c")}`, unique("ATT").toUpperCase(), teacher.id);
-  const studentA = await createStudent(`Arjuna ${unique("s")}`, unique("R1"), course.batches[0].id);
-  const studentB = await createStudent(`Krishna ${unique("s")}`, unique("R2"), course.batches[0].id);
-  const session = await createSession(course.batches[0].id, teacher.id, new Date("2026-02-04T00:00:00.000Z"));
+  const studentA = await createStudent(`Arjuna ${unique("s")}`, unique("R1"), course.id);
+  const studentB = await createStudent(`Krishna ${unique("s")}`, unique("R2"), course.id);
+  const session = await createSession(course.subjects[0].id, teacher.id, new Date("2026-02-04T00:00:00.000Z"));
   return { teacher, password, course, studentA, studentB, session };
 }
 

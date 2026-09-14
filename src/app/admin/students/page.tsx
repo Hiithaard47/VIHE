@@ -95,15 +95,15 @@ export default async function StudentsPage({
     prisma.student.count({ where }),
     prisma.course.findMany({
       where: { isActive: true },
-      include: { batches: { where: { isActive: true }, orderBy: { name: "asc" } } },
       orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const page = parseAdminListPage(rawPage, totalPages);
   const students = await prisma.student.findMany({
     where,
-    include: { enrollments: { include: { batch: { include: { course: true } } } } },
+    include: { enrollments: { include: { course: true } } },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * ADMIN_PAGE_SIZE,
     take: ADMIN_PAGE_SIZE,
@@ -124,8 +124,7 @@ export default async function StudentsPage({
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Student</th>
-                <th className="px-4 py-2 font-medium">Course</th>
-                <th className="px-4 py-2 font-medium">Batch</th>
+                <th className="px-4 py-2 font-medium">Courses</th>
               </tr>
             </thead>
             <tbody>
@@ -142,19 +141,12 @@ export default async function StudentsPage({
                   </td>
                   <td className="px-4 py-3">
                     {student.enrollments.length > 0 ? (
-                      student.enrollments.map(({ batch }) => (
-                        <p key={batch.id}>
-                          {batch.course.name}
-                          {!batch.course.isActive && <span className="text-muted"> (completed)</span>}
+                      student.enrollments.map(({ course }) => (
+                        <p key={course.id}>
+                          {course.name}
+                          {!course.isActive && <span className="text-muted"> (completed)</span>}
                         </p>
                       ))
-                    ) : (
-                      <span className="text-muted">None</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {student.enrollments.length > 0 ? (
-                      student.enrollments.map(({ batch }) => <p key={batch.id}>{batch.name}</p>)
                     ) : (
                       <span className="text-muted">None</span>
                     )}
@@ -163,7 +155,7 @@ export default async function StudentsPage({
               ))}
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm text-muted">
+                  <td colSpan={2} className="px-4 py-3 text-sm text-muted">
                     {q ? "No matching students." : isActive ? "No active students yet." : "No archived students."}
                   </td>
                 </tr>

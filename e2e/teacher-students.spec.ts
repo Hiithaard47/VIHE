@@ -11,7 +11,7 @@ test.describe("teacher: students directory", () => {
       password,
     );
     const course = await createCourse(`Directory Course ${unique("c")}`, unique("DIR").toUpperCase(), teacher.id);
-    const student = await createStudent(`Directory Student ${unique("s")}`, unique("R"), course.batches[0].id, {
+    const student = await createStudent(`Directory Student ${unique("s")}`, unique("R"), course.id, {
       email: `${unique("directorystudent")}@example.com`,
       phone: `555${unique("p").replace(/\D/g, "").padEnd(7, "0").slice(0, 7)}`,
     });
@@ -41,11 +41,11 @@ test.describe("teacher: students directory", () => {
     const course = await createCourse(`Search Course ${unique("c")}`, unique("SRCH").toUpperCase(), teacher.id);
     const email = `${unique("searchstudent")}@example.com`;
     const phone = `555${Date.now().toString().slice(-7)}`;
-    const match = await createStudent(`Search Student ${unique("s")}`, unique("RS"), course.batches[0].id, {
+    const match = await createStudent(`Search Student ${unique("s")}`, unique("RS"), course.id, {
       email,
       phone,
     });
-    const other = await createStudent(`Other Student ${unique("s")}`, unique("RO"), course.batches[0].id);
+    const other = await createStudent(`Other Student ${unique("s")}`, unique("RO"), course.id);
 
     await login(page, teacher.email, password);
     await page.goto("/teacher/students");

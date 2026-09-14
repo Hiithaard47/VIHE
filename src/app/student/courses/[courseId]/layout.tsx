@@ -17,7 +17,7 @@ export default async function StudentCourseLayout({
   const enrollment = await findStudentCourseEnrollment(session.user.id, courseId);
   if (!enrollment) notFound();
 
-  const { course, name: batchName } = enrollment.batch;
+  const { course } = enrollment;
 
   return (
     <div className="flex flex-col gap-5">
@@ -28,7 +28,7 @@ export default async function StudentCourseLayout({
         </Link>
         <h1 className="font-heading text-lg font-semibold text-ink">{course.name}</h1>
         <p className="text-sm text-muted">
-          {course.code} · {batchName}
+          {course.code}
           {!course.isActive && " · Completed"}
         </p>
         {course.description && <p className="mt-2 text-sm text-ink">{course.description}</p>}

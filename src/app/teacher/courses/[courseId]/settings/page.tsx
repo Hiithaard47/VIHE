@@ -3,7 +3,7 @@ import { updateCourseDetails, updateCoursePolicy } from "@/app/courses/actions";
 import { CourseDetailsForm, CoursePolicyForm } from "@/components/course-settings-forms";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { isCourseAdmin } from "@/lib/batch-scope";
+import { isCourseAdmin } from "@/lib/subject-scope";
 import { requireCourseConfigure } from "@/lib/rbac";
 
 export default async function CourseSettingsPage({ params }: { params: Promise<{ courseId: string }> }) {

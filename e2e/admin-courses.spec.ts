@@ -7,7 +7,7 @@ test.describe("admin: courses", () => {
     await page.goto("/admin/courses");
   });
 
-  test("creates a course with a default batch", async ({ page }) => {
+  test("creates a course with a default subject", async ({ page }) => {
     const courseName = `Bhakti Sastra ${unique("course")}`;
     const code = unique("BS").toUpperCase();
 
@@ -22,11 +22,11 @@ test.describe("admin: courses", () => {
 
     await page.getByRole("link", { name: courseName }).click();
     await expect(page.getByRole("link", { name: "Default", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Add batch" }).click();
-    const batchDialog = page.getByRole("dialog");
-    await batchDialog.getByLabel("Batch name").fill("Morning");
-    const batchKind = await waitForFlashAfter(page, () => batchDialog.getByRole("button", { name: "Create batch" }).click());
-    expect(batchKind).toBe("success");
+    await page.getByRole("button", { name: "Add subject" }).click();
+    const subjectDialog = page.getByRole("dialog");
+    await subjectDialog.getByLabel("Subject name").fill("Morning");
+    const subjectKind = await waitForFlashAfter(page, () => subjectDialog.getByRole("button", { name: "Create subject" }).click());
+    expect(subjectKind).toBe("success");
     await expect(page.getByRole("link", { name: "Morning", exact: true })).toBeVisible();
   });
 
@@ -43,7 +43,7 @@ test.describe("admin: courses", () => {
     const archiveKind = await waitForFlashAfter(page, () => page.getByRole("button", { name: "Archive" }).click());
     expect(archiveKind).toBe("success");
     await expect(page.getByText("This course is archived. Restore it to make changes.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Add batch" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add subject" })).toHaveCount(0);
     await page.getByRole("link", { name: "Details" }).click();
     await expect(page.getByRole("button", { name: "Save details" })).toHaveCount(0);
     await page.getByRole("link", { name: "Policy" }).click();
@@ -57,6 +57,6 @@ test.describe("admin: courses", () => {
     await page.getByRole("link", { name: courseName }).click();
     const restoreKind = await waitForFlashAfter(page, () => page.getByRole("button", { name: "Restore" }).click());
     expect(restoreKind).toBe("success");
-    await expect(page.getByRole("button", { name: "Add batch" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add subject" })).toBeVisible();
   });
 });

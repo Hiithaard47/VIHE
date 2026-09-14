@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminBatchTabs } from "@/components/admin-batch-tabs";
+import { AdminSubjectTabs } from "@/components/admin-subject-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 
-export default async function AdminBatchLayout({
+export default async function AdminSubjectLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ courseId: string; batchId: string }>;
+  params: Promise<{ courseId: string; subjectId: string }>;
 }) {
-  const { courseId, batchId } = await params;
+  const { courseId, subjectId } = await params;
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
-  const batch = await prisma.courseBatch.findUnique({
-    where: { id: batchId },
+  const subject = await prisma.courseSubject.findUnique({
+    where: { id: subjectId },
     select: {
       id: true,
       name: true,
@@ -25,7 +25,7 @@ export default async function AdminBatchLayout({
       course: { select: { name: true, isActive: true } },
     },
   });
-  if (!batch || batch.courseId !== courseId) notFound();
+  if (!subject || subject.courseId !== courseId) notFound();
 
   return (
     <div className="flex flex-col gap-5">
@@ -36,24 +36,24 @@ export default async function AdminBatchLayout({
         </Link>
         <span>/</span>
         <Link href={`/admin/courses/${courseId}`} className="hover:text-ink">
-          {batch.course.name}
+          {subject.course.name}
         </Link>
         <span>/</span>
-        <span className="text-ink">{batch.name}</span>
+        <span className="text-ink">{subject.name}</span>
       </nav>
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-heading text-lg font-semibold text-ink">{batch.name}</h1>
-          <span className={batch.isActive ? "text-xs text-ink" : "text-xs text-muted"}>
-            {batch.isActive ? "Active" : "Archived"}
+          <h1 className="font-heading text-lg font-semibold text-ink">{subject.name}</h1>
+          <span className={subject.isActive ? "text-xs text-ink" : "text-xs text-muted"}>
+            {subject.isActive ? "Active" : "Archived"}
           </span>
-          {!batch.course.isActive && <span className="text-xs text-muted">Course archived</span>}
+          {!subject.course.isActive && <span className="text-xs text-muted">Course archived</span>}
         </div>
-        {!batch.course.isActive && (
+        {!subject.course.isActive && (
           <p className="mt-2 text-sm text-muted">This course is archived. Restore it to make changes.</p>
         )}
       </div>
-      <AdminBatchTabs courseId={courseId} batchId={batchId} />
+      <AdminSubjectTabs courseId={courseId} subjectId={subjectId} />
       {children}
     </div>
   );

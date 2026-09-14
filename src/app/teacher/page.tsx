@@ -27,7 +27,7 @@ export default async function TeacherHome({
   const courses = await prisma.course.findMany({
     where: {
       isActive,
-      batches: {
+      subjects: {
         some: {
           ...(isActive ? { isActive: true } : {}),
           teachers: { some: { teacherId: session.user.id } },
@@ -46,13 +46,14 @@ export default async function TeacherHome({
       id: true,
       name: true,
       code: true,
-      batches: {
+      _count: { select: { enrollments: true } },
+      subjects: {
         where: {
           ...(isActive ? { isActive: true } : {}),
           teachers: { some: { teacherId: session.user.id } },
         },
         orderBy: [{ name: "asc" }, { createdAt: "asc" }],
-        select: { id: true, name: true, _count: { select: { enrollments: true } } },
+        select: { id: true, name: true },
       },
     },
     orderBy: { name: "asc" },
@@ -69,13 +70,13 @@ export default async function TeacherHome({
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Course</th>
-                <th className="px-4 py-2 font-medium">Batches</th>
+                <th className="px-4 py-2 font-medium">Subjects</th>
                 <th className="px-4 py-2 font-medium">Students</th>
               </tr>
             </thead>
             <tbody>
               {courses.map((course) => {
-                const studentCount = course.batches.reduce((total, batch) => total + batch._count.enrollments, 0);
+                const studentCount = course._count.enrollments;
                 return (
                   <tr key={course.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
@@ -86,13 +87,13 @@ export default async function TeacherHome({
                     </td>
                     <td className="px-4 py-3">
                       <ul className="flex flex-col gap-1">
-                        {course.batches.map((batch) => (
-                          <li key={batch.id}>
+                        {course.subjects.map((subject) => (
+                          <li key={subject.id}>
                             <Link
-                              href={`/teacher/courses/${course.id}?batch=${batch.id}`}
+                              href={`/teacher/courses/${course.id}?subject=${subject.id}`}
                               className="hover:text-accent-dark"
                             >
-                              {batch.name}
+                              {subject.name}
                             </Link>
                           </li>
                         ))}

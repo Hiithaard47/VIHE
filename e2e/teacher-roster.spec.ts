@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
 import { createTeacher, createCourse, createStudent, createSession, prisma } from "./db";
-import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
-
 test.describe("teacher: roster", () => {
   test("shows attendance percentage and flags a student below the threshold", async ({ page }) => {
     const password = "TeacherPass123!";
@@ -17,8 +15,8 @@ test.describe("teacher: roster", () => {
       data: { minAttendancePercent: 75 },
     });
 
-    const good = await createStudent(`Good Student ${unique("s")}`, unique("RG").toUpperCase(), course.batches[0].id);
-    const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.batches[0].id);
+    const good = await createStudent(`Good Student ${unique("s")}`, unique("RG").toUpperCase(), course.id);
+    const poor = await createStudent(`Poor Student ${unique("s")}`, unique("RP").toUpperCase(), course.id);
 
     // Four past sessions: `good` attends all four, `poor` attends one.
     //
@@ -31,7 +29,7 @@ test.describe("teacher: roster", () => {
     const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     const day = 24 * 60 * 60 * 1000;
     for (let i = 1; i <= 4; i++) {
-      const classSession = await createSession(course.batches[0].id, teacher.id, new Date(todayUtc - i * day));
+      const classSession = await createSession(course.subjects[0].id, teacher.id, new Date(todayUtc - i * day));
       await prisma.attendanceRecord.createMany({
         data: [
           { sessionId: classSession.id, studentId: good.id, status: "PRESENT", markedById: teacher.id },
@@ -65,7 +63,7 @@ test.describe("teacher: roster", () => {
       password,
     );
     const course = await createCourse(`Blank Course ${unique("c")}`, unique("BLK").toUpperCase(), teacher.id);
-    const student = await createStudent(`Blank Student ${unique("s")}`, unique("RB").toUpperCase(), course.batches[0].id);
+    const student = await createStudent(`Blank Student ${unique("s")}`, unique("RB").toUpperCase(), course.id);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);
@@ -90,7 +88,7 @@ test.describe("teacher: roster", () => {
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);
 
-    await expect(page.getByText("No students enrolled in this batch yet.")).toBeVisible();
+    await expect(page.getByText("No students enrolled in this course yet.")).toBeVisible();
 
     await page.getByRole("button", { name: "Add student" }).click();
     const dialog = page.getByRole("dialog");
@@ -107,15 +105,15 @@ test.describe("teacher: roster", () => {
     await expect(page.locator("tr", { hasText: student.name })).toHaveCount(0);
   });
 
-  test("rejects enrolling a student who is already in another batch of the course", async ({ page }) => {
+  test("shows a course-enrolled student on every subject roster", async ({ page }) => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(
-      `Twin Batch Teacher ${unique("t")}`,
-      `${unique("twinbatch")}@example.com`,
+      `Twin Subject Teacher ${unique("t")}`,
+      `${unique("twinsubject")}@example.com`,
       password,
     );
-    const course = await createCourse(`Twin Batch Course ${unique("c")}`, unique("TWB").toUpperCase(), teacher.id);
-    const evening = await prisma.courseBatch.create({
+    const course = await createCourse(`Twin Subject Course ${unique("c")}`, unique("TWS").toUpperCase(), teacher.id);
+    const evening = await prisma.courseSubject.create({
       data: {
         courseId: course.id,
         name: "Evening",
@@ -123,24 +121,16 @@ test.describe("teacher: roster", () => {
       },
     });
     const student = await createStudent(
-      `Twin Batch Student ${unique("s")}`,
-      unique("TBS").toUpperCase(),
-      course.batches[0].id,
+      `Twin Subject Student ${unique("s")}`,
+      unique("TSS").toUpperCase(),
+      course.id,
     );
 
     await login(page, teacher.email, password);
-    await page.goto(`/teacher/courses/${course.id}/roster?batch=${evening.id}`);
-    await page.getByRole("button", { name: "Add student" }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByPlaceholder(/Search by name/).fill(student.name);
-    await dialog.getByRole("option", { name: new RegExp(student.name) }).click();
-    expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Add student" }).click())).toBe(
-      "error",
-    );
-    await expect(page.getByText(`This student is already enrolled in ${DEFAULT_BATCH_NAME}.`)).toBeVisible();
-    await expect.poll(() => prisma.batchEnrollment.count({ where: { studentId: student.id, batchId: evening.id } })).toBe(0);
+    await page.goto(`/teacher/courses/${course.id}/roster?subject=${evening.id}`);
+    await expect(page.locator("tr", { hasText: student.name })).toBeVisible();
     await expect
-      .poll(() => prisma.batchEnrollment.count({ where: { studentId: student.id, batchId: course.batches[0].id } }))
+      .poll(() => prisma.courseEnrollment.count({ where: { studentId: student.id, courseId: course.id } }))
       .toBe(1);
   });
 
@@ -166,7 +156,7 @@ test.describe("teacher: roster", () => {
       password,
     );
     const course = await createCourse(`Racer Course ${unique("c")}`, unique("RCE").toUpperCase(), teacher.id);
-    const student = await createStudent(`Racer Student ${unique("s")}`, unique("RR").toUpperCase(), course.batches[0].id);
+    const student = await createStudent(`Racer Student ${unique("s")}`, unique("RR").toUpperCase(), course.id);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/roster`);

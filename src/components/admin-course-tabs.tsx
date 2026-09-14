@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { SubTabs } from "@/components/sub-tabs";
 
 const TABS = [
-  { slug: "", label: "Batches" },
+  { slug: "", label: "Subjects" },
+  { slug: "roster", label: "Roster" },
   { slug: "details", label: "Details" },
   { slug: "policy", label: "Policy" },
 ];

@@ -14,9 +14,9 @@ export default async function AdminTeacherAssignmentsPage({
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      taughtBatches: {
-        include: { batch: { include: { course: { select: { id: true, name: true, code: true } } } } },
-        orderBy: { batch: { course: { name: "asc" } } },
+      taughtSubjects: {
+        include: { subject: { include: { course: { select: { id: true, name: true, code: true } } } } },
+        orderBy: { subject: { course: { name: "asc" } } },
       },
     },
   });
@@ -30,32 +30,32 @@ export default async function AdminTeacherAssignmentsPage({
           <thead className="border-b border-hairline bg-canvas text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Course</th>
-              <th className="px-4 py-2 font-medium">Batch</th>
+              <th className="px-4 py-2 font-medium">Subject</th>
             </tr>
           </thead>
           <tbody>
-            {user.taughtBatches.map(({ batch }) => (
-              <tr key={batch.id} className="border-b border-hairline text-ink last:border-0">
+            {user.taughtSubjects.map(({ subject }) => (
+              <tr key={subject.id} className="border-b border-hairline text-ink last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/admin/courses/${batch.course.id}`} className="hover:text-accent-dark">
-                    {batch.course.name}
+                  <Link href={`/admin/courses/${subject.course.id}`} className="hover:text-accent-dark">
+                    {subject.course.name}
                   </Link>
-                  <p className="text-xs text-muted">{batch.course.code}</p>
+                  <p className="text-xs text-muted">{subject.course.code}</p>
                 </td>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/admin/courses/${batch.course.id}/batches/${batch.id}`}
+                    href={`/admin/courses/${subject.course.id}/subjects/${subject.id}`}
                     className="hover:text-accent-dark"
                   >
-                    {batch.name}
+                    {subject.name}
                   </Link>
                 </td>
               </tr>
             ))}
-            {user.taughtBatches.length === 0 && (
+            {user.taughtSubjects.length === 0 && (
               <tr>
                 <td colSpan={2} className="px-4 py-3 text-sm text-muted">
-                  Not assigned to any batch.
+                  Not assigned to any subject.
                 </td>
               </tr>
             )}

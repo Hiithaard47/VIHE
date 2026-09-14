@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canManageCourse, requireCourseAccess } from "@/lib/rbac";
-import { assertWritableBatch } from "@/lib/batch-scope";
+import { assertWritableSubject } from "@/lib/subject-scope";
 import { courseHref, parseCoursePortal, type CoursePortal } from "@/lib/course-workspace";
 import { hasWorkspaceWrite } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
@@ -12,8 +12,8 @@ import { parseDateInput } from "@/lib/time";
 import { deleteObject, isStorageConfigured } from "@/lib/storage";
 import { sanitizeFileName, storeAssignmentFile, validateResourceFile } from "@/lib/assignment-files";
 
-function assignmentsPath(courseId: string, portal: CoursePortal, batchId?: string | null) {
-  return courseHref(portal, courseId, "assignments", batchId ?? undefined);
+function assignmentsPath(courseId: string, portal: CoursePortal, subjectId?: string | null) {
+  return courseHref(portal, courseId, "assignments", subjectId ?? undefined);
 }
 
 async function requireAssignmentManage(courseId: string, portalArg: CoursePortal) {
@@ -27,10 +27,10 @@ async function requireAssignmentManage(courseId: string, portalArg: CoursePortal
 
 export async function createAssignment(courseId: string, portalArg: CoursePortal, formData: FormData) {
   const { session, portal } = await requireAssignmentManage(courseId, portalArg);
-  const requestedBatchId = String(formData.get("batchId") ?? "") || null;
-  const batchId = await assertWritableBatch(session, courseId, requestedBatchId);
-  const path = assignmentsPath(courseId, portal, batchId ?? requestedBatchId);
-  if (!batchId) redirect(flashUrl(path, "error", "You are not assigned to that batch."));
+  const requestedSubjectId = String(formData.get("subjectId") ?? "") || null;
+  const subjectId = await assertWritableSubject(session, courseId, requestedSubjectId);
+  const path = assignmentsPath(courseId, portal, subjectId ?? requestedSubjectId);
+  if (!subjectId) redirect(flashUrl(path, "error", "You are not assigned to that subject."));
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect(flashUrl(path, "error", "Title is required."));
@@ -52,7 +52,7 @@ export async function createAssignment(courseId: string, portalArg: CoursePortal
   const fileName = sanitizeFileName(file.name);
   const assignment = await prisma.assignment.create({
     data: {
-      batchId,
+      subjectId,
       title,
       instructions,
       dueDate,
@@ -79,10 +79,10 @@ export async function createAssignment(courseId: string, portalArg: CoursePortal
 export async function gradeSubmission(courseId: string, assignmentId: string, studentId: string, portalArg: CoursePortal, formData: FormData) {
   const { session, portal } = await requireAssignmentManage(courseId, portalArg);
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batch: { courseId } },
-    select: { id: true, maxMarks: true, batchId: true },
+    where: { id: assignmentId, subject: { courseId } },
+    select: { id: true, maxMarks: true, subjectId: true },
   });
-  const path = courseHref(portal, courseId, `assignments/${assignmentId}`, assignment?.batchId);
+  const path = courseHref(portal, courseId, `assignments/${assignmentId}`, assignment?.subjectId);
   if (!assignment) redirect(flashUrl(assignmentsPath(courseId, portal), "error", "That assignment was not found."));
 
   const submission = await prisma.assignmentSubmission.findUnique({
@@ -109,10 +109,10 @@ export async function gradeSubmission(courseId: string, assignmentId: string, st
 export async function deleteAssignment(courseId: string, assignmentId: string, portalArg: CoursePortal, formData: FormData) {
   const { portal } = await requireAssignmentManage(courseId, portalArg);
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batch: { courseId } },
+    where: { id: assignmentId, subject: { courseId } },
     include: { submissions: { select: { storageKey: true } } },
   });
-  const path = assignmentsPath(courseId, portal, assignment?.batchId);
+  const path = assignmentsPath(courseId, portal, assignment?.subjectId);
   if (!assignment) redirect(flashUrl(path, "error", "That assignment was not found."));
 
   if (isStorageConfigured()) {

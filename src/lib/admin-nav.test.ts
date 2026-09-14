@@ -11,7 +11,7 @@ describe("isAdminNavActive", () => {
   it("highlights a section for its list and nested pages", () => {
     expect(isAdminNavActive("/admin/teachers", "/admin/teachers")).toBe(true);
     expect(isAdminNavActive("/admin/teachers/u1/roles", "/admin/teachers")).toBe(true);
-    expect(isAdminNavActive("/admin/courses/c1/batches/b1/sessions", "/admin/courses")).toBe(true);
+    expect(isAdminNavActive("/admin/courses/c1/subjects/s1/sessions", "/admin/courses")).toBe(true);
     expect(isAdminNavActive("/admin/teachers", "/admin/courses")).toBe(false);
   });
 

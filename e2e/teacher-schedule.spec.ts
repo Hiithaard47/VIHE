@@ -5,15 +5,15 @@ import { mondayOf } from "../src/lib/schedule";
 import { addUtcDays, startOfTodayUtc } from "../src/lib/time";
 
 test.describe("teacher: week schedule", () => {
-  test("saves one meeting on that day and that batch only", async ({ page }) => {
+  test("saves one meeting on that day and that subject only", async ({ page }) => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Schedule Teacher ${unique("t")}`, `${unique("schedteacher")}@example.com`, password);
     const course = await createCourse(`Schedule Course ${unique("c")}`, unique("SCH").toUpperCase(), teacher.id);
-    const student = await createStudent(`Schedule Student ${unique("s")}`, unique("SCS"), course.batches[0].id);
+    const student = await createStudent(`Schedule Student ${unique("s")}`, unique("SCS"), course.id);
     const klass = await defaultSessionCategory();
     const temple = await prisma.sessionCategory.create({ data: { name: `Temple ${unique("k")}` } });
-    const batchId = course.batches[0].id;
-    const evening = await prisma.courseBatch.create({
+    const subjectId = course.subjects[0].id;
+    const evening = await prisma.courseSubject.create({
       data: {
         courseId: course.id,
         name: "Evening",
@@ -22,7 +22,7 @@ test.describe("teacher: week schedule", () => {
     });
 
     await login(page, teacher.email, password);
-    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
 
     await page.getByLabel("Term start").fill("2026-09-14");
     await page.getByLabel("Weeks").fill("2");
@@ -37,7 +37,7 @@ test.describe("teacher: week schedule", () => {
     await add.getByLabel("End").fill("10:30");
     await add.getByRole("button", { name: "Add" }).click();
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
-    await expect.poll(() => prisma.classSession.count({ where: { batchId, name: "Chapter 1" } })).toBe(1);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(1);
 
     await page.getByRole("button", { name: /\+ Add on Tue 15/ }).click();
     const addTemple = page.getByRole("dialog", { name: "Add meeting" });
@@ -46,12 +46,12 @@ test.describe("teacher: week schedule", () => {
     await addTemple.getByLabel("Start").fill("05:00");
     await addTemple.getByLabel("End").fill("05:45");
     await addTemple.getByRole("button", { name: "Add" }).click();
-    await expect.poll(() => prisma.classSession.count({ where: { batchId } })).toBe(2);
-    await expect.poll(() => prisma.classSession.count({ where: { batchId: evening.id } })).toBe(0);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId } })).toBe(2);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId: evening.id } })).toBe(0);
     await expect(page.getByRole("button", { name: /Apply to \d+ weeks/ })).toHaveCount(0);
 
     const created = await prisma.classSession.findMany({
-      where: { batchId },
+      where: { subjectId },
       orderBy: [{ date: "asc" }, { startMinute: "asc" }],
     });
     expect(created.map((row) => row.date.toISOString())).toEqual([
@@ -60,7 +60,7 @@ test.describe("teacher: week schedule", () => {
     ]);
     expect(created.map((row) => row.name)).toEqual(["Chapter 1", "Mangla Aarti"]);
 
-    await page.goto(`/teacher/courses/${course.id}?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}?subject=${subjectId}`);
     await expect(page.getByText("New session")).toBeVisible();
     await expect(page.getByText("Chapter 1")).toHaveCount(1);
     await expect(page.getByText("14 Sept 2026")).toBeVisible();
@@ -68,7 +68,7 @@ test.describe("teacher: week schedule", () => {
     await page.getByRole("link", { name: new RegExp(temple.name) }).click();
     await expect(page.getByText("Mangla Aarti")).toHaveCount(1);
 
-    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
     await page.getByRole("button", { name: "Next week" }).click();
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toHaveCount(0);
     await expect(page.getByRole("article").filter({ hasText: "Mangla Aarti" })).toHaveCount(0);
@@ -85,9 +85,9 @@ test.describe("teacher: week schedule", () => {
         page.getByRole("article").filter({ hasText: "Chapter 1" }).getByRole("button", { name: "Remove" }).click(),
       ),
     ).toBe("success");
-    expect(await prisma.classSession.count({ where: { batchId, name: "Chapter 1" } })).toBe(1);
+    expect(await prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(1);
 
-    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
     await page.getByRole("button", { name: "Next week" }).click();
     await page.getByRole("button", { name: /\+ Add on Mon 21/ }).click();
     const addAgain = page.getByRole("dialog", { name: "Add meeting" });
@@ -98,12 +98,12 @@ test.describe("teacher: week schedule", () => {
     await expect
       .poll(() =>
         prisma.classSession.count({
-          where: { batchId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
+          where: { subjectId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
         }),
       )
       .toBe(1);
     const week2Class = await prisma.classSession.findFirstOrThrow({
-      where: { batchId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
+      where: { subjectId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
     });
     expect(
       await waitForFlashAfter(page, () =>
@@ -124,13 +124,13 @@ test.describe("teacher: week schedule", () => {
       },
     });
 
-    await page.goto(`/teacher/courses/${course.id}?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}?subject=${subjectId}`);
     await expect(page.getByText("1 marked")).toBeVisible();
 
-    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" }).getByRole("button", { name: "Remove" })).toHaveCount(0);
     expect(await prisma.classSession.findUnique({ where: { id: week1Class!.id } })).not.toBeNull();
-    expect(await prisma.classSession.count({ where: { batchId: evening.id } })).toBe(0);
+    expect(await prisma.classSession.count({ where: { subjectId: evening.id } })).toBe(0);
   });
 
   test("duplicates a meeting onto the next free day in the same week", async ({ page }) => {
@@ -138,7 +138,7 @@ test.describe("teacher: week schedule", () => {
     const teacher = await createTeacher(`Dup Teacher ${unique("t")}`, `${unique("dupteacher")}@example.com`, password);
     const course = await createCourse(`Dup Course ${unique("c")}`, unique("DUP").toUpperCase(), teacher.id);
     const klass = await defaultSessionCategory();
-    const batchId = course.batches[0].id;
+    const subjectId = course.subjects[0].id;
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/schedule`);
@@ -150,11 +150,11 @@ test.describe("teacher: week schedule", () => {
     await add.locator('select[name="categoryId"]').selectOption({ label: klass.name });
     await add.getByRole("button", { name: "Add" }).click();
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
-    await expect.poll(() => prisma.classSession.count({ where: { batchId, name: "Chapter 1" } })).toBe(1);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(1);
 
     await page.getByRole("article").filter({ hasText: "Chapter 1" }).getByRole("button", { name: "Duplicate" }).click();
     await expect(page.getByRole("region", { name: "Tue 15" }).getByText("Chapter 1")).toBeVisible();
-    await expect.poll(() => prisma.classSession.count({ where: { batchId, name: "Chapter 1" } })).toBe(2);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(2);
     await expect(page.getByRole("button", { name: "Apply to 2 weeks" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Next week" }).click();
@@ -167,11 +167,11 @@ test.describe("teacher: week schedule", () => {
     const course = await createCourse(`Lock Course ${unique("c")}`, unique("LCK").toUpperCase(), teacher.id);
     const today = startOfTodayUtc();
     const termStart = addUtcDays(mondayOf(today), -7);
-    await prisma.courseBatch.update({
-      where: { id: course.batches[0].id },
+    await prisma.courseSubject.update({
+      where: { id: course.subjects[0].id },
       data: { termStart, weekCount: 2 },
     });
-    await createSession(course.batches[0].id, teacher.id, today, "Today class");
+    await createSession(course.subjects[0].id, teacher.id, today, "Today class");
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/schedule`);
@@ -188,10 +188,10 @@ test.describe("teacher: week schedule", () => {
     const teacher = await createTeacher(`Clash Teacher ${unique("t")}`, `${unique("clashteacher")}@example.com`, password);
     const course = await createCourse(`Clash Course ${unique("c")}`, unique("CLH").toUpperCase(), teacher.id);
     const klass = await defaultSessionCategory();
-    const batchId = course.batches[0].id;
+    const subjectId = course.subjects[0].id;
 
     await login(page, teacher.email, password);
-    await page.goto(`/teacher/courses/${course.id}/schedule?batch=${batchId}`);
+    await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
     await page.getByLabel("Term start").fill("2026-09-14");
     await page.getByLabel("Weeks").fill("2");
 
@@ -210,6 +210,6 @@ test.describe("teacher: week schedule", () => {
     await expect(clash.getByText("That day already has a session at this time.")).toBeVisible();
     await expect(page.locator("p[aria-live]")).not.toHaveText("That day already has a session at this time.");
     await expect(clash).toBeVisible();
-    await expect.poll(() => prisma.classSession.count({ where: { batchId } })).toBe(1);
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId } })).toBe(1);
   });
 });

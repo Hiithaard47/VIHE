@@ -25,12 +25,12 @@ model User {
   sessions Session[]
 
   roles                UserRole[]
-  taughtBatches        BatchTeacher[]
-  createdSessions      ClassSession[]        @relation("SessionCreatedBy")
-  markedRecords        AttendanceRecord[]    @relation("AttendanceMarkedBy")
-  reviewedApplications StudentApplication[]  @relation("ApplicationReviewedBy")
-  uploadedResources    SessionResource[]     @relation("SessionResourceUploadedBy")
-  createdAssignments   Assignment[]          @relation("AssignmentCreatedBy")
+  taughtSubjects       SubjectTeacher[]
+  createdSessions      ClassSession[]         @relation("SessionCreatedBy")
+  markedRecords        AttendanceRecord[]     @relation("AttendanceMarkedBy")
+  reviewedApplications StudentApplication[]   @relation("ApplicationReviewedBy")
+  uploadedResources    SessionResource[]      @relation("SessionResourceUploadedBy")
+  createdAssignments   Assignment[]           @relation("AssignmentCreatedBy")
   gradedSubmissions    AssignmentSubmission[] @relation("AssignmentGradedBy")
 
   @@map("users")
@@ -147,13 +147,14 @@ model Course {
   // (BSA/BPV 6 months, BS 1 year, BV/BVA 4 years, otherwise none).
   loginMonths Int?
 
-  batches      CourseBatch[]
+  subjects     CourseSubject[]
+  enrollments  CourseEnrollment[]
   applications StudentApplication[]
 
   @@map("courses")
 }
 
-model CourseBatch {
+model CourseSubject {
   id        String    @id @default(cuid())
   courseId  String
   name      String
@@ -163,26 +164,25 @@ model CourseBatch {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  course        Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  teachers      BatchTeacher[]
-  enrollments BatchEnrollment[]
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teachers    SubjectTeacher[]
   sessions    ClassSession[]
-  assignments   Assignment[]
+  assignments Assignment[]
 
   @@unique([courseId, name])
-  @@map("course_batches")
+  @@map("course_subjects")
 }
 
-model BatchTeacher {
-  batchId   String
+model SubjectTeacher {
+  subjectId String
   teacherId String
 
-  batch   CourseBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  teacher User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject CourseSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher User          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  @@id([batchId, teacherId])
+  @@id([subjectId, teacherId])
   @@index([teacherId])
-  @@map("batch_teachers")
+  @@map("subject_teachers")
 }
 
 model Student {
@@ -200,35 +200,35 @@ model Student {
   // Null = no expiry. First enrollment may fill this from the course.
   loginExpiresAt DateTime?
 
-  enrollments BatchEnrollment[]
+  enrollments CourseEnrollment[]
   attendance  AttendanceRecord[]
   submissions AssignmentSubmission[]
 
   @@map("students")
 }
 
-model BatchEnrollment {
-  batchId   String
+model CourseEnrollment {
+  courseId  String
   studentId String
   createdAt DateTime @default(now())
 
-  batch   CourseBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@id([batchId, studentId])
+  @@id([courseId, studentId])
   @@index([studentId])
-  @@map("batch_enrollments")
+  @@map("course_enrollments")
 }
 
 model SessionCategory {
-  id                    String   @id @default(cuid())
-  name                  String   @unique
-  minAttendancePercent  Int?
-  isActive              Boolean  @default(true)
-  isSystem              Boolean  @default(false)
-  allowsResources       Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String   @unique
+  minAttendancePercent Int?
+  isActive             Boolean  @default(true)
+  isSystem             Boolean  @default(false)
+  allowsResources      Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   sessions ClassSession[]
 
@@ -237,7 +237,7 @@ model SessionCategory {
 
 model ClassSession {
   id          String   @id @default(cuid())
-  batchId     String
+  subjectId   String
   categoryId  String
   date        DateTime
   name        String
@@ -247,13 +247,13 @@ model ClassSession {
   startMinute Int?
   endMinute   Int?
 
-  batch      CourseBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  subject   CourseSubject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   category  SessionCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
   records   AttendanceRecord[]
   resources SessionResource[]
 
-  @@index([batchId, date, startMinute])
+  @@index([subjectId, date, startMinute])
   @@map("class_sessions")
 }
 
@@ -276,7 +276,7 @@ model SessionResource {
 
 model Assignment {
   id           String    @id @default(cuid())
-  batchId      String
+  subjectId    String
   title        String
   instructions String?
   dueDate      DateTime?
@@ -288,11 +288,11 @@ model Assignment {
   createdById  String
   createdAt    DateTime  @default(now())
 
-  batch       CourseBatch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  createdBy   User                     @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  subject     CourseSubject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdBy   User                   @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
   submissions AssignmentSubmission[]
 
-  @@index([batchId])
+  @@index([subjectId])
   @@map("assignments")
 }
 
@@ -327,16 +327,16 @@ enum AttendanceStatus {
 }
 
 model AttendanceRecord {
-  id           String            @id @default(cuid())
-  sessionId    String
-  studentId    String
-  status       AttendanceStatus
-  markedById   String
-  markedAt     DateTime          @default(now())
+  id         String           @id @default(cuid())
+  sessionId  String
+  studentId  String
+  status     AttendanceStatus
+  markedById String
+  markedAt   DateTime         @default(now())
 
-  session   ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  markedBy  User         @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  session  ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student  Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy User         @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
 
   @@unique([sessionId, studentId])
   @@index([studentId])

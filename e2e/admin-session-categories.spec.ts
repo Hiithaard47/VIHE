@@ -21,7 +21,7 @@ test.describe("admin: session categories", () => {
     await expect(row).toBeVisible();
     await expect(row.getByText("80")).toBeVisible();
 
-    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/sessions`);
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
     await page.locator('input[type="date"]').fill("2026-03-15");
     await page.locator('input[name="name"]').fill("Morning program");
     await page.locator('select[name="categoryId"]').selectOption({ label: name });
@@ -36,19 +36,19 @@ test.describe("admin: session categories", () => {
   test("keeps class and temple attendance percentages separate", async ({ page }) => {
     const teacher = await createTeacher(`Cat Teacher ${unique("t")}`, `${unique("catteacher")}@example.com`, "TeacherPass123!");
     const course = await createCourse(`Split Course ${unique("c")}`, unique("SPL").toUpperCase(), teacher.id);
-    const student = await createStudent(`Split Student ${unique("s")}`, unique("RSS"), course.batches[0].id);
+    const student = await createStudent(`Split Student ${unique("s")}`, unique("RSS"), course.id);
     const temple = await prisma.sessionCategory.create({
       data: { name: `Kirtana ${unique("k")}`, minAttendancePercent: 90 },
     });
     const classSession = await createSession(
-      course.batches[0].id,
+      course.subjects[0].id,
       teacher.id,
       new Date("2026-02-01T00:00:00.000Z"),
       "Bhagavad-gita 2",
     );
     const templeSession = await prisma.classSession.create({
       data: {
-        batchId: course.batches[0].id,
+        subjectId: course.subjects[0].id,
         categoryId: temple.id,
         date: new Date("2026-02-02T00:00:00.000Z"),
         name: "Evening kirtana",
@@ -63,7 +63,7 @@ test.describe("admin: session categories", () => {
     });
 
     await loginAsAdmin(page);
-    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/attendance`);
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/attendance`);
     const row = page.locator("tr", { hasText: student.name });
     await expect(row.getByText("100%", { exact: true })).toBeVisible();
     await expect(row.getByText("0%", { exact: true })).toBeVisible();
@@ -115,7 +115,7 @@ test.describe("admin: session categories", () => {
     await expect(page.locator("tr", { hasText: name }).getByText("No files")).toBeVisible();
     await expect(page.locator("tr", { hasText: "Class" }).getByText("Files")).toBeVisible();
 
-    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/sessions`);
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
     await page.locator('input[type="date"]').fill("2026-03-15");
     await page.locator('input[name="name"]').fill("Morning aarti");
     await page.locator('select[name="categoryId"]').selectOption({ label: name });
@@ -128,7 +128,7 @@ test.describe("admin: session categories", () => {
     await expect(page.getByRole("button", { name: "Upload" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Save attendance" })).toBeVisible();
 
-    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/sessions`);
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
     await page.locator('input[type="date"]').fill("2026-03-16");
     await page.locator('input[name="name"]').fill("Chapter 1");
     await page.locator('select[name="categoryId"]').selectOption({ label: "Class" });

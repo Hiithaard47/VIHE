@@ -36,10 +36,10 @@ test.describe("admin: reviewing student applications", () => {
 
     const student = await prisma.student.findFirstOrThrow({
       where: { rollNumber: roll },
-      include: { enrollments: { include: { batch: true } } },
+      include: { enrollments: { include: { course: true } } },
     });
     expect(student.name).toBe(name);
-    expect(student.enrollments.map((e) => e.batch.courseId)).toContain(course.id);
+    expect(student.enrollments.map((e) => e.courseId)).toContain(course.id);
 
     const application = await prisma.studentApplication.findFirstOrThrow({ where: { email } });
     expect(application.status).toBe("APPROVED");

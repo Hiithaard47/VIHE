@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 
-test("admin assigns teachers and keeps roster enrollment per batch", async ({ page }) => {
+test("admin assigns teachers and keeps roster enrollment at course level", async ({ page }) => {
   await loginAsAdmin(page);
 
   const teacherOne = unique("teacher-one");
@@ -25,24 +25,24 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await studentDialog.getByLabel("Roll number").fill(rollNumber);
   expect(await waitForFlashAfter(page, () => studentDialog.getByRole("button", { name: "Create student" }).click())).toBe("success");
 
-  const courseName = unique("Batch Course");
+  const courseName = unique("Subject Course");
   await page.goto("/admin/courses");
   await page.getByRole("button", { name: "Add course" }).click();
   const courseDialog = page.getByRole("dialog");
   await courseDialog.getByLabel("Course name").fill(courseName);
-  await courseDialog.getByLabel("Course code").fill(unique("BATCH").toUpperCase());
+  await courseDialog.getByLabel("Course code").fill(unique("SUBJ").toUpperCase());
   expect(await waitForFlashAfter(page, () => courseDialog.getByRole("button", { name: "Create course" }).click())).toBe("success");
   await page.getByRole("link", { name: courseName }).click();
 
-  await page.getByRole("button", { name: "Add batch" }).click();
+  await page.getByRole("button", { name: "Add subject" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Batch name").fill("Evening");
-  expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create batch" }).click())).toBe("success");
+  await dialog.getByLabel("Subject name").fill("Evening");
+  expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create subject" }).click())).toBe("success");
   await expect(page.getByRole("link", { name: "Evening", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Default" }).click();
-  await page.getByLabel("Batch name").fill("Morning");
+  await page.getByLabel("Subject name").fill("Morning");
   expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Save details" }).click())).toBe("success");
-  const status = page.locator('section:has-text("Batch status")');
+  const status = page.locator('section:has-text("Subject status")');
   await expect(status.getByText("Active")).toBeVisible();
   await expect(status.getByRole("button", { name: "Archive" })).toBeVisible();
 
@@ -73,7 +73,6 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await expect(page.getByRole("cell", { name: teacherTwo, exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
-  await page.getByRole("link", { name: "Morning" }).click();
   await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await page.getByRole("button", { name: "Add student" }).click();
   const rosterStudentDialog = page.getByRole("dialog");
@@ -85,8 +84,6 @@ test("admin assigns teachers and keeps roster enrollment per batch", async ({ pa
   await expect(page.getByRole("link", { name: courseName })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
-  await page.getByRole("link", { name: "Evening" }).click();
   await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
-  await expect(page.getByText("No students enrolled in this batch yet.")).toBeVisible();
-  await expect(page.locator("tbody").getByText(studentName)).toHaveCount(0);
+  await expect(page.locator("tbody").getByText(studentName)).toBeVisible();
 });

@@ -3,10 +3,10 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { flashUrl } from "@/lib/flash";
-import { resolveWorkspaceScope, type BatchScope } from "@/lib/batch-scope";
+import { resolveWorkspaceScope, type SubjectScope } from "@/lib/subject-scope";
 import { courseHref, deniedCourseHref, type CoursePortal } from "@/lib/course-workspace";
 import {
-  BATCH_ACCESS_PERMISSIONS,
+  SUBJECT_ACCESS_PERMISSIONS,
   PERMISSIONS,
   SESSION_VIEW_PERMISSIONS,
   TEACHER_PORTAL_PERMISSIONS,
@@ -78,67 +78,67 @@ export async function requirePermission(permission: PermissionKey) {
   return requireAnyPermission([permission]);
 }
 
-export async function canManageBatch(session: Session, batchId: string) {
-  const batch = await prisma.courseBatch.findUnique({
-    where: { id: batchId },
+export async function canManageSubject(session: Session, subjectId: string) {
+  const subject = await prisma.courseSubject.findUnique({
+    where: { id: subjectId },
     select: { isActive: true, course: { select: { isActive: true } } },
   });
-  if (!batch?.course.isActive) return false;
+  if (!subject?.course.isActive) return false;
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
-  if (!batch.isActive) return false;
-  const assignment = await prisma.batchTeacher.findFirst({
-    where: { batchId, teacherId: session.user.id },
+  if (!subject.isActive) return false;
+  const assignment = await prisma.subjectTeacher.findFirst({
+    where: { subjectId, teacherId: session.user.id },
   });
   return Boolean(assignment);
 }
 
-export async function canAccessBatch(session: Session, batchId: string) {
+export async function canAccessSubject(session: Session, subjectId: string) {
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) {
-    const batch = await prisma.courseBatch.findUnique({
-      where: { id: batchId },
+    const subject = await prisma.courseSubject.findUnique({
+      where: { id: subjectId },
       select: { id: true },
     });
-    return Boolean(batch);
+    return Boolean(subject);
   }
-  return canManageBatch(session, batchId);
+  return canManageSubject(session, subjectId);
 }
 
-export async function requireBatchAccess(batchId: string, portal: CoursePortal = "teacher") {
-  const session = await requireAnyPermission(BATCH_ACCESS_PERMISSIONS);
-  if (!(await canManageBatch(session, batchId))) redirect(deniedCourseHref(portal));
+export async function requireSubjectAccess(subjectId: string, portal: CoursePortal = "teacher") {
+  const session = await requireAnyPermission(SUBJECT_ACCESS_PERMISSIONS);
+  if (!(await canManageSubject(session, subjectId))) redirect(deniedCourseHref(portal));
   return session;
 }
 
-export async function requireBatchView(batchId: string, portal: CoursePortal = "teacher") {
+export async function requireSubjectView(subjectId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission(SESSION_VIEW_PERMISSIONS);
-  if (!(await canAccessBatch(session, batchId))) redirect(deniedCourseHref(portal));
+  if (!(await canAccessSubject(session, subjectId))) redirect(deniedCourseHref(portal));
   return session;
 }
 
-export async function canConfigureBatch(session: Session, batchId: string) {
+export async function canConfigureSubject(session: Session, subjectId: string) {
   const isAdmin = session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE);
   if (!isAdmin && !session.user.permissions.includes(PERMISSIONS.COURSES_CONFIGURE)) {
     return false;
   }
-  const batch = await prisma.courseBatch.findUnique({
-    where: { id: batchId },
+  const subject = await prisma.courseSubject.findUnique({
+    where: { id: subjectId },
     select: { isActive: true, course: { select: { isActive: true } } },
   });
-  if (!batch?.course.isActive) return false;
+  if (!subject?.course.isActive) return false;
   if (isAdmin) return true;
-  if (!batch.isActive) return false;
-  const assignment = await prisma.batchTeacher.findFirst({
-    where: { batchId, teacherId: session.user.id },
+  if (!subject.isActive) return false;
+  const assignment = await prisma.subjectTeacher.findFirst({
+    where: { subjectId, teacherId: session.user.id },
   });
   return Boolean(assignment);
 }
 
-export async function requireBatchConfigure(batchId: string, portal: CoursePortal = "teacher") {
+export async function requireSubjectConfigure(subjectId: string, portal: CoursePortal = "teacher") {
   const session = await requireAnyPermission([
     PERMISSIONS.COURSES_CONFIGURE,
     PERMISSIONS.COURSES_MANAGE,
   ]);
-  if (!(await canConfigureBatch(session, batchId))) {
+  if (!(await canConfigureSubject(session, subjectId))) {
     redirect(deniedCourseHref(portal));
   }
   return session;
@@ -146,7 +146,7 @@ export async function requireBatchConfigure(batchId: string, portal: CoursePorta
 
 // Non-redirecting check: can this user manage (create sessions, mark
 // attendance for) a given course? Admins can manage any course; teachers
-// only courses they're assigned to via any batch.
+// only courses they're assigned to via any subject.
 export async function canManageCourse(session: Session, courseId: string) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -155,8 +155,8 @@ export async function canManageCourse(session: Session, courseId: string) {
   if (!course?.isActive) return false;
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
 
-  const assignment = await prisma.batchTeacher.findFirst({
-    where: { teacherId: session.user.id, batch: { courseId, isActive: true } },
+  const assignment = await prisma.subjectTeacher.findFirst({
+    where: { teacherId: session.user.id, subject: { courseId, isActive: true } },
   });
   return Boolean(assignment);
 }
@@ -169,8 +169,8 @@ export async function canAccessCourse(session: Session, courseId: string) {
     });
     return Boolean(course);
   }
-  const assignment = await prisma.batchTeacher.findFirst({
-    where: { teacherId: session.user.id, batch: { courseId } },
+  const assignment = await prisma.subjectTeacher.findFirst({
+    where: { teacherId: session.user.id, subject: { courseId } },
   });
   return Boolean(assignment);
 }
@@ -187,7 +187,7 @@ export async function requireCourseAccess(courseId: string, portal: CoursePortal
 
 // Non-redirecting check: can this user configure (edit details, policy,
 // roster, schedule for) a given course? Admins holding COURSES_MANAGE can
-// configure any course; everyone else needs COURSES_CONFIGURE *and* a batch
+// configure any course; everyone else needs COURSES_CONFIGURE *and* a subject
 // assignment on this course.
 export async function canConfigureCourse(session: Session, courseId: string) {
   const course = await prisma.course.findUnique({
@@ -198,8 +198,8 @@ export async function canConfigureCourse(session: Session, courseId: string) {
   if (session.user.permissions.includes(PERMISSIONS.COURSES_MANAGE)) return true;
   if (!session.user.permissions.includes(PERMISSIONS.COURSES_CONFIGURE)) return false;
 
-  const assignment = await prisma.batchTeacher.findFirst({
-    where: { teacherId: session.user.id, batch: { courseId, isActive: true } },
+  const assignment = await prisma.subjectTeacher.findFirst({
+    where: { teacherId: session.user.id, subject: { courseId, isActive: true } },
   });
   return Boolean(assignment);
 }
@@ -220,15 +220,15 @@ export async function requireCourseConfigure(courseId: string, portal: CoursePor
 export async function loadCourseWorkspace(
   courseId: string,
   portal: CoursePortal,
-  selectedBatchId?: string,
+  selectedSubjectId?: string,
 ): Promise<{
   session: Session;
-  scope: BatchScope;
+  scope: SubjectScope;
   canManage: boolean;
   canConfigure: boolean;
 }> {
   const session = await requireCourseAccess(courseId, portal);
-  const scope = await resolveWorkspaceScope(session, courseId, selectedBatchId);
+  const scope = await resolveWorkspaceScope(session, courseId, selectedSubjectId);
   if (!scope) redirect(deniedCourseHref(portal));
   const [canManage, canConfigure] = await Promise.all([
     canManageCourse(session, courseId),

@@ -5,16 +5,16 @@ export default async function TeacherAssignmentDetailPage({
   searchParams,
 }: {
   params: Promise<{ courseId: string; assignmentId: string }>;
-  searchParams: Promise<{ batch?: string }>;
+  searchParams: Promise<{ subject?: string }>;
 }) {
   const { courseId, assignmentId } = await params;
-  const { batch } = await searchParams;
+  const { subject } = await searchParams;
   return (
     <CourseAssignmentDetailView
       courseId={courseId}
       assignmentId={assignmentId}
       portal="teacher"
-      selectedBatchId={batch}
+      selectedSubjectId={subject}
     />
   );
 }

@@ -24,7 +24,7 @@ export default async function AdminDashboard({
   const page = parseAdminListPage(rawPage, totalPages);
   const courses = await prisma.course.findMany({
     where: { isActive: true },
-    include: { batches: { include: { enrollments: true } } },
+    include: { _count: { select: { enrollments: true, subjects: true } } },
     orderBy: { name: "asc" },
     skip: (page - 1) * ADMIN_PAGE_SIZE,
     take: ADMIN_PAGE_SIZE,
@@ -60,13 +60,13 @@ export default async function AdminDashboard({
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Course</th>
-                <th className="px-4 py-2 font-medium">Batches</th>
+                <th className="px-4 py-2 font-medium">Subjects</th>
                 <th className="px-4 py-2 font-medium">Students</th>
               </tr>
             </thead>
             <tbody>
               {courses.map((course) => {
-                const enrolled = course.batches.reduce((total, batch) => total + batch.enrollments.length, 0);
+                const enrolled = course._count.enrollments;
                 return (
                   <tr key={course.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
@@ -75,7 +75,7 @@ export default async function AdminDashboard({
                       </Link>
                       <p className="text-xs text-muted">{course.code}</p>
                     </td>
-                    <td className="px-4 py-3">{course.batches.length}</td>
+                    <td className="px-4 py-3">{course._count.subjects}</td>
                     <td className="px-4 py-3">{enrolled}</td>
                   </tr>
                 );

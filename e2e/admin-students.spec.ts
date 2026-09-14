@@ -2,13 +2,13 @@ import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 import { createCourse } from "./db";
 
-async function createStudent(page: import("@playwright/test").Page, name: string, roll: string, courseId?: string, batchId?: string) {
+async function createStudent(page: import("@playwright/test").Page, name: string, roll: string, courseId?: string) {
   await page.getByRole("button", { name: "Add student" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Full name").fill(name);
   await dialog.getByLabel("Roll number").fill(roll);
-  if (courseId && batchId) {
-    await dialog.locator(`select[name="batch-${courseId}"]`).selectOption(batchId);
+  if (courseId) {
+    await dialog.locator(`input[name="course-${courseId}"]`).check();
   }
   return waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create student" }).click());
 }
@@ -26,7 +26,7 @@ test.describe("admin: students", () => {
 
     const studentName = `Test Student ${unique("s")}`;
     const roll = unique("R");
-    expect(await createStudent(page, studentName, roll, course.id, course.batches[0].id)).toBe("success");
+    expect(await createStudent(page, studentName, roll, course.id)).toBe("success");
 
     const row = page.locator("tr", { hasText: studentName });
     await expect(row).toBeVisible();

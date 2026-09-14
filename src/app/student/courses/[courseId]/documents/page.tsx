@@ -21,7 +21,7 @@ export default async function StudentCourseDocumentsPage({
   if (!enrollment) notFound();
 
   const resources = await prisma.sessionResource.findMany({
-    where: { session: { batchId: enrollment.batch.id } },
+    where: { session: { subject: { courseId } } },
     include: { session: { select: { date: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { emptyTally, type StatusTally, type StatusValue } from "@/lib/attendance";
-import { type BatchScope, sessionWhere } from "@/lib/batch-scope";
+import { type SubjectScope, sessionWhere } from "@/lib/subject-scope";
 import { startOfTodayUtc } from "@/lib/time";
 
 export type StudentCategoryTallies = Map<string, Map<string, StatusTally>>;
@@ -40,7 +40,7 @@ export function statusAt(marks: AttendanceMarks, studentId: string, sessionId: s
   return marks.get(studentId)?.get(sessionId) ?? null;
 }
 
-export async function loadAttendanceTallies(courseId: string, scope: BatchScope) {
+export async function loadAttendanceTallies(courseId: string, scope: SubjectScope) {
   const records = await prisma.attendanceRecord.findMany({
     where: { session: { ...sessionWhere(courseId, scope), date: { lte: startOfTodayUtc() } } },
     select: { studentId: true, status: true, session: { select: { categoryId: true } } },
@@ -53,7 +53,7 @@ export async function loadAttendanceTallies(courseId: string, scope: BatchScope)
   return tallies;
 }
 
-export async function loadCourseAttendanceCategories(courseId: string, scope: BatchScope) {
+export async function loadCourseAttendanceCategories(courseId: string, scope: SubjectScope) {
   return prisma.sessionCategory.findMany({
     where: { sessions: { some: sessionWhere(courseId, scope) } },
     orderBy: { name: "asc" },
@@ -61,7 +61,7 @@ export async function loadCourseAttendanceCategories(courseId: string, scope: Ba
   });
 }
 
-export async function loadAttendanceMatrix(courseId: string, scope: BatchScope) {
+export async function loadAttendanceMatrix(courseId: string, scope: SubjectScope) {
   const sessions = await prisma.classSession.findMany({
     where: sessionWhere(courseId, scope),
     orderBy: [{ date: "asc" }, { startMinute: "asc" }],

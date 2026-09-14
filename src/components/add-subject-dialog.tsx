@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { createBatch } from "@/app/admin/courses/[courseId]/actions";
+import { createSubject } from "@/app/admin/courses/[courseId]/actions";
 
-export function AddBatchDialog({ courseId }: { courseId: string }) {
+export function AddSubjectDialog({ courseId }: { courseId: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
 
   return (
@@ -13,15 +13,15 @@ export function AddBatchDialog({ courseId }: { courseId: string }) {
         onClick={() => dialog.current?.showModal()}
         className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
       >
-        Add batch
+        Add subject
       </button>
       <dialog
         ref={dialog}
         className="fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-hairline bg-card p-0 text-ink shadow-lg backdrop:bg-ink/40"
       >
-        <form action={createBatch.bind(null, courseId)} className="flex flex-col gap-4 p-4">
+        <form action={createSubject.bind(null, courseId)} className="flex flex-col gap-4 p-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-heading text-base font-semibold">Add batch</h2>
+            <h2 className="font-heading text-base font-semibold">Add subject</h2>
             <button
               type="button"
               onClick={() => dialog.current?.close()}
@@ -31,7 +31,7 @@ export function AddBatchDialog({ courseId }: { courseId: string }) {
             </button>
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-muted">Batch name</span>
+            <span className="text-muted">Subject name</span>
             <input
               name="name"
               placeholder="Morning"
@@ -41,7 +41,7 @@ export function AddBatchDialog({ courseId }: { courseId: string }) {
             />
           </label>
           <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Create batch
+            Create subject
           </button>
         </form>
       </dialog>

@@ -18,7 +18,7 @@ export default async function StudentAssignmentDetailPage({
   if (!enrollment) notFound();
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batchId: enrollment.batch.id },
+    where: { id: assignmentId, subject: { courseId } },
     include: { submissions: { where: { studentId: session.user.id } } },
   });
   if (!assignment) notFound();
@@ -26,7 +26,7 @@ export default async function StudentAssignmentDetailPage({
   const submission = assignment.submissions[0] ?? null;
   const graded = submission?.marks !== null && submission?.marks !== undefined;
   const pastDue = isPastDueDate(assignment.dueDate);
-  const canSubmit = enrollment.batch.course.isActive && !graded && !(submission && pastDue);
+  const canSubmit = enrollment.course.isActive && !graded && !(submission && pastDue);
 
   return (
     <div className="flex flex-col gap-6">

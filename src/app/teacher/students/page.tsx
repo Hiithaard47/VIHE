@@ -21,14 +21,24 @@ export default async function TeacherStudentsPage({
     where: {
       isActive: true,
       enrollments: {
-        some: { batch: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
+        some: {
+          course: {
+            isActive: true,
+            subjects: { some: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
+          },
+        },
       },
       ...(q ? containsInsensitive(q, ["name", "rollNumber", "email", "phone"]) : {}),
     },
     include: {
       enrollments: {
-        where: { batch: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
-        include: { batch: { include: { course: true } } },
+        where: {
+          course: {
+            isActive: true,
+            subjects: { some: { isActive: true, teachers: { some: { teacherId: session.user.id } } } },
+          },
+        },
+        include: { course: true },
       },
     },
     orderBy: { rollNumber: "asc" },
@@ -64,8 +74,8 @@ export default async function TeacherStudentsPage({
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {student.enrollments.map((e) => (
-                      <span key={e.batchId} className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
-                        {e.batch.course.name}
+                      <span key={e.courseId} className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">
+                        {e.course.name}
                       </span>
                     ))}
                   </div>

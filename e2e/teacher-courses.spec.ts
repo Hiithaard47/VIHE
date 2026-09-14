@@ -66,18 +66,18 @@ test.describe("teacher: course visibility & session management", () => {
     await expect(page.getByText("This course is archived. An admin can restore it to make changes.")).toBeVisible();
   });
 
-  test("sees sessions from every assigned batch", async ({ page }) => {
+  test("sees sessions from every assigned subject", async ({ page }) => {
     const password = "TeacherPass123!";
-    const teacher = await createTeacher(`Multi Batch Teacher ${unique("t")}`, `${unique("multibatch")}@example.com`, password);
-    const course = await createCourse(`Multi Batch Course ${unique("c")}`, unique("MBC").toUpperCase(), teacher.id);
-    const evening = await prisma.courseBatch.create({
+    const teacher = await createTeacher(`Multi Subject Teacher ${unique("t")}`, `${unique("multisubject")}@example.com`, password);
+    const course = await createCourse(`Multi Subject Course ${unique("c")}`, unique("MSC").toUpperCase(), teacher.id);
+    const evening = await prisma.courseSubject.create({
       data: {
         courseId: course.id,
         name: "Evening",
         teachers: { create: [{ teacherId: teacher.id }] },
       },
     });
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Morning class");
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Morning class");
     await createSession(evening.id, teacher.id, new Date("2026-03-16T00:00:00.000Z"), "Evening class");
 
     await login(page, teacher.email, password);
@@ -99,7 +99,7 @@ test.describe("teacher: course visibility & session management", () => {
     await expect(page.getByText("Evening class")).toBeVisible();
     await expect(page.getByText("15 Mar 2026 · Default")).toBeVisible();
     await expect(page.getByText("16 Mar 2026 · Evening")).toBeVisible();
-    await expect(page.locator('select[name="batchId"]')).toBeVisible();
+    await expect(page.locator('select[name="subjectId"]')).toBeVisible();
   });
 
   test("creates a session for an assigned course", async ({ page }) => {
@@ -125,10 +125,10 @@ test.describe("teacher: course visibility & session management", () => {
     const teacher = await createTeacher(`Group Teacher ${unique("t")}`, `${unique("groupteacher")}@example.com`, password);
     const course = await createCourse(`Group Course ${unique("c")}`, unique("GRP").toUpperCase(), teacher.id);
     const temple = await prisma.sessionCategory.create({ data: { name: `Kirtana ${unique("k")}` } });
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Chapter 1");
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Chapter 1");
     await prisma.classSession.create({
       data: {
-        batchId: course.batches[0].id,
+        subjectId: course.subjects[0].id,
         categoryId: temple.id,
         date: new Date("2026-03-16T00:00:00.000Z"),
         name: "Evening kirtana",
@@ -149,12 +149,12 @@ test.describe("teacher: course visibility & session management", () => {
     await expect(page.getByText("Chapter 1")).toHaveCount(0);
   });
 
-  test("hides category tabs the course batch has not used", async ({ page }) => {
+  test("hides category tabs the course has not used", async ({ page }) => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Unused Tab Teacher ${unique("t")}`, `${unique("unusedtab")}@example.com`, password);
     const course = await createCourse(`Unused Tab Course ${unique("c")}`, unique("UTB").toUpperCase(), teacher.id);
     const unused = await prisma.sessionCategory.create({ data: { name: `Sadhana ${unique("s")}` } });
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Chapter 1");
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-03-15T00:00:00.000Z"), "Chapter 1");
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}`);
@@ -168,7 +168,7 @@ test.describe("teacher: course visibility & session management", () => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Reschedule Teacher ${unique("t")}`, `${unique("reschedule")}@example.com`, password);
     const course = await createCourse(`Reschedule Course ${unique("c")}`, unique("RSC").toUpperCase(), teacher.id);
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"));
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"));
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}`);
@@ -190,8 +190,8 @@ test.describe("teacher: course visibility & session management", () => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Past Session Teacher ${unique("t")}`, `${unique("pastdate")}@example.com`, password);
     const course = await createCourse(`Past Session Course ${unique("c")}`, unique("PSD").toUpperCase(), teacher.id);
-    await createSession(course.batches[0].id, teacher.id, startOfTodayUtc());
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-01-05T00:00:00.000Z"));
+    await createSession(course.subjects[0].id, teacher.id, startOfTodayUtc());
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-01-05T00:00:00.000Z"));
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}`);
@@ -206,7 +206,7 @@ test.describe("teacher: course visibility & session management", () => {
     const password = "TeacherPass123!";
     const teacher = await createTeacher(`Delete Teacher ${unique("t")}`, `${unique("deleteteacher")}@example.com`, password);
     const course = await createCourse(`Delete Course ${unique("c")}`, unique("DEL").toUpperCase(), teacher.id);
-    await createSession(course.batches[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"), "Chapter 4");
+    await createSession(course.subjects[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"), "Chapter 4");
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}`);

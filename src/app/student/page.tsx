@@ -5,21 +5,25 @@ import { requireStudent } from "@/lib/rbac";
 
 export default async function StudentHome() {
   const session = await requireStudent();
-  const enrollments = await prisma.batchEnrollment.findMany({
+  const enrollments = await prisma.courseEnrollment.findMany({
     where: studentEnrollmentWhere(session.user.id),
     include: {
-      batch: {
-        include: {
-          course: { select: { id: true, name: true, code: true, description: true, isActive: true } },
-          _count: { select: { sessions: true } },
+      course: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          isActive: true,
+          subjects: { select: { _count: { select: { sessions: true } } } },
         },
       },
     },
     orderBy: { createdAt: "asc" },
   });
-  enrollments.sort((a, b) => a.batch.course.name.localeCompare(b.batch.course.name));
-  const active = enrollments.filter(({ batch }) => batch.course.isActive);
-  const completed = enrollments.filter(({ batch }) => !batch.course.isActive);
+  enrollments.sort((a, b) => a.course.name.localeCompare(b.course.name));
+  const active = enrollments.filter(({ course }) => course.isActive);
+  const completed = enrollments.filter(({ course }) => !course.isActive);
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,11 +49,13 @@ function CourseGroup({
 }: {
   title: string;
   courses: Array<{
-    batch: {
+    course: {
       id: string;
       name: string;
-      _count: { sessions: number };
-      course: { id: string; name: string; code: string; description: string | null; isActive: boolean };
+      code: string;
+      description: string | null;
+      isActive: boolean;
+      subjects: { _count: { sessions: number } }[];
     };
   }>;
   empty: string;
@@ -61,19 +67,22 @@ function CourseGroup({
       </h2>
       {courses.length === 0 && <p className="text-sm text-muted">{empty}</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {courses.map(({ batch }) => (
-          <Link
-            key={batch.id}
-            href={`/student/courses/${batch.course.id}`}
-            className="rounded-lg border border-hairline bg-card p-4 hover:border-accent-dark"
-          >
-            <p className="font-heading font-medium text-ink">{batch.course.name}</p>
-            <p className="text-xs text-muted">
-              {batch.course.code} · {batch.name} · {batch._count.sessions} session(s)
-            </p>
-            {batch.course.description && <p className="mt-2 text-sm text-ink">{batch.course.description}</p>}
-          </Link>
-        ))}
+        {courses.map(({ course }) => {
+          const sessionCount = course.subjects.reduce((total, subject) => total + subject._count.sessions, 0);
+          return (
+            <Link
+              key={course.id}
+              href={`/student/courses/${course.id}`}
+              className="rounded-lg border border-hairline bg-card p-4 hover:border-accent-dark"
+            >
+              <p className="font-heading font-medium text-ink">{course.name}</p>
+              <p className="text-xs text-muted">
+                {course.code} · {sessionCount} session(s)
+              </p>
+              {course.description && <p className="mt-2 text-sm text-ink">{course.description}</p>}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { batchWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { hasAttendanceAccess } from "@/lib/permissions";
 import {
@@ -26,14 +25,14 @@ export async function CourseAttendanceView({
   courseId,
   portal,
   categoryId,
-  selectedBatchId,
+  selectedSubjectId,
 }: {
   courseId: string;
   portal: CoursePortal;
   categoryId?: string;
-  selectedBatchId?: string;
+  selectedSubjectId?: string;
 }) {
-  const { session, scope } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
   if (portal === "teacher" && !hasAttendanceAccess(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
@@ -43,10 +42,7 @@ export async function CourseAttendanceView({
     select: {
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
-      batches: {
-        where: batchWhere(scope),
-        include: { enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } } },
-      },
+      enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } },
     },
   });
   if (!course) notFound();
@@ -57,9 +53,8 @@ export async function CourseAttendanceView({
     loadAttendanceMatrix(courseId, scope),
   ]);
 
-  const rows = course.batches
-    .flatMap((batch) => batch.enrollments.map((enrollment) => ({ ...enrollment, batchName: batch.name })))
-    .map(({ student, batchName }) => {
+  const rows = course.enrollments
+    .map(({ student }) => {
       const percents = categories.map((category) => {
         const policy = categoryAttendancePolicy(course, category);
         const percent = attendancePercent(tallyFor(tallies, student.id, category.id), policy);
@@ -67,13 +62,11 @@ export async function CourseAttendanceView({
       });
       return {
         student,
-        batchName,
         percents,
         atRisk: percents.some((item) => item.atRisk),
       };
     })
     .sort((a, b) => Number(b.atRisk) - Number(a.atRisk) || a.student.name.localeCompare(b.student.name));
-  const showBatchName = course.batches.length > 1;
   const thresholdNote = categories
     .filter((category) => category.minAttendancePercent !== null)
     .map((category) => `${category.name} ${category.minAttendancePercent}%`)
@@ -100,7 +93,6 @@ export async function CourseAttendanceView({
               <tr>
                 <th className="px-4 py-2 font-medium">Student</th>
                 <th className="px-4 py-2 font-medium">Roll no.</th>
-                {showBatchName && <th className="px-4 py-2 font-medium">Batch</th>}
                 {categories.length > 0 ? (
                   categories.map((category) => (
                     <th key={category.id} className="px-4 py-2 font-medium">
@@ -113,14 +105,13 @@ export async function CourseAttendanceView({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ student, batchName, percents, atRisk }) => (
+              {rows.map(({ student, percents, atRisk }) => (
                 <tr
                   key={student.id}
                   className={`border-b border-hairline last:border-0 ${atRisk ? "bg-red-50 text-red-700" : "text-ink"}`}
                 >
                   <td className="px-4 py-3 font-medium">{student.name}</td>
                   <td className="px-4 py-3">{student.rollNumber}</td>
-                  {showBatchName && <td className="px-4 py-3">{batchName}</td>}
                   {categories.length > 0 ? (
                     percents.map(({ category, percent, atRisk: cellAtRisk }) => (
                       <td key={category.id} className={`px-4 py-3 ${cellAtRisk ? "font-semibold" : ""}`}>
@@ -134,8 +125,8 @@ export async function CourseAttendanceView({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={(showBatchName ? 3 : 2) + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
-                    No students enrolled in this batch yet.
+                  <td colSpan={2 + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
+                    No students enrolled in this course yet.
                   </td>
                 </tr>
               )}
@@ -152,7 +143,7 @@ export async function CourseAttendanceView({
               return (
                 <Link
                   key={tab.id}
-                  href={attendanceHref(portal, courseId, tab.id, selectedBatchId)}
+                  href={attendanceHref(portal, courseId, tab.id, selectedSubjectId)}
                   aria-current={active ? "page" : undefined}
                   className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
                     active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
@@ -208,7 +199,7 @@ export async function CourseAttendanceView({
                 {rows.length === 0 && (
                   <tr>
                     <td colSpan={2 + selectedSessions.length} className="px-4 py-3 text-sm text-muted">
-                      No students enrolled in this batch yet.
+                      No students enrolled in this course yet.
                     </td>
                   </tr>
                 )}

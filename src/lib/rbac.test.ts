@@ -1,16 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { isBatchAssignableToCourse } from "@/lib/batch-access";
+import { describe, it, expect } from "vitest";
+import { isSubjectAssignableToCourse } from "@/lib/subject-access";
 
-describe("batch assignment RBAC helpers", () => {
-  it("only assigns active batches from the selected course", () => {
+describe("subject assignment RBAC helpers", () => {
+  it("only assigns active subjects from the selected course", () => {
     expect(
-      isBatchAssignableToCourse({ courseId: "course_1", isActive: true }, "course_1"),
+      isSubjectAssignableToCourse({ courseId: "course_1", isActive: true }, "course_1"),
     ).toBe(true);
     expect(
-      isBatchAssignableToCourse({ courseId: "course_1", isActive: false }, "course_1"),
+      isSubjectAssignableToCourse({ courseId: "course_1", isActive: false }, "course_1"),
     ).toBe(false);
     expect(
-      isBatchAssignableToCourse({ courseId: "course_2", isActive: true }, "course_1"),
+      isSubjectAssignableToCourse({ courseId: "course_2", isActive: true }, "course_1"),
     ).toBe(false);
   });
 });

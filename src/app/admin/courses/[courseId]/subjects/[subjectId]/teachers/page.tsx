@@ -3,18 +3,18 @@ import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { addBatchTeacher, removeBatchTeacher } from "../actions";
+import { addSubjectTeacher, removeSubjectTeacher } from "../actions";
 import { contactKeywords } from "@/lib/admin-list";
 
-export default async function AdminBatchTeachersPage({
+export default async function AdminSubjectTeachersPage({
   params,
 }: {
-  params: Promise<{ courseId: string; batchId: string }>;
+  params: Promise<{ courseId: string; subjectId: string }>;
 }) {
-  const { courseId, batchId } = await params;
+  const { courseId, subjectId } = await params;
   await requirePermission(PERMISSIONS.COURSES_MANAGE);
-  const batch = await prisma.courseBatch.findUnique({
-    where: { id: batchId },
+  const subject = await prisma.courseSubject.findUnique({
+    where: { id: subjectId },
     select: {
       courseId: true,
       course: { select: { isActive: true } },
@@ -24,9 +24,9 @@ export default async function AdminBatchTeachersPage({
       },
     },
   });
-  if (!batch || batch.courseId !== courseId) notFound();
+  if (!subject || subject.courseId !== courseId) notFound();
 
-  const assignedIds = batch.teachers.map(({ teacherId }) => teacherId);
+  const assignedIds = subject.teachers.map(({ teacherId }) => teacherId);
   const available = await prisma.user.findMany({
     where: { isActive: true, id: { notIn: assignedIds } },
     orderBy: { name: "asc" },
@@ -37,9 +37,9 @@ export default async function AdminBatchTeachersPage({
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Teachers &middot; {batch.teachers.length} assigned
+          Teachers &middot; {subject.teachers.length} assigned
         </h2>
-        {batch.course.isActive && (
+        {subject.course.isActive && (
           <AddPersonDialog
             people={available.map((teacher) => ({
               id: teacher.id,
@@ -51,7 +51,7 @@ export default async function AdminBatchTeachersPage({
             buttonLabel="Add teacher"
             placeholder="Search by name, email, or mobile"
             emptyLabel="No matching teachers."
-            action={addBatchTeacher.bind(null, courseId, batchId)}
+            action={addSubjectTeacher.bind(null, courseId, subjectId)}
           />
         )}
       </div>
@@ -66,14 +66,14 @@ export default async function AdminBatchTeachersPage({
             </tr>
           </thead>
           <tbody>
-            {batch.teachers.map(({ teacher }) => (
+            {subject.teachers.map(({ teacher }) => (
               <tr key={teacher.id} className="border-b border-hairline text-ink last:border-0">
                 <td className="px-4 py-3">{teacher.name}</td>
                 <td className="px-4 py-3 text-muted">{teacher.email}</td>
                 <td className="px-4 py-3 text-muted">{teacher.phone || "—"}</td>
                 <td className="px-4 py-3">
-                  {batch.course.isActive && (
-                    <form action={removeBatchTeacher.bind(null, courseId, batchId)}>
+                  {subject.course.isActive && (
+                    <form action={removeSubjectTeacher.bind(null, courseId, subjectId)}>
                       <input type="hidden" name="teacherId" value={teacher.id} />
                       <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
                         Remove
@@ -83,7 +83,7 @@ export default async function AdminBatchTeachersPage({
                 </td>
               </tr>
             ))}
-            {batch.teachers.length === 0 && (
+            {subject.teachers.length === 0 && (
               <tr>
                   <td colSpan={4} className="px-4 py-3 text-sm text-muted">
                   No teachers assigned yet.

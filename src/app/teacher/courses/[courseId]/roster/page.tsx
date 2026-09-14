@@ -5,9 +5,9 @@ export default async function CourseRosterPage({
   searchParams,
 }: {
   params: Promise<{ courseId: string }>;
-  searchParams: Promise<{ batch?: string }>;
+  searchParams: Promise<{ subject?: string }>;
 }) {
   const { courseId } = await params;
-  const { batch } = await searchParams;
-  return <CourseRosterView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
+  const { subject } = await searchParams;
+  return <CourseRosterView courseId={courseId} portal="teacher" selectedSubjectId={subject} />;
 }

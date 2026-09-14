@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { batchWhere } from "@/lib/batch-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { hasStudentsRead } from "@/lib/permissions";
 import {
@@ -11,7 +10,6 @@ import {
 } from "@/lib/attendance";
 import { loadAttendanceTallies, loadCourseAttendanceCategories, tallyFor } from "@/lib/course-attendance";
 import { AddPersonDialog } from "@/components/add-person-autocomplete";
-import { BatchField } from "@/components/course-workspace-fields";
 import { enrollStudent, unenrollStudent } from "@/app/teacher/courses/[courseId]/roster/actions";
 import { contactKeywords } from "@/lib/admin-list";
 import { firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
@@ -19,13 +17,13 @@ import { firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspac
 export async function CourseRosterView({
   courseId,
   portal,
-  selectedBatchId,
+  selectedSubjectId,
 }: {
   courseId: string;
   portal: CoursePortal;
-  selectedBatchId?: string;
+  selectedSubjectId?: string;
 }) {
-  const { session, scope, canConfigure } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canConfigure } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
   if (portal === "teacher" && !hasStudentsRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
@@ -35,14 +33,7 @@ export async function CourseRosterView({
     select: {
       lateCountsAsAttended: true,
       excusedCountsAsAttended: true,
-      batches: {
-        where: batchWhere(scope),
-        select: {
-          id: true,
-          name: true,
-          enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
-        },
-      },
+      enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
     },
   });
   if (!course) notFound();
@@ -52,13 +43,7 @@ export async function CourseRosterView({
     loadAttendanceTallies(courseId, scope),
   ]);
 
-  const rows = course.batches.flatMap((batch) =>
-    batch.enrollments.map((enrollment) => ({
-      ...enrollment,
-      batchId: batch.id,
-      batchName: batch.name,
-    })),
-  );
+  const rows = course.enrollments;
   const enrolledIds = rows.map((row) => row.studentId);
   const available = canConfigure
     ? await prisma.student.findMany({
@@ -66,8 +51,6 @@ export async function CourseRosterView({
         orderBy: { rollNumber: "asc" },
       })
     : [];
-  const writableBatches = course.batches.map((batch) => ({ id: batch.id, name: batch.name }));
-  const showBatchName = course.batches.length > 1;
   const thresholdNote = categories
     .filter((category) => category.minAttendancePercent !== null)
     .map((category) => `${category.name} ${category.minAttendancePercent}%`)
@@ -92,9 +75,7 @@ export async function CourseRosterView({
             placeholder="Search by name, roll number, email, or mobile"
             emptyLabel="No matching students."
             action={enrollStudent.bind(null, courseId, portal)}
-          >
-            <BatchField batches={writableBatches} />
-          </AddPersonDialog>
+          />
         )}
       </div>
       {thresholdNote ? (
@@ -110,7 +91,6 @@ export async function CourseRosterView({
             <tr>
               <th className="px-4 py-2 font-medium">Roll no.</th>
               <th className="px-4 py-2 font-medium">Student</th>
-              {showBatchName && <th className="px-4 py-2 font-medium">Batch</th>}
               {categories.length > 0 ? (
                 categories.map((category) => (
                   <th key={category.id} className="px-4 py-2 font-medium">
@@ -125,7 +105,7 @@ export async function CourseRosterView({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ student, batchId: studentBatchId, batchName }) => {
+            {rows.map(({ student }) => {
               const percents = categories.map((category) => {
                 const policy = categoryAttendancePolicy(course, category);
                 const percent = attendancePercent(tallyFor(tallies, student.id, category.id), policy);
@@ -133,7 +113,7 @@ export async function CourseRosterView({
               });
               const atRisk = percents.some((item) => item.atRisk);
               return (
-                <tr key={`${studentBatchId}-${student.id}`} className="border-b border-hairline text-ink last:border-0">
+                <tr key={student.id} className="border-b border-hairline text-ink last:border-0">
                   <td className="px-4 py-3">{student.rollNumber}</td>
                   <td className="px-4 py-3">
                     {portal === "admin" ? (
@@ -144,7 +124,6 @@ export async function CourseRosterView({
                       student.name
                     )}
                   </td>
-                  {showBatchName && <td className="px-4 py-3 text-muted">{batchName}</td>}
                   {categories.length > 0 ? (
                     percents.map(({ category, percent, atRisk: cellAtRisk }) => (
                       <td
@@ -170,7 +149,6 @@ export async function CourseRosterView({
                     {canConfigure && (
                       <form action={unenrollStudent.bind(null, courseId, portal)}>
                         <input type="hidden" name="studentId" value={student.id} />
-                        <input type="hidden" name="batchId" value={studentBatchId} />
                         <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
                           Remove
                         </button>
@@ -182,8 +160,8 @@ export async function CourseRosterView({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={(showBatchName ? 5 : 4) + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
-                  No students enrolled in this batch yet.
+                <td colSpan={4 + Math.max(categories.length, 1)} className="px-4 py-3 text-sm text-muted">
+                  No students enrolled in this course yet.
                 </td>
               </tr>
             )}

@@ -19,16 +19,16 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 export const PERMISSION_DEFINITIONS: { key: PermissionKey; description: string }[] = [
   { key: PERMISSIONS.USERS_MANAGE, description: "Create, deactivate, and manage teacher/admin accounts" },
   { key: PERMISSIONS.ROLES_MANAGE, description: "Create roles and configure their permissions" },
-  { key: PERMISSIONS.COURSES_MANAGE, description: "Create and archive courses; manage batches, batch teachers, and batch rosters" },
+  { key: PERMISSIONS.COURSES_MANAGE, description: "Create and archive courses; manage subjects, subject teachers, and course rosters" },
   {
     key: PERMISSIONS.COURSES_CONFIGURE,
-    description: "Configure schedule, roster, and attendance policy for an assigned batch",
+    description: "Configure schedule, roster, and attendance policy for an assigned subject",
   },
-  { key: PERMISSIONS.COURSES_READ, description: "View assigned courses and batch workspace" },
-  { key: PERMISSIONS.STUDENTS_MANAGE, description: "Add students and manage course → batch enrollment" },
-  { key: PERMISSIONS.STUDENTS_READ, description: "View students enrolled in assigned batches" },
+  { key: PERMISSIONS.COURSES_READ, description: "View assigned courses and subject workspace" },
+  { key: PERMISSIONS.STUDENTS_MANAGE, description: "Add students and manage course enrollment" },
+  { key: PERMISSIONS.STUDENTS_READ, description: "View students enrolled in assigned courses" },
   { key: PERMISSIONS.SESSIONS_MANAGE, description: "Create class sessions and change the date of future sessions" },
-  { key: PERMISSIONS.SESSIONS_READ, description: "View class sessions for assigned batches" },
+  { key: PERMISSIONS.SESSIONS_READ, description: "View class sessions for assigned subjects" },
   { key: PERMISSIONS.ATTENDANCE_MARK, description: "Mark attendance for a class session" },
   { key: PERMISSIONS.ATTENDANCE_VIEW, description: "View attendance records and reports" },
 ];
@@ -98,7 +98,7 @@ export const SESSION_VIEW_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.ATTENDANCE_VIEW,
 ];
 
-export const BATCH_ACCESS_PERMISSIONS: PermissionKey[] = [
+export const SUBJECT_ACCESS_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.SESSIONS_MANAGE,
   PERMISSIONS.ATTENDANCE_MARK,
   PERMISSIONS.ATTENDANCE_VIEW,

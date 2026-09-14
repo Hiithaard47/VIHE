@@ -32,7 +32,7 @@ test.describe("student login expiry", () => {
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Full name").fill(name);
     await dialog.getByLabel("Roll number").fill(roll);
-    await dialog.locator(`select[name="batch-${course.id}"]`).selectOption(course.batches[0].id);
+    await dialog.locator(`input[name="course-${course.id}"]`).check();
     expect(await waitForFlashAfter(page, () => dialog.getByRole("button", { name: "Create student" }).click())).toBe(
       "success",
     );

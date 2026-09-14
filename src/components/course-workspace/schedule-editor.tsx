@@ -25,8 +25,8 @@ export type ScheduleSession = {
 export function ScheduleEditor({
   courseId,
   portal,
-  batchName,
-  batches,
+  subjectName,
+  subjects,
   categories,
   initialTermStart,
   initialWeekCount,
@@ -35,8 +35,8 @@ export function ScheduleEditor({
 }: {
   courseId: string;
   portal: CoursePortal;
-  batchName: string;
-  batches: { id: string; name: string }[];
+  subjectName: string;
+  subjects: { id: string; name: string }[];
   categories: { id: string; name: string }[];
   initialTermStart: string;
   initialWeekCount: number;
@@ -61,7 +61,7 @@ export function ScheduleEditor({
   const days = daysOfWeek(visibleMonday);
   const weekDates = new Set(days.map((day) => toDateInputValue(day)));
   const weekSessions = sessions.filter((item) => weekDates.has(item.date));
-  const batchId = batches[0]?.id;
+  const subjectId = subjects[0]?.id;
 
   const cards: WeekGridCard[] = weekSessions.map((item) => ({
     id: item.id,
@@ -85,7 +85,7 @@ export function ScheduleEditor({
         setStatus("saving");
         setError(null);
         const result = await saveSchedule(courseId, portal, {
-          batchId,
+          subjectId,
           termStart: nextTerm,
           weekCount: nextWeeks,
         });
@@ -101,14 +101,14 @@ export function ScheduleEditor({
   }
 
   async function addSlot(formData: FormData) {
-    if (!addDate || !batchId) return false;
+    if (!addDate || !subjectId) return false;
     const times = parseMeetingTimes(String(formData.get("startTime") ?? ""), String(formData.get("endTime") ?? ""));
     const name = String(formData.get("name") ?? "").trim();
     const categoryId = String(formData.get("categoryId") ?? "").trim();
     if (!times || !name || !categoryId) return false;
     setAddError(null);
     const result = await createScheduleSession(courseId, portal, {
-      batchId,
+      subjectId,
       date: toDateInputValue(addDate),
       name,
       categoryId,
@@ -173,7 +173,7 @@ export function ScheduleEditor({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-heading text-base font-semibold text-ink">Schedule · {batchName}</h2>
+          <h2 className="font-heading text-base font-semibold text-ink">Schedule · {subjectName}</h2>
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm text-ink">
               Term start
