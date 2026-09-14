@@ -1,13 +1,4 @@
 import {
-  CreateBucketCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadBucketCommand,
-  PutObjectCommand,
-  S3Client,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import {
   BlobSASPermissions,
   BlobServiceClient,
   StorageSharedKeyCredential,
@@ -18,10 +9,6 @@ function required(name: string) {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is not configured.`);
   return value;
-}
-
-function useAzure() {
-  return Boolean(process.env.AZURE_STORAGE_CONNECTION_STRING?.trim());
 }
 
 function azureContainerName() {
@@ -38,68 +25,20 @@ async function ensureAzureContainer() {
   return container;
 }
 
-function s3Client() {
-  const endpoint = process.env.S3_ENDPOINT?.trim();
-  return new S3Client({
-    region: required("S3_REGION"),
-    endpoint: endpoint || undefined,
-    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
-    credentials: {
-      accessKeyId: required("S3_ACCESS_KEY"),
-      secretAccessKey: required("S3_SECRET_KEY"),
-    },
-  });
-}
-
-function s3Bucket() {
-  return required("S3_BUCKET");
-}
-
 export function isStorageConfigured() {
-  if (useAzure()) return true;
-  return Boolean(
-    process.env.S3_BUCKET && process.env.S3_REGION && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY,
-  );
-}
-
-async function ensureS3Bucket() {
-  const s3 = s3Client();
-  const name = s3Bucket();
-  try {
-    await s3.send(new HeadBucketCommand({ Bucket: name }));
-  } catch {
-    await s3.send(new CreateBucketCommand({ Bucket: name }));
-  }
+  return Boolean(process.env.AZURE_STORAGE_CONNECTION_STRING?.trim());
 }
 
 export async function putObject(key: string, body: Buffer, contentType: string) {
-  if (useAzure()) {
-    const container = await ensureAzureContainer();
-    await container.getBlockBlobClient(key).uploadData(body, {
-      blobHTTPHeaders: { blobContentType: contentType },
-    });
-    return;
-  }
-
-  await ensureS3Bucket();
-  await s3Client().send(
-    new PutObjectCommand({
-      Bucket: s3Bucket(),
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    }),
-  );
+  const container = await ensureAzureContainer();
+  await container.getBlockBlobClient(key).uploadData(body, {
+    blobHTTPHeaders: { blobContentType: contentType },
+  });
 }
 
 export async function deleteObject(key: string) {
-  if (useAzure()) {
-    const container = await ensureAzureContainer();
-    await container.getBlockBlobClient(key).deleteIfExists();
-    return;
-  }
-
-  await s3Client().send(new DeleteObjectCommand({ Bucket: s3Bucket(), Key: key }));
+  const container = await ensureAzureContainer();
+  await container.getBlockBlobClient(key).deleteIfExists();
 }
 
 function azureSharedKeyCredential(): StorageSharedKeyCredential {
@@ -113,31 +52,19 @@ function azureSharedKeyCredential(): StorageSharedKeyCredential {
 }
 
 export async function presignedDownloadUrl(key: string, fileName: string) {
-  if (useAzure()) {
-    const container = await ensureAzureContainer();
-    const blob = container.getBlockBlobClient(key);
-    const credential = azureSharedKeyCredential();
-    const expiresOn = new Date(Date.now() + 60 * 1000);
-    const sas = generateBlobSASQueryParameters(
-      {
-        containerName: azureContainerName(),
-        blobName: key,
-        permissions: BlobSASPermissions.parse("r"),
-        expiresOn,
-        contentDisposition: `attachment; filename="${fileName.replace(/"/g, "")}"`,
-      },
-      credential,
-    ).toString();
-    return `${blob.url}?${sas}`;
-  }
-
-  return getSignedUrl(
-    s3Client(),
-    new GetObjectCommand({
-      Bucket: s3Bucket(),
-      Key: key,
-      ResponseContentDisposition: `attachment; filename="${fileName.replace(/"/g, "")}"`,
-    }),
-    { expiresIn: 60 },
-  );
+  const container = await ensureAzureContainer();
+  const blob = container.getBlockBlobClient(key);
+  const credential = azureSharedKeyCredential();
+  const expiresOn = new Date(Date.now() + 60 * 1000);
+  const sas = generateBlobSASQueryParameters(
+    {
+      containerName: azureContainerName(),
+      blobName: key,
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn,
+      contentDisposition: `attachment; filename="${fileName.replace(/"/g, "")}"`,
+    },
+    credential,
+  ).toString();
+  return `${blob.url}?${sas}`;
 }

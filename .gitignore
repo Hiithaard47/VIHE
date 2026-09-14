@@ -5,9 +5,7 @@ out
 build
 .env
 .env*.local
-.aws-deploy-secrets.local
 .azure-deploy-secrets.local
-.venv-awscli
 *.log
 .DS_Store
 next-env.d.ts
