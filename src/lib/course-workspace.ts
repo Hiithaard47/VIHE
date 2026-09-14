@@ -2,7 +2,7 @@ import { hasAttendanceAccess, hasCoursesRead, hasSessionsRead, hasStudentsRead }
 
 export type CoursePortal = "teacher" | "admin";
 
-const ADMIN_CLASSROOM = new Set(["sessions", "schedule", "roster", "attendance", "uploads", "assignments"]);
+const ADMIN_CLASSROOM = new Set(["sessions", "schedule", "attendance", "uploads", "assignments"]);
 
 export function parseCoursePortal(value: unknown): CoursePortal {
   return value === "admin" ? "admin" : "teacher";
@@ -11,6 +11,8 @@ export function parseCoursePortal(value: unknown): CoursePortal {
 export function courseHref(portal: CoursePortal, courseId: string, suffix = "", subjectId?: string) {
   if (portal === "admin") {
     const head = suffix.split("/")[0] ?? "";
+    // Enrollment is course-wide — roster never nests under a subject.
+    if (head === "roster") return `/admin/courses/${courseId}/roster`;
     if (subjectId) return `/admin/courses/${courseId}/subjects/${subjectId}/${suffix || "sessions"}`;
     if (ADMIN_CLASSROOM.has(head)) return `/admin/courses/${courseId}`;
     return suffix ? `/admin/courses/${courseId}/${suffix}` : `/admin/courses/${courseId}`;

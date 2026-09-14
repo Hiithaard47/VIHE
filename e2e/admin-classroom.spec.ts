@@ -18,9 +18,10 @@ test.describe("admin: classroom", () => {
     await expect(page.getByRole("link", { name: "Sessions", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Details", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Policy", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Roster", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Default" }).click();
     await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Roster", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Roster", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Attendance", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Assignments", exact: true })).toBeVisible();
 
@@ -40,11 +41,11 @@ test.describe("admin: classroom", () => {
       "success",
     );
 
-    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/roster`);
+    await page.goto(`/admin/courses/${course.id}/roster`);
     await expect(page.getByText(student.name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Add student" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Attendance", exact: true }).click();
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/attendance`);
     await expect(page.getByText(student.name)).toBeVisible();
 
     await page.getByRole("link", { name: "Assignments", exact: true }).click();

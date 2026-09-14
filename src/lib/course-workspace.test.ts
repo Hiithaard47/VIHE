@@ -11,9 +11,10 @@ describe("course workspace hrefs", () => {
     expect(sessionListHref("teacher", "c1", "cls", "b1")).toBe("/teacher/courses/c1?subject=b1&category=cls");
   });
 
-  it("puts admin classroom pages under the subject", () => {
+  it("puts admin classroom pages under the subject, with roster at course level", () => {
     expect(courseHref("admin", "c1", "sessions", "b1")).toBe("/admin/courses/c1/subjects/b1/sessions");
-    expect(courseHref("admin", "c1", "roster", "b1")).toBe("/admin/courses/c1/subjects/b1/roster");
+    expect(courseHref("admin", "c1", "roster", "b1")).toBe("/admin/courses/c1/roster");
+    expect(courseHref("admin", "c1", "roster")).toBe("/admin/courses/c1/roster");
     expect(sessionListHref("admin", "c1", "cls", "b1")).toBe("/admin/courses/c1/subjects/b1/sessions?category=cls");
     expect(attendanceHref("teacher", "c1", "cls", "b1")).toBe("/teacher/courses/c1/attendance?subject=b1&category=cls");
     expect(attendanceHref("admin", "c1", "cls", "b1")).toBe(

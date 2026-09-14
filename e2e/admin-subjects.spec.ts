@@ -73,7 +73,6 @@ test("admin assigns teachers and keeps roster enrollment at course level", async
   await expect(page.getByRole("cell", { name: teacherTwo, exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
-  await page.getByRole("link", { name: "Morning" }).click();
   await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await page.getByRole("button", { name: "Add student" }).click();
   const rosterStudentDialog = page.getByRole("dialog");
@@ -85,7 +84,6 @@ test("admin assigns teachers and keeps roster enrollment at course level", async
   await expect(page.getByRole("link", { name: courseName })).toBeVisible();
 
   await page.getByRole("link", { name: courseName }).click();
-  await page.getByRole("link", { name: "Evening" }).click();
   await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await expect(page.locator("tbody").getByText(studentName)).toBeVisible();
 });

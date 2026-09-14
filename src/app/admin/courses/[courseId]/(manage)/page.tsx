@@ -7,7 +7,7 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
   const [course, subjects] = await Promise.all([
     prisma.course.findUnique({
       where: { id: courseId },
-      select: { isActive: true, _count: { select: { enrollments: true } } },
+      select: { isActive: true },
     }),
     prisma.courseSubject.findMany({
       where: { courseId },
@@ -17,8 +17,6 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
       orderBy: { createdAt: "asc" },
     }),
   ]);
-
-  const enrollmentCount = course?._count.enrollments ?? 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -33,7 +31,6 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
               <tr>
                 <th className="px-4 py-2 font-medium">Subject</th>
                 <th className="px-4 py-2 font-medium">Teachers</th>
-                <th className="px-4 py-2 font-medium">Students</th>
               </tr>
             </thead>
             <tbody>
@@ -47,7 +44,6 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
                   <td className="px-4 py-3">
                     {subject.teachers.map(({ teacher }) => teacher.name).join(", ") || <span className="text-muted">Unassigned</span>}
                   </td>
-                  <td className="px-4 py-3">{enrollmentCount}</td>
                 </tr>
               ))}
             </tbody>
