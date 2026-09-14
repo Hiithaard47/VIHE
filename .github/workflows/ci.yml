@@ -1,5 +1,10 @@
 # Unit tests + sharded Playwright e2e on every PR / push to main.
 # Any failing job marks the check red (require these checks to block merges).
+#
+# Speed notes:
+# - Shared Next build artifact → shards use `next start` (no per-route compile)
+# - Playwright browser cache avoids re-downloading Chromium each shard
+# - DB prepare runs once per shard before Playwright (webServer only boots the app)
 name: CI
 
 on:
@@ -23,6 +28,8 @@ env:
   AZURE_STORAGE_CONTAINER: session-files
   DATABASE_URL: postgresql://vihe:vihe@localhost:5432/vihe_app?schema=public
   TEST_DATABASE_URL: postgresql://vihe:vihe@localhost:5432/vihe_app_test?schema=public
+  NEXT_DIST_DIR: .next-e2e
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.ms-playwright
 
 jobs:
   test:
@@ -46,10 +53,44 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+  e2e-build:
+    name: E2E build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js for e2e
+        run: npx next build
+        env:
+          AUTH_URL: http://localhost:3001
+
+      - name: Upload e2e build
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-e2e-build
+          path: .next-e2e
+          retention-days: 1
+
   e2e:
     name: E2E (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: e2e-build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -91,8 +132,26 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Download e2e build
+        uses: actions/download-artifact@v4
+        with:
+          name: next-e2e-build
+          path: .next-e2e
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright OS deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Wait for Azurite
         run: |
@@ -106,11 +165,16 @@ jobs:
           echo "Azurite did not become ready in time" >&2
           exit 1
 
+      - name: Prepare e2e database
+        run: npm run test:e2e:prepare
+
       - name: Run e2e tests
         run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         env:
           CI: true
           AUTH_URL: http://localhost:3001
+          E2E_SKIP_PREPARE: "1"
+          E2E_SERVER_MODE: start
 
   e2e-ok:
     name: E2E
