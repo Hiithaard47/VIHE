@@ -38,23 +38,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Temporary: print OIDC claims so IAM trust `sub` can be matched exactly.
-      - name: Debug OIDC claims
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken('sts.amazonaws.com')
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
-            core.info(JSON.stringify({
-              sub: payload.sub,
-              aud: payload.aud,
-              iss: payload.iss,
-              repository: payload.repository,
-              ref: payload.ref,
-              environment: payload.environment,
-              job_workflow_ref: payload.job_workflow_ref,
-            }, null, 2))
-
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -90,11 +73,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Image-only update so existing Express Mode env (DATABASE_URL, AUTH_*, S3_*) is preserved.
+      # Until the Express service exists, ECR push still succeeds (ALLOW_MISSING_SERVICE=1).
       - name: Update ECS Express Mode image
         env:
           IMAGE_URI: ${{ steps.meta.outputs.image_uri }}
           SERVICE_NAME: ${{ env.ECS_SERVICE }}
           AWS_REGION: ${{ env.AWS_REGION }}
+          ECS_SERVICE_ARN: ${{ vars.ECS_SERVICE_ARN }}
+          ALLOW_MISSING_SERVICE: "1"
         run: |
           chmod +x scripts/ecs-update-image.sh
           ./scripts/ecs-update-image.sh

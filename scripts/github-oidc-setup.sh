@@ -45,6 +45,27 @@ fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+GITHUB_OWNER="${GITHUB_REPO%%/*}"
+GITHUB_NAME="${GITHUB_REPO#*/}"
+
+# GitHub Actions OIDC `sub` may be either:
+#   repo:owner/name:ref:...
+#   repo:owner@OWNER_ID/name@REPO_ID:ref:...
+# Prefer numeric IDs when `gh` can resolve them (required on newer tokens).
+SUB_PATTERNS=("repo:${GITHUB_REPO}:*")
+if command -v gh >/dev/null 2>&1; then
+  REPO_JSON="$(gh api "repos/${GITHUB_REPO}" --jq '{owner:.owner.id,repo:.id}' 2>/dev/null || true)"
+  if [[ -n "$REPO_JSON" && "$REPO_JSON" != "null" ]]; then
+    OWNER_ID="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["owner"])' <<<"$REPO_JSON")"
+    REPO_ID="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["repo"])' <<<"$REPO_JSON")"
+    SUB_PATTERNS+=("repo:${GITHUB_OWNER}@${OWNER_ID}/${GITHUB_NAME}@${REPO_ID}:*")
+  fi
+fi
+# Fallback wildcard if gh unavailable / private without token
+SUB_PATTERNS+=("repo:${GITHUB_OWNER}@*/${GITHUB_NAME}@*:*")
+
+SUB_JSON="$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "${SUB_PATTERNS[@]}")"
+
 cat >"$TMP/trust.json" <<EOF
 {
   "Version": "2012-10-17",
@@ -60,7 +81,7 @@ cat >"$TMP/trust.json" <<EOF
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:${GITHUB_REPO}:*"
+          "token.actions.githubusercontent.com:sub": ${SUB_JSON}
         }
       }
     }
@@ -184,7 +205,7 @@ cat <<EOF
 
 --- GitHub Actions OIDC ready ---
 Role ARN:   ${ROLE_ARN}
-Repo trust: repo:${GITHUB_REPO}:*
+Repo trust: classic repo:${GITHUB_REPO}:* plus owner@id/repo@id forms
 ECR repo:   ${ECR_REPO} (${REGION})
 
 Add in GitHub → Settings → Secrets and variables → Actions → Variables:
@@ -195,9 +216,13 @@ Optional variables (defaults already match vihe):
   ECR_REPOSITORY=${ECR_REPO}
   ECS_SERVICE=vihe-app
   AWS_ROLE_NAME=${ROLE_NAME}
+  ECS_SERVICE_ARN=<from ./scripts/aws-provision.sh summary after first create>
 
 Role ARN used by the workflow:
   ${ROLE_ARN}
+
+OIDC note: GitHub may issue sub as repo:owner@OWNER_ID/name@REPO_ID:ref:...
+This script allows both classic and @id subject shapes.
 
 Day-to-day: merge to main (or Actions → Deploy → Run workflow).
 First-time ECS service create still: ./scripts/aws-provision.sh ecs-express
