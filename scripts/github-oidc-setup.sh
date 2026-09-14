@@ -7,11 +7,9 @@
 #   export GITHUB_REPO=parmod-arora/vihe-app   # owner/name
 #   ./scripts/github-oidc-setup.sh
 #
-# Then in the GitHub repo:
-#   Settings → Secrets and variables → Actions
-#   Secret:  AWS_ROLE_ARN = arn:aws:iam::ACCOUNT:role/vihe-github-actions
-#   Variables (optional if defaults match): AWS_ACCOUNT_ID, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE
-#   Environments → create "production" (workflow uses it)
+# Then in the GitHub repo (Settings → Secrets and variables → Actions → Variables):
+#   AWS_ACCOUNT_ID = <account id printed below>
+# Optional: AWS_REGION, ECR_REPOSITORY, ECS_SERVICE, AWS_ROLE_NAME
 
 set -euo pipefail
 
@@ -189,16 +187,17 @@ Role ARN:   ${ROLE_ARN}
 Repo trust: repo:${GITHUB_REPO}:*
 ECR repo:   ${ECR_REPO} (${REGION})
 
-Add in GitHub → Settings → Secrets and variables → Actions:
-  Secret AWS_ROLE_ARN = ${ROLE_ARN}
+Add in GitHub → Settings → Secrets and variables → Actions → Variables:
+  AWS_ACCOUNT_ID=${ACCOUNT_ID}
 
 Optional variables (defaults already match vihe):
-  AWS_ACCOUNT_ID=${ACCOUNT_ID}
   AWS_REGION=${REGION}
   ECR_REPOSITORY=${ECR_REPO}
   ECS_SERVICE=vihe-app
+  AWS_ROLE_NAME=${ROLE_NAME}
 
-Also create Environment name: production
+Role ARN used by the workflow:
+  ${ROLE_ARN}
 
 Day-to-day: merge to main (or Actions → Deploy → Run workflow).
 First-time ECS service create still: ./scripts/aws-provision.sh ecs-express
