@@ -1,0 +1,82 @@
+# Build linux/amd64 image → push ECR → roll ECS Express Mode to the new image.
+# One-time AWS bootstrap (RDS/S3/ECS create) stays in scripts/aws-provision.sh.
+#
+# Required GitHub Actions variables (Settings → Secrets and variables → Actions → Variables):
+#   AWS_ACCOUNT_ID, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE
+# Required secret:
+#   AWS_ROLE_ARN  (IAM role for GitHub OIDC — see scripts/github-oidc-setup.sh)
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'vihe-app' }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE || 'vihe-app' }}
+
+jobs:
+  deploy:
+    name: Build, push, deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: vihe-github-actions-deploy
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tags
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "image_tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_uri_latest=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_uri }}
+            ${{ steps.meta.outputs.image_uri_latest }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Image-only update so existing Express Mode env (DATABASE_URL, AUTH_*, S3_*) is preserved.
+      - name: Update ECS Express Mode image
+        env:
+          IMAGE_URI: ${{ steps.meta.outputs.image_uri }}
+          SERVICE_NAME: ${{ env.ECS_SERVICE }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          chmod +x scripts/ecs-update-image.sh
+          ./scripts/ecs-update-image.sh
+

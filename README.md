@@ -60,47 +60,48 @@ Students sign in with the email and portal password set by an admin, then downlo
 
 There is no self sign-up: a Google account only works if an admin has already created a matching `User` record for that email.
 
-## Deploy on AWS App Runner
+## Deploy on AWS (ECS Express Mode)
 
-The app is a Docker image. On boot it runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
+App Runner is closed to **new** customers (as of 30 Apr 2026). Use **Amazon ECS Express Mode** instead: Docker image on Fargate + managed ALB/HTTPS.
 
-**Before the service**
+The app image runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
 
-1. RDS PostgreSQL 16 — database `vihe_app`, not public to the internet. Allow inbound 5432 from the App Runner VPC connector (or the service security group).
-2. Private S3 bucket for session files. IAM user with `s3:GetObject`, `PutObject`, `DeleteObject`, `HeadBucket` on that bucket.
-3. Push this repo to GitHub (or build/push the image to ECR).
+### First-time provision (local)
 
-**Create the App Runner service**
-
-1. AWS Console → App Runner → Create service → **Source code** (GitHub) or **Container registry** (ECR).
-2. If source: repository + branch, deployment trigger automatic, configuration file `apprunner.yaml` (Docker runtime).
-3. If ECR: build for App Runner’s CPU (`docker build --platform linux/amd64 -t vihe-app .`), push, then point App Runner at the image. GitHub source builds amd64 for you.
-4. Port **8080**. Health check path **`/login`**.
-5. Auto scaling: **Min size 2**, max 4 (or whatever you want above 2). Console: service → Configuration → Auto scaling. Or after the service exists:
+Creates RDS, S3, ECS roles, builds once, and creates the Express Mode service:
 
 ```
-AWS_REGION=ap-south-1 SERVICE_ARN=arn:aws:apprunner:…:service/vihe-app/… \
-  sh scripts/apprunner-min-size.sh
+export AWS_REGION=ap-south-1
+export ADMIN_EMAIL=you@your.org
+./scripts/aws-provision.sh ecs-express
 ```
 
-Both instances use the same RDS, S3, `AUTH_SECRET`, and `AUTH_URL`. You pay for two instances even when idle.
-6. Environment variables (do not set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE`):
+Secrets land in `.aws-deploy-secrets.local` (gitignored). Do **not** set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE` in production. Never run `npm run db:clean` or `prisma migrate reset` against RDS.
+
+Optional Google sign-in: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and callback `https://YOUR_HOST/api/auth/callback/google`.
+
+### Day-to-day deploys (GitHub Actions)
+
+After the service exists, **build → ECR → ECS** runs in CI (no Docker Desktop required).
+
+1. One-time IAM OIDC role (from a machine with AWS admin credentials):
 
 ```
-DATABASE_URL=postgresql://USER:PASS@RDS_HOST:5432/vihe_app?schema=public&sslmode=require
-AUTH_URL=https://YOUR_APPRUNNER_HOST
-AUTH_SECRET=<output of npx auth secret>
-ADMIN_EMAIL=you@your.org
-ADMIN_PASSWORD=<strong password>
-S3_REGION=ap-south-1
-S3_BUCKET=your-bucket
-S3_ACCESS_KEY=...
-S3_SECRET_KEY=...
+export AWS_REGION=ap-south-1
+export GITHUB_REPO=parmod-arora/vihe-app
+./scripts/github-oidc-setup.sh
 ```
 
-After the first deploy, set `AUTH_URL` to the App Runner HTTPS URL (or custom domain) and deploy again so Auth.js cookies match. Optional Google: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and the callback `https://YOUR_HOST/api/auth/callback/google`.
+2. In the GitHub repo → **Settings → Secrets and variables → Actions**:
+   - Secret `AWS_ROLE_ARN` = the role ARN printed by the script
+   - Optional variables: `AWS_REGION`, `ECR_REPOSITORY`, `ECS_SERVICE` (defaults: `ap-south-1` / `vihe-app` / `vihe-app`)
+3. Create Environment **`production`** (Settings → Environments).
+4. Merge to `main`, or run **Actions → Deploy → Run workflow**.
 
-Never run `npm run db:clean` or `prisma migrate reset` against RDS.
+The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) pushes `sha-<commit>` and `latest` to ECR, then updates the Express Mode service **image only** (existing env vars stay on the service).
+
+Local fallback if CI is unavailable: `./scripts/aws-provision.sh ecr-push` then `./scripts/aws-provision.sh ecs-express`.
+
 
 ## Testing
 
