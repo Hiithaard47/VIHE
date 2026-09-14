@@ -27,7 +27,7 @@ test.describe("course assignments", () => {
     );
     const course = await createCourse(`Assignment Course ${unique("c")}`, unique("ASG").toUpperCase(), teacher.id);
     const studentEmail = `${unique("asgstudent")}@example.com`;
-    const student = await createStudent(`Assignment Student ${unique("s")}`, unique("AS"), course.batches[0].id, {
+    const student = await createStudent(`Assignment Student ${unique("s")}`, unique("AS"), course.id, {
       email: studentEmail,
       password: studentPassword,
     });
@@ -85,7 +85,7 @@ test.describe("course assignments", () => {
     );
     const course = await createCourse(`Late Course ${unique("c")}`, unique("LTE").toUpperCase(), teacher.id);
     const studentEmail = `${unique("latestudent")}@example.com`;
-    await createStudent(`Late Student ${unique("s")}`, unique("LS"), course.batches[0].id, {
+    await createStudent(`Late Student ${unique("s")}`, unique("LS"), course.id, {
       email: studentEmail,
       password: studentPassword,
     });

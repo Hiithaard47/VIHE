@@ -5,10 +5,13 @@ import { createStudent } from "@/app/admin/students/actions";
 
 export function AddStudentDialog({
   courses,
+  enrolledCourseIds = [],
 }: {
-  courses: { id: string; name: string; batches: { id: string; name: string }[] }[];
+  courses: { id: string; name: string }[];
+  enrolledCourseIds?: string[];
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const enrolled = new Set(enrolledCourseIds);
 
   return (
     <>
@@ -74,22 +77,16 @@ export function AddStudentDialog({
           </label>
           {courses.length > 0 && (
             <fieldset className="flex flex-col gap-2 text-sm">
-              <legend className="mb-1 text-muted">Enroll in course batches</legend>
+              <legend className="mb-1 text-muted">Enroll in courses</legend>
               {courses.map((course) => (
-                <label key={course.id} className="flex items-center justify-between gap-2">
+                <label key={course.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name={`course-${course.id}`}
+                    defaultChecked={enrolled.has(course.id)}
+                    className="rounded border-hairline"
+                  />
                   <span>{course.name}</span>
-                  <select
-                    name={`batch-${course.id}`}
-                    defaultValue=""
-                    className="rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink"
-                  >
-                    <option value="">Not enrolled</option>
-                    {course.batches.map((batch) => (
-                      <option key={batch.id} value={batch.id}>
-                        {batch.name}
-                      </option>
-                    ))}
-                  </select>
                 </label>
               ))}
             </fieldset>

@@ -1,86 +1,36 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_BATCH_NAME } from "@/lib/batches";
+import { DEFAULT_SUBJECT_NAME } from "@/lib/subjects";
 import { applyDefaultLoginExpiry } from "@/lib/student-login";
 
 type EnrollmentTransaction = Prisma.TransactionClient;
 
-export function alreadyEnrolledInCourseMessage(batchName: string) {
-  return `This student is already enrolled in ${batchName}.`;
-}
-
-export class AlreadyEnrolledInCourseError extends Error {
-  constructor(public batchName: string) {
-    super(alreadyEnrolledInCourseMessage(batchName));
-    this.name = "AlreadyEnrolledInCourseError";
-  }
-}
-
-export function otherBatchEnrollmentWhere(args: {
-  studentId: string;
-  courseId: string;
-  exceptBatchId: string;
-}) {
-  return {
-    studentId: args.studentId,
-    batchId: { not: args.exceptBatchId },
-    batch: { courseId: args.courseId },
-  };
-}
-
-async function enrollStudentInBatchWithClient(
+async function enrollStudentInCourseWithClient(
   studentId: string,
-  batchId: string,
+  courseId: string,
   tx: EnrollmentTransaction,
-  options?: { replaceExisting?: boolean },
 ) {
-  const batch = await tx.courseBatch.findUniqueOrThrow({
-    where: { id: batchId },
-    select: { id: true, courseId: true },
-  });
-  const sibling = await tx.batchEnrollment.findFirst({
-    where: otherBatchEnrollmentWhere({
-      studentId,
-      courseId: batch.courseId,
-      exceptBatchId: batch.id,
-    }),
-    select: { batch: { select: { name: true } } },
-  });
-  if (sibling && !options?.replaceExisting) {
-    throw new AlreadyEnrolledInCourseError(sibling.batch.name);
-  }
-
-  if (sibling) {
-    await tx.batchEnrollment.deleteMany({
-      where: otherBatchEnrollmentWhere({
-        studentId,
-        courseId: batch.courseId,
-        exceptBatchId: batch.id,
-      }),
-    });
-  }
-  await tx.batchEnrollment.upsert({
-    where: { batchId_studentId: { batchId: batch.id, studentId } },
-    create: { batchId, studentId },
+  await tx.courseEnrollment.upsert({
+    where: { courseId_studentId: { courseId, studentId } },
+    create: { courseId, studentId },
     update: {},
   });
-  await applyDefaultLoginExpiry(studentId, batch.courseId, tx);
+  await applyDefaultLoginExpiry(studentId, courseId, tx);
 }
 
-export async function enrollStudentInBatch(
+export async function enrollStudentInCourse(
   studentId: string,
-  batchId: string,
+  courseId: string,
   tx?: EnrollmentTransaction,
-  options?: { replaceExisting?: boolean },
 ) {
-  if (tx) return enrollStudentInBatchWithClient(studentId, batchId, tx, options);
+  if (tx) return enrollStudentInCourseWithClient(studentId, courseId, tx);
   return prisma.$transaction((transaction) =>
-    enrollStudentInBatchWithClient(studentId, batchId, transaction, options),
+    enrollStudentInCourseWithClient(studentId, courseId, transaction),
   );
 }
 
-export async function unenrollStudentFromBatch(studentId: string, batchId: string) {
-  await prisma.batchEnrollment.deleteMany({ where: { studentId, batchId } });
+export async function unenrollStudentFromCourse(studentId: string, courseId: string) {
+  await prisma.courseEnrollment.deleteMany({ where: { studentId, courseId } });
 }
 
 export function studentEnrollmentWhere(studentId: string) {
@@ -88,24 +38,18 @@ export function studentEnrollmentWhere(studentId: string) {
 }
 
 export async function findStudentCourseEnrollment(studentId: string, courseId: string) {
-  return prisma.batchEnrollment.findFirst({
-    where: { studentId, batch: { courseId } },
+  return prisma.courseEnrollment.findUnique({
+    where: { courseId_studentId: { courseId, studentId } },
     include: {
-      batch: {
-        select: {
-          id: true,
-          name: true,
-          course: { select: { id: true, name: true, code: true, description: true, isActive: true } },
-        },
-      },
+      course: { select: { id: true, name: true, code: true, description: true, isActive: true } },
     },
   });
 }
 
-export async function getOrCreateDefaultBatch(courseId: string, tx?: EnrollmentTransaction) {
-  return (tx ?? prisma).courseBatch.upsert({
-    where: { courseId_name: { courseId, name: DEFAULT_BATCH_NAME } },
-    create: { courseId, name: DEFAULT_BATCH_NAME },
+export async function getOrCreateDefaultSubject(courseId: string, tx?: EnrollmentTransaction) {
+  return (tx ?? prisma).courseSubject.upsert({
+    where: { courseId_name: { courseId, name: DEFAULT_SUBJECT_NAME } },
+    create: { courseId, name: DEFAULT_SUBJECT_NAME },
     update: {},
   });
 }

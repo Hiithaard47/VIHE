@@ -15,12 +15,12 @@ export async function submitAssignment(courseId: string, assignmentId: string, f
   const path = `/student/courses/${courseId}/assignments/${assignmentId}`;
   const enrollment = await findStudentCourseEnrollment(session.user.id, courseId);
   if (!enrollment) redirect("/student");
-  if (!enrollment.batch.course.isActive) {
+  if (!enrollment.course.isActive) {
     redirect(flashUrl(path, "error", "This course is completed. You cannot submit."));
   }
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, batchId: enrollment.batch.id },
+    where: { id: assignmentId, subject: { courseId } },
     select: { id: true, dueDate: true },
   });
   if (!assignment) redirect(flashUrl(`/student/courses/${courseId}/assignments`, "error", "That assignment was not found."));

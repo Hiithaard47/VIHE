@@ -3,53 +3,53 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireActiveCourse, requireCourseConfigure } from "@/lib/rbac";
-import { assertWritableBatch } from "@/lib/batch-scope";
+import { assertWritableSubject } from "@/lib/subject-scope";
 import { insertSession } from "@/lib/session-write";
 import { courseHref, parseCoursePortal, scheduleHref, type CoursePortal } from "@/lib/course-workspace";
 import { isFutureSessionDate, parseDateInput } from "@/lib/time";
 import { mondayOf, parseMeetingTimes } from "@/lib/schedule";
 
-function revalidateSchedule(portal: CoursePortal, courseId: string, batchId: string) {
-  const path = scheduleHref(portal, courseId, batchId);
+function revalidateSchedule(portal: CoursePortal, courseId: string, subjectId: string) {
+  const path = scheduleHref(portal, courseId, subjectId);
   revalidatePath(path);
   revalidatePath(path.split("?")[0]);
-  revalidatePath(courseHref(portal, courseId, "", batchId));
+  revalidatePath(courseHref(portal, courseId, "", subjectId));
 }
 
 export async function saveSchedule(
   courseId: string,
   portalArg: CoursePortal,
-  input: { batchId?: string; termStart: string; weekCount: number },
+  input: { subjectId?: string; termStart: string; weekCount: number },
 ): Promise<{ ok: true } | { error: string }> {
   const session = await requireCourseConfigure(courseId, parseCoursePortal(portalArg));
   const portal = parseCoursePortal(portalArg);
-  const path = scheduleHref(portal, courseId, input.batchId);
+  const path = scheduleHref(portal, courseId, input.subjectId);
   await requireActiveCourse(courseId, path);
   const termStart = parseDateInput(input.termStart);
   if (!termStart) return { error: "Pick a term start date." };
   if (!Number.isInteger(input.weekCount) || input.weekCount < 1 || input.weekCount > 52) {
     return { error: "Weeks must be between 1 and 52." };
   }
-  const batchId = await assertWritableBatch(session, courseId, input.batchId);
-  if (!batchId) return { error: "You are not assigned to that batch." };
+  const subjectId = await assertWritableSubject(session, courseId, input.subjectId);
+  if (!subjectId) return { error: "You are not assigned to that subject." };
 
-  await prisma.courseBatch.update({
-    where: { id: batchId },
+  await prisma.courseSubject.update({
+    where: { id: subjectId },
     data: { termStart: mondayOf(termStart), weekCount: input.weekCount },
   });
 
-  revalidateSchedule(portal, courseId, batchId);
+  revalidateSchedule(portal, courseId, subjectId);
   return { ok: true };
 }
 
 export async function createScheduleSession(
   courseId: string,
   portalArg: CoursePortal,
-  input: { batchId?: string; date: string; name: string; categoryId: string; startTime: string; endTime: string },
+  input: { subjectId?: string; date: string; name: string; categoryId: string; startTime: string; endTime: string },
 ): Promise<{ ok: true } | { error: string }> {
   const session = await requireCourseConfigure(courseId, parseCoursePortal(portalArg));
   const portal = parseCoursePortal(portalArg);
-  const path = scheduleHref(portal, courseId, input.batchId);
+  const path = scheduleHref(portal, courseId, input.subjectId);
   await requireActiveCourse(courseId, path);
   const date = parseDateInput(input.date);
   if (!date) return { error: "Pick a valid date." };
@@ -57,8 +57,8 @@ export async function createScheduleSession(
   if (!name) return { error: "Enter a session name." };
   const times = parseMeetingTimes(input.startTime, input.endTime);
   if (!times) return { error: "Pick a valid start and end time." };
-  const batchId = await assertWritableBatch(session, courseId, input.batchId);
-  if (!batchId) return { error: "You are not assigned to that batch." };
+  const subjectId = await assertWritableSubject(session, courseId, input.subjectId);
+  if (!subjectId) return { error: "You are not assigned to that subject." };
 
   const category = await prisma.sessionCategory.findFirst({
     where: { id: input.categoryId, isActive: true },
@@ -67,7 +67,7 @@ export async function createScheduleSession(
   if (!category) return { error: "Pick a session category." };
 
   const created = await insertSession({
-    batchId,
+    subjectId,
     categoryId: category.id,
     date,
     name,
@@ -78,7 +78,7 @@ export async function createScheduleSession(
     requireTime: true,
   });
   if ("error" in created) return created;
-  revalidateSchedule(portal, courseId, batchId);
+  revalidateSchedule(portal, courseId, subjectId);
   return { ok: true };
 }
 
@@ -97,20 +97,20 @@ export async function duplicateOneOffSession(
   const source = await prisma.classSession.findUniqueOrThrow({
     where: { id: input.sessionId },
     select: {
-      batchId: true,
+      subjectId: true,
       name: true,
       categoryId: true,
       startMinute: true,
       endMinute: true,
-      batch: { select: { courseId: true } },
+      subject: { select: { courseId: true } },
     },
   });
-  if (source.batch.courseId !== courseId) return { error: "That session is not on this course." };
-  const batchId = await assertWritableBatch(session, courseId, source.batchId);
-  if (!batchId) return { error: "You are not assigned to that batch." };
+  if (source.subject.courseId !== courseId) return { error: "That session is not on this course." };
+  const subjectId = await assertWritableSubject(session, courseId, source.subjectId);
+  if (!subjectId) return { error: "You are not assigned to that subject." };
 
   const created = await insertSession({
-    batchId,
+    subjectId,
     categoryId: source.categoryId,
     date,
     name: source.name,
@@ -121,6 +121,6 @@ export async function duplicateOneOffSession(
     requireTime: true,
   });
   if ("error" in created) return created;
-  revalidateSchedule(portal, courseId, batchId);
+  revalidateSchedule(portal, courseId, subjectId);
   return { ok: true };
 }

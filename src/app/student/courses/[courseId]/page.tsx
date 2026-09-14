@@ -17,7 +17,7 @@ export default async function StudentCourseSessionsPage({
   if (!enrollment) notFound();
 
   const sessions = await prisma.classSession.findMany({
-    where: { batchId: enrollment.batch.id },
+    where: { subject: { courseId } },
     orderBy: { date: "asc" },
     select: { id: true, date: true, name: true, category: { select: { name: true } } },
   });

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { canManageBatch, requireBatchView } from "@/lib/rbac";
+import { canManageSubject, requireSubjectView } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { hasWorkspaceWrite, PERMISSIONS } from "@/lib/permissions";
@@ -24,11 +24,17 @@ export async function SessionDetailView({
     where: { id: sessionId },
     include: {
       category: { select: { name: true, allowsResources: true } },
-      batch: {
+      subject: {
         select: {
           id: true,
-          course: { select: { id: true, name: true, defaultStatus: true } },
-          enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
+          course: {
+            select: {
+              id: true,
+              name: true,
+              defaultStatus: true,
+              enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
+            },
+          },
         },
       },
       records: { include: { markedBy: { select: { name: true } } } },
@@ -37,21 +43,21 @@ export async function SessionDetailView({
   });
   if (!classSession) notFound();
 
-  const session = await requireBatchView(classSession.batch.id, portal);
-  const canManage = await canManageBatch(session, classSession.batch.id);
+  const session = await requireSubjectView(classSession.subject.id, portal);
+  const canManage = await canManageSubject(session, classSession.subject.id);
   const canManageSession = canManage && session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE);
   const canMarkAttendance = canManage && session.user.permissions.includes(PERMISSIONS.ATTENDANCE_MARK);
   const canChangeDate = canManageSession && isFutureSessionDate(classSession.date);
   const canRemove = canManageSession && classSession.records.length === 0;
 
   const recordByStudent = new Map(classSession.records.map((record) => [record.studentId, record]));
-  const students = classSession.batch.enrollments.map(({ student }) => ({
+  const students = classSession.subject.course.enrollments.map(({ student }) => ({
     id: student.id,
     rollNumber: student.rollNumber,
     name: student.name,
     email: student.email,
     phone: student.phone,
-    status: recordByStudent.get(student.id)?.status ?? classSession.batch.course.defaultStatus,
+    status: recordByStudent.get(student.id)?.status ?? classSession.subject.course.defaultStatus,
   }));
   const lastSaved = classSession.records.reduce<(typeof classSession.records)[number] | null>(
     (latest, record) => (!latest || record.markedAt > latest.markedAt ? record : latest),
@@ -63,8 +69,8 @@ export async function SessionDetailView({
     <div className="flex flex-col gap-6">
       <FlashBanner />
       <div>
-        <Link href={courseHref(portal, classSession.batch.course.id, "", classSession.batch.id)} className="text-sm text-muted">
-          &larr; {classSession.batch.course.name}
+        <Link href={courseHref(portal, classSession.subject.course.id, "", classSession.subject.id)} className="text-sm text-muted">
+          &larr; {classSession.subject.course.name}
         </Link>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -83,7 +89,7 @@ export async function SessionDetailView({
               startMinute={classSession.startMinute}
               endMinute={classSession.endMinute}
               returnTo={selfHref}
-              deleteReturnTo={courseHref(portal, classSession.batch.course.id, "", classSession.batch.id)}
+              deleteReturnTo={courseHref(portal, classSession.subject.course.id, "", classSession.subject.id)}
               canChangeDate={canChangeDate}
               canRemove={canRemove}
               portal={portal}
@@ -130,7 +136,7 @@ export async function SessionDetailView({
               {students.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-4 py-3 text-sm text-muted">
-                    No students enrolled in this batch yet.
+                    No students enrolled in this course yet.
                   </td>
                 </tr>
               )}

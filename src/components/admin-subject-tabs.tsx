@@ -14,9 +14,9 @@ const TABS = [
   { slug: "assignments", label: "Assignments" },
 ];
 
-export function AdminBatchTabs({ courseId, batchId }: { courseId: string; batchId: string }) {
+export function AdminSubjectTabs({ courseId, subjectId }: { courseId: string; subjectId: string }) {
   const pathname = usePathname();
-  const base = `/admin/courses/${courseId}/batches/${batchId}`;
+  const base = `/admin/courses/${courseId}/subjects/${subjectId}`;
 
   return (
     <SubTabs

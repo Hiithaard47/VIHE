@@ -13,7 +13,7 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
   if (!enrollment) notFound();
 
   const assignments = await prisma.assignment.findMany({
-    where: { batchId: enrollment.batch.id },
+    where: { subject: { courseId } },
     include: { submissions: { where: { studentId: session.user.id } } },
     orderBy: { createdAt: "desc" },
   });

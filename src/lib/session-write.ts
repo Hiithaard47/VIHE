@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { isFutureSessionDate } from "@/lib/time";
 
 export async function insertSession(input: {
-  batchId: string;
+  subjectId: string;
   categoryId: string;
   date: Date;
   name: string;
@@ -20,7 +20,7 @@ export async function insertSession(input: {
   }
   if (input.startMinute != null) {
     const clash = await prisma.classSession.findFirst({
-      where: { batchId: input.batchId, date: input.date, startMinute: input.startMinute },
+      where: { subjectId: input.subjectId, date: input.date, startMinute: input.startMinute },
       select: { id: true },
     });
     if (clash) return { error: "That day already has a session at this time." };
@@ -28,7 +28,7 @@ export async function insertSession(input: {
 
   const row = await prisma.classSession.create({
     data: {
-      batchId: input.batchId,
+      subjectId: input.subjectId,
       categoryId: input.categoryId,
       date: input.date,
       name: input.name,

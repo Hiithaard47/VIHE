@@ -20,7 +20,7 @@ export default async function AdminStudentAttendancePage({
       attendance: {
         include: {
           session: {
-            include: { category: { select: { name: true } }, batch: { include: { course: { select: { name: true } } } } },
+            include: { category: { select: { name: true } }, subject: { include: { course: { select: { name: true } } } } },
           },
         },
         orderBy: { session: { date: "desc" } },
@@ -47,7 +47,7 @@ export default async function AdminStudentAttendancePage({
               <tr key={record.id} className="border-b border-hairline text-ink last:border-0">
                 <td className="px-4 py-3">{formatDisplayDate(record.session.date)}</td>
                 <td className="px-4 py-3">
-                  {record.session.batch.course.name}
+                  {record.session.subject.course.name}
                   <p className="text-xs text-muted">
                     {record.session.category.name} · {record.session.name}
                   </p>

@@ -5,9 +5,9 @@ export default async function CourseSchedulePage({
   searchParams,
 }: {
   params: Promise<{ courseId: string }>;
-  searchParams: Promise<{ batch?: string }>;
+  searchParams: Promise<{ subject?: string }>;
 }) {
   const { courseId } = await params;
-  const { batch } = await searchParams;
-  return <CourseScheduleView courseId={courseId} portal="teacher" selectedBatchId={batch} />;
+  const { subject } = await searchParams;
+  return <CourseScheduleView courseId={courseId} portal="teacher" selectedSubjectId={subject} />;
 }

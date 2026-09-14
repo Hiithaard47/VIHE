@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { assertBatchFileAccess, redirectToStoredFile } from "@/lib/file-access";
+import { assertSubjectFileAccess, redirectToStoredFile } from "@/lib/file-access";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const session = await auth();
@@ -14,11 +14,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sub
       fileName: true,
       storageKey: true,
       studentId: true,
-      assignment: { select: { batchId: true } },
+      assignment: { select: { subjectId: true } },
     },
   });
   if (!submission) notFound();
 
-  await assertBatchFileAccess(session, submission.assignment.batchId, submission.studentId);
+  await assertSubjectFileAccess(session, submission.assignment.subjectId, submission.studentId);
   await redirectToStoredFile(submission.storageKey, submission.fileName);
 }

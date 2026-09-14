@@ -13,7 +13,7 @@ test.describe("teacher: sessions.read", () => {
       [PERMISSIONS.SESSIONS_READ],
     );
     const course = await createCourse(`View Course ${unique("c")}`, unique("VWC").toUpperCase(), viewer.id);
-    await createSession(course.batches[0].id, viewer.id, new Date("2026-03-15T00:00:00.000Z"), "Visible class");
+    await createSession(course.subjects[0].id, viewer.id, new Date("2026-03-15T00:00:00.000Z"), "Visible class");
 
     await login(page, viewer.email, password);
     await expect(page).toHaveURL(/\/teacher/);

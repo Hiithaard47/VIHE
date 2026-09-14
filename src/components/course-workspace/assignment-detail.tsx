@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { sessionWhere } from "@/lib/batch-scope";
+import { sessionWhere } from "@/lib/subject-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
@@ -13,14 +13,14 @@ export async function CourseAssignmentDetailView({
   courseId,
   assignmentId,
   portal,
-  selectedBatchId,
+  selectedSubjectId,
 }: {
   courseId: string;
   assignmentId: string;
   portal: CoursePortal;
-  selectedBatchId?: string;
+  selectedSubjectId?: string;
 }) {
-  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
   const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
   if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
@@ -29,9 +29,13 @@ export async function CourseAssignmentDetailView({
   const assignment = await prisma.assignment.findFirst({
     where: { id: assignmentId, ...sessionWhere(courseId, scope) },
     include: {
-      batch: {
-        include: {
-          enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
+      subject: {
+        select: {
+          course: {
+            select: {
+              enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
+            },
+          },
         },
       },
       submissions: true,
@@ -40,7 +44,7 @@ export async function CourseAssignmentDetailView({
   if (!assignment) notFound();
 
   const submissionByStudent = new Map(assignment.submissions.map((item) => [item.studentId, item]));
-  const listHref = courseHref(portal, courseId, "assignments", selectedBatchId);
+  const listHref = courseHref(portal, courseId, "assignments", selectedSubjectId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,7 +74,7 @@ export async function CourseAssignmentDetailView({
 
       <section>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-          Submissions &middot; {assignment.batch.enrollments.length} student(s)
+          Submissions &middot; {assignment.subject.course.enrollments.length} student(s)
         </h3>
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
@@ -83,7 +87,7 @@ export async function CourseAssignmentDetailView({
               </tr>
             </thead>
             <tbody>
-              {assignment.batch.enrollments.map(({ student }) => {
+              {assignment.subject.course.enrollments.map(({ student }) => {
                 const submission = submissionByStudent.get(student.id);
                 return (
                   <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
@@ -137,10 +141,10 @@ export async function CourseAssignmentDetailView({
                   </tr>
                 );
               })}
-              {assignment.batch.enrollments.length === 0 && (
+              {assignment.subject.course.enrollments.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-3 text-sm text-muted">
-                    No students enrolled in this batch.
+                    No students enrolled in this course yet.
                   </td>
                 </tr>
               )}

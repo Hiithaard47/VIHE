@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEFAULT_BATCH_NAME } from "../src/lib/batches";
+import { DEFAULT_SUBJECT_NAME } from "../src/lib/subjects";
 import {
   DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
   DEFAULT_SESSION_CATEGORY_NAME,
@@ -54,21 +54,21 @@ export async function createCourse(name: string, code: string, teacherId?: strin
     data: {
       name,
       code,
-      batches: {
+      subjects: {
         create: {
-          name: DEFAULT_BATCH_NAME,
+          name: DEFAULT_SUBJECT_NAME,
           teachers: teacherId ? { create: [{ teacherId }] } : undefined,
         },
       },
     },
-    include: { batches: true },
+    include: { subjects: true },
   });
 }
 
 export async function createStudent(
   name: string,
   rollNumber: string,
-  batchId?: string,
+  courseId?: string,
   contact?: { email?: string; phone?: string; password?: string; loginExpiresAt?: Date },
 ) {
   return prisma.student.create({
@@ -79,7 +79,7 @@ export async function createStudent(
       phone: contact?.phone,
       loginExpiresAt: contact?.loginExpiresAt,
       passwordHash: contact?.password ? await bcrypt.hash(contact.password, 10) : undefined,
-      enrollments: batchId ? { create: [{ batchId }] } : undefined,
+      enrollments: courseId ? { create: [{ courseId }] } : undefined,
     },
   });
 }
@@ -96,9 +96,9 @@ export async function defaultSessionCategory() {
   });
 }
 
-export async function createSession(batchId: string, createdById: string, date = new Date(), name = DEFAULT_SESSION_CATEGORY_NAME) {
+export async function createSession(subjectId: string, createdById: string, date = new Date(), name = DEFAULT_SESSION_CATEGORY_NAME) {
   const category = await defaultSessionCategory();
   return prisma.classSession.create({
-    data: { batchId, date, createdById, name, categoryId: category.id },
+    data: { subjectId, date, createdById, name, categoryId: category.id },
   });
 }

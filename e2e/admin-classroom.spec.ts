@@ -10,7 +10,7 @@ const PNG = Buffer.from(
 test.describe("admin: classroom", () => {
   test("can run sessions, roster, attendance, and assignments on a course", async ({ page }) => {
     const course = await createCourse(`Admin Classroom ${unique("c")}`, unique("ACL").toUpperCase());
-    const student = await createStudent(`Admin Student ${unique("s")}`, unique("ACS"), course.batches[0].id);
+    const student = await createStudent(`Admin Student ${unique("s")}`, unique("ACS"), course.id);
     const title = `Admin Essay ${unique("asg")}`;
 
     await loginAsAdmin(page);
@@ -40,7 +40,7 @@ test.describe("admin: classroom", () => {
       "success",
     );
 
-    await page.goto(`/admin/courses/${course.id}/batches/${course.batches[0].id}/roster`);
+    await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/roster`);
     await expect(page.getByText(student.name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Add student" })).toBeVisible();
 

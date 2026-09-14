@@ -22,8 +22,8 @@ export function CourseTabs({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const batch = searchParams.get("batch");
-  const query = batch ? `?batch=${batch}` : "";
+  const subject = searchParams.get("subject");
+  const query = subject ? `?subject=${subject}` : "";
   const base = `/teacher/courses/${courseId}`;
   const tabs = TABS.filter((tab) => slugs.includes(tab.slug));
 

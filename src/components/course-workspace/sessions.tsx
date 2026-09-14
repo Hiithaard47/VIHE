@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
-import { BatchField } from "@/components/course-workspace-fields";
+import { SubjectField } from "@/components/course-workspace-fields";
 import { firstTeacherCoursePath, sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
 import { hasSessionsManage, hasSessionsRead } from "@/lib/permissions";
 import {
@@ -20,14 +20,14 @@ export async function CourseSessionsView({
   courseId,
   portal,
   categoryId,
-  selectedBatchId,
+  selectedSubjectId,
 }: {
   courseId: string;
   portal: CoursePortal;
   categoryId?: string;
-  selectedBatchId?: string;
+  selectedSubjectId?: string;
 }) {
-  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedBatchId);
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
   const perms = session.user.permissions;
   if (portal === "teacher" && !hasSessionsRead(perms)) {
     redirect(firstTeacherCoursePath(courseId, perms));
@@ -39,7 +39,7 @@ export async function CourseSessionsView({
       where: { id: courseId },
       select: {
         description: true,
-        batches: {
+        subjects: {
           where: { isActive: true },
           select: {
             id: true,
@@ -60,21 +60,23 @@ export async function CourseSessionsView({
   ]);
   if (!course) notFound();
 
-  const visibleBatches = course.batches.filter((batch) => scope.kind === "all" || scope.ids.includes(batch.id));
-  const sessions = visibleBatches
-    .flatMap((batch) => batch.sessions.map((item) => ({ ...item, batchName: batch.name })))
+  const visibleSubjects = course.subjects.filter(
+    (subject) => scope.kind === "all" || scope.ids.includes(subject.id),
+  );
+  const sessions = visibleSubjects
+    .flatMap((subject) => subject.sessions.map((item) => ({ ...item, subjectName: subject.name })))
     .sort((a, b) => a.date.getTime() - b.date.getTime() || (a.startMinute ?? 0) - (b.startMinute ?? 0));
   const groups = groupSessionsByCategory(sessions);
   const tabs = sessionCategoryTabs(groups);
   const selected = resolveCategoryTab(tabs, categoryId);
-  const writableBatches = visibleBatches.map((batch) => ({ id: batch.id, name: batch.name }));
-  const showBatchName = visibleBatches.length > 1;
+  const writableSubjects = visibleSubjects.map((subject) => ({ id: subject.id, name: subject.name }));
+  const showSubjectName = visibleSubjects.length > 1;
   const createCategoryId =
     categories.find((category) => category.id === selected?.id)?.id ??
     categories.find((category) => category.name === DEFAULT_SESSION_CATEGORY_NAME)?.id ??
     categories[0]?.id ??
     "";
-  const listHref = sessionListHref(portal, courseId, selected?.id, selectedBatchId);
+  const listHref = sessionListHref(portal, courseId, selected?.id, selectedSubjectId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,7 +89,7 @@ export async function CourseSessionsView({
             action={createSession.bind(null, courseId, portal)}
             className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:items-end"
           >
-            <BatchField batches={writableBatches} />
+            <SubjectField subjects={writableSubjects} />
             <label className="flex flex-col gap-1 text-sm text-ink">
               Date
               <input type="date" name="date" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
@@ -126,7 +128,7 @@ export async function CourseSessionsView({
               return (
                 <Link
                   key={tab.id}
-                  href={sessionListHref(portal, courseId, tab.id, selectedBatchId)}
+                  href={sessionListHref(portal, courseId, tab.id, selectedSubjectId)}
                   aria-current={active ? "page" : undefined}
                   className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
                     active ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
@@ -152,7 +154,7 @@ export async function CourseSessionsView({
                     {item.startMinute != null && item.endMinute != null
                       ? ` · ${formatTime(item.startMinute)}–${formatTime(item.endMinute)}`
                       : ""}
-                    {showBatchName ? ` · ${item.batchName}` : ""}
+                    {showSubjectName ? ` · ${item.subjectName}` : ""}
                   </p>
                 </>
               );

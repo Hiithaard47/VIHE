@@ -11,13 +11,13 @@ test.describe("student: my courses and sessions", () => {
     await prisma.course.update({ where: { id: completed.id }, data: { isActive: false } });
     const email = `${unique("stu")}@example.com`;
     const password = "StudentPass123!";
-    const student = await createStudent(`Portal Student ${unique("s")}`, unique("PS").toUpperCase(), active.batches[0].id, {
+    const student = await createStudent(`Portal Student ${unique("s")}`, unique("PS").toUpperCase(), active.id, {
       email,
       password,
     });
-    await prisma.batchEnrollment.create({ data: { studentId: student.id, batchId: completed.batches[0].id } });
-    const past = await createSession(active.batches[0].id, teacher.id, new Date("2026-01-05T00:00:00.000Z"));
-    await createSession(active.batches[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"));
+    await prisma.courseEnrollment.create({ data: { studentId: student.id, courseId: completed.id } });
+    const past = await createSession(active.subjects[0].id, teacher.id, new Date("2026-01-05T00:00:00.000Z"));
+    await createSession(active.subjects[0].id, teacher.id, new Date("2026-11-20T00:00:00.000Z"));
     await prisma.sessionResource.create({
       data: {
         sessionId: past.id,

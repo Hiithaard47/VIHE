@@ -8,19 +8,19 @@ export function parseCoursePortal(value: unknown): CoursePortal {
   return value === "admin" ? "admin" : "teacher";
 }
 
-export function courseHref(portal: CoursePortal, courseId: string, suffix = "", batchId?: string) {
+export function courseHref(portal: CoursePortal, courseId: string, suffix = "", subjectId?: string) {
   if (portal === "admin") {
     const head = suffix.split("/")[0] ?? "";
-    if (batchId) return `/admin/courses/${courseId}/batches/${batchId}/${suffix || "sessions"}`;
+    if (subjectId) return `/admin/courses/${courseId}/subjects/${subjectId}/${suffix || "sessions"}`;
     if (ADMIN_CLASSROOM.has(head)) return `/admin/courses/${courseId}`;
     return suffix ? `/admin/courses/${courseId}/${suffix}` : `/admin/courses/${courseId}`;
   }
   const path = suffix ? `/teacher/courses/${courseId}/${suffix}` : `/teacher/courses/${courseId}`;
-  return batchId ? withBatchQuery(path, batchId) : path;
+  return subjectId ? withSubjectQuery(path, subjectId) : path;
 }
 
-export function sessionListHref(portal: CoursePortal, courseId: string, categoryId?: string, batchId?: string) {
-  const path = courseHref(portal, courseId, portal === "admin" ? "sessions" : "", batchId);
+export function sessionListHref(portal: CoursePortal, courseId: string, categoryId?: string, subjectId?: string) {
+  const path = courseHref(portal, courseId, portal === "admin" ? "sessions" : "", subjectId);
   const [pathname, existing] = path.split("?");
   const params = new URLSearchParams(existing);
   if (categoryId) params.set("category", categoryId);
@@ -28,12 +28,12 @@ export function sessionListHref(portal: CoursePortal, courseId: string, category
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function scheduleHref(portal: CoursePortal, courseId: string, batchId?: string) {
-  return courseHref(portal, courseId, "schedule", batchId);
+export function scheduleHref(portal: CoursePortal, courseId: string, subjectId?: string) {
+  return courseHref(portal, courseId, "schedule", subjectId);
 }
 
-export function attendanceHref(portal: CoursePortal, courseId: string, categoryId?: string, batchId?: string) {
-  const path = courseHref(portal, courseId, "attendance", batchId);
+export function attendanceHref(portal: CoursePortal, courseId: string, categoryId?: string, subjectId?: string) {
+  const path = courseHref(portal, courseId, "attendance", subjectId);
   const [pathname, existing] = path.split("?");
   const params = new URLSearchParams(existing);
   if (categoryId) params.set("category", categoryId);
@@ -41,9 +41,9 @@ export function attendanceHref(portal: CoursePortal, courseId: string, categoryI
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function withBatchQuery(href: string, batchId?: string) {
-  if (!batchId) return href;
-  return href.includes("?") ? `${href}&batch=${batchId}` : `${href}?batch=${batchId}`;
+export function withSubjectQuery(href: string, subjectId?: string) {
+  if (!subjectId) return href;
+  return href.includes("?") ? `${href}&subject=${subjectId}` : `${href}?subject=${subjectId}`;
 }
 
 export function sessionHref(portal: CoursePortal, sessionId: string) {
@@ -83,7 +83,7 @@ export function safeWorkspaceReturnTo(raw: unknown, fallback: string) {
   if (!pathname) return fallback;
   const params = new URLSearchParams(query);
   const kept = new URLSearchParams();
-  for (const key of ["category", "batch"] as const) {
+  for (const key of ["category", "subject"] as const) {
     const value = params.get(key);
     if (value) kept.set(key, value);
   }

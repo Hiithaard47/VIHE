@@ -35,7 +35,7 @@ describe("resolveCategoryTab", () => {
 });
 
 describe("sessionCategoryTabs", () => {
-  it("keeps only categories that already have sessions on the course batch", () => {
+  it("keeps only categories that already have sessions on the course", () => {
     const groups = groupSessionsByCategory([
       { id: "c1", category: { id: "cat_c", name: DEFAULT_SESSION_CATEGORY_NAME } },
       { id: "old", category: { id: "cat_old", name: "Temple" } },

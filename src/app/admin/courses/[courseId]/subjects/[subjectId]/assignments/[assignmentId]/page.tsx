@@ -1,17 +1,17 @@
 import { CourseAssignmentDetailView } from "@/components/course-workspace/assignment-detail";
 
-export default async function AdminBatchAssignmentDetailPage({
+export default async function AdminSubjectAssignmentDetailPage({
   params,
 }: {
-  params: Promise<{ courseId: string; batchId: string; assignmentId: string }>;
+  params: Promise<{ courseId: string; subjectId: string; assignmentId: string }>;
 }) {
-  const { courseId, batchId, assignmentId } = await params;
+  const { courseId, subjectId, assignmentId } = await params;
   return (
     <CourseAssignmentDetailView
       courseId={courseId}
       assignmentId={assignmentId}
       portal="admin"
-      selectedBatchId={batchId}
+      selectedSubjectId={subjectId}
     />
   );
 }
