@@ -199,7 +199,7 @@ export async function updateStudentEnrollments(studentId: string, formData: Form
     });
   } catch (err) {
     if (err instanceof InvalidCourseSelectionError) {
-      redirect(flashUrl(PATH, "error", "Select an active course to enroll in."));
+      redirect(flashUrl(path, "error", "Select an active course to enroll in."));
     }
     throw err;
   }
