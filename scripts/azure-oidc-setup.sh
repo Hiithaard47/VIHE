@@ -106,7 +106,7 @@ Variables (optional; defaults match provision script):
   AZURE_RG           = ${RG}
   AZURE_APP_NAME     = vihe-app
   AZURE_ACR_NAME     = <from .azure-deploy-secrets.local ACR_NAME>
-  AZURE_LOCATION     = australiaeast
+  AZURE_LOCATION     = centralindia
 
 Day-to-day: merge to main (or Actions → Deploy → Run workflow).
 First-time: ./scripts/azure-provision.sh

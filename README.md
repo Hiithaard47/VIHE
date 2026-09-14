@@ -73,9 +73,11 @@ export ADMIN_EMAIL=you@your.org
 ./scripts/azure-provision.sh
 ```
 
-Creates (Australia East by default): resource group `rg-vihe-app`, ACR, Postgres Flexible Server 16, Blob Storage, Container Apps environment + app with HTTPS ingress. Registers Azure resource providers on first run if needed. Secrets land in `.azure-deploy-secrets.local` (gitignored).
+Creates (**Central India / Mumbai** by default): resource group `rg-vihe-app`, ACR, Postgres Flexible Server 16, Blob Storage, Container Apps environment + app with HTTPS ingress. Registers Azure resource providers on first run if needed. Secrets land in `.azure-deploy-secrets.local` (gitignored).
 
-Override location: `export AZURE_LOCATION=australiaeast`.
+Override location: `export AZURE_LOCATION=centralindia` (or e.g. `australiaeast`).
+
+Moving an existing stack: Azure does not relocate resource groups. Delete the old RG (`az group delete -n rg-vihe-app --yes`), remove `.azure-deploy-secrets.local`, re-run provision, then update GitHub var `AZURE_ACR_NAME` to the new registry.
 
 Never run `npm run db:clean` or `prisma migrate reset` against the Azure database.
 
