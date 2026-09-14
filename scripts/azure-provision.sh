@@ -5,7 +5,7 @@
 # Prerequisites:
 #   - Azure CLI: brew install azure-cli
 #   - az login   (subscription with Owner/Contributor)
-#   - Docker Desktop running (az acr build / ACR Tasks often blocked on new subs)
+#   - Image build/push via GitHub Actions (local Docker optional: SKIP_LOCAL_BUILD=0)
 #
 # Usage:
 #   export ADMIN_EMAIL=you@your.org
@@ -205,28 +205,23 @@ step_build_push() {
   load_secrets
   [[ -n "${ACR_NAME:-}" ]] || die "ACR_NAME missing. Run full provision first."
   [[ -n "${ACR_LOGIN_SERVER:-}" ]] || ACR_LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
-  IMAGE_URI="${ACR_LOGIN_SERVER}/${APP_NAME}:${IMAGE_TAG}"
 
-  # Prefer local Docker. ACR Tasks (az acr build) are often blocked on new/trial subscriptions
-  # with TasksOperationsNotAllowed.
+  # Primary path: GitHub Actions builds/pushes. Local Docker is opt-in only.
+  if [[ "${SKIP_LOCAL_BUILD:-1}" == "1" ]]; then
+    IMAGE_URI="${IMAGE_URI:-${ACR_LOGIN_SERVER}/${APP_NAME}:latest}"
+    save_secret IMAGE_URI "$IMAGE_URI"
+    log "Skipping local Docker build (SKIP_LOCAL_BUILD=1)."
+    log "Push image via GitHub Actions: gh workflow run Deploy"
+    log "Expected image: $IMAGE_URI"
+    return 0
+  fi
+
+  IMAGE_URI="${ACR_LOGIN_SERVER}/${APP_NAME}:${IMAGE_TAG}"
   if ! command -v docker >/dev/null; then
-    die "Docker CLI not found. Install Docker Desktop, start it, then re-run build-push."
+    die "Docker CLI not found. Use GitHub Actions (default) or install Docker Desktop."
   fi
   if ! docker info >/dev/null 2>&1; then
-    if [[ "$(uname -s)" == "Darwin" ]] && [[ -d /Applications/Docker.app ]]; then
-      log "Docker daemon not ready — starting Docker Desktop…"
-      open -a Docker
-      local i=0
-      while ! docker info >/dev/null 2>&1; do
-        i=$((i + 1))
-        if [[ $i -gt 90 ]]; then
-          die "Docker Desktop did not become ready. Open it, wait until it is running, then re-run: ./scripts/azure-provision.sh build-push app-update"
-        fi
-        sleep 2
-      done
-    else
-      die "Docker daemon not running. Start Docker Desktop, then re-run build-push."
-    fi
+    die "Docker daemon not running. Start Docker, or use: SKIP_LOCAL_BUILD=1 (GitHub Actions)."
   fi
 
   log "Building linux/amd64 locally → $IMAGE_URI"
@@ -237,11 +232,49 @@ step_build_push() {
   log "Image pushed: $IMAGE_URI"
 }
 
+wait_for_acr_image() {
+  require_az
+  load_secrets
+  [[ -n "${ACR_NAME:-}" ]] || die "ACR_NAME missing"
+  local repo="${APP_NAME}"
+  local tag="${IMAGE_TAG:-latest}"
+  local i=0
+  log "Waiting for ACR image ${ACR_NAME}/${repo}:${tag} (from GitHub Actions)…"
+  while true; do
+    if az acr repository show-tags --name "$ACR_NAME" --repository "$repo" --query "[?@=='${tag}']" -o tsv 2>/dev/null | grep -qx "$tag"; then
+      IMAGE_URI="${ACR_LOGIN_SERVER}/${repo}:${tag}"
+      save_secret IMAGE_URI "$IMAGE_URI"
+      log "Found $IMAGE_URI"
+      return 0
+    fi
+    i=$((i + 1))
+    if [[ $i -gt 90 ]]; then
+      die "Timed out waiting for ${repo}:${tag}. Run: gh workflow run Deploy — then re-run app-update"
+    fi
+    sleep 20
+  done
+}
+
 step_container_app() {
   require_az
   load_secrets
   [[ -n "${DATABASE_URL:-}" ]] || die "DATABASE_URL missing"
-  [[ -n "${IMAGE_URI:-}" ]] || step_build_push
+  [[ -n "${ACR_NAME:-}" && -n "${ACR_LOGIN_SERVER:-}" ]] || die "ACR missing"
+
+  # Prefer an image already in ACR (from GitHub Actions). Fallback: public placeholder,
+  # then re-run app-update after Actions pushes the real image.
+  if [[ -z "${IMAGE_URI:-}" ]]; then
+    if az acr repository show-tags --name "$ACR_NAME" --repository "$APP_NAME" --query "[?@=='latest']" -o tsv 2>/dev/null | grep -qx latest; then
+      IMAGE_URI="${ACR_LOGIN_SERVER}/${APP_NAME}:latest"
+      save_secret IMAGE_URI "$IMAGE_URI"
+    elif [[ "${WAIT_FOR_IMAGE:-0}" == "1" ]]; then
+      wait_for_acr_image
+      load_secrets
+    else
+      IMAGE_URI="${PLACEHOLDER_IMAGE:-mcr.microsoft.com/k8se/quickstart:latest}"
+      log "No ACR image yet — creating app with placeholder $IMAGE_URI (GHA will replace it)"
+    fi
+  fi
   load_secrets
 
   if [[ -z "${AUTH_SECRET:-}" ]]; then
@@ -291,15 +324,36 @@ step_container_app() {
   AUTH_URL="${AUTH_URL:-https://placeholder.local}"
   save_secret AUTH_URL "$AUTH_URL"
 
+  local target_port=8080
+  if [[ "$IMAGE_URI" == *"/k8se/quickstart"* ]]; then
+    target_port=80
+  fi
+
+  local registry_args=()
+  if [[ "$IMAGE_URI" == "${ACR_LOGIN_SERVER}"/* ]]; then
+    registry_args=(
+      --registry-server "$ACR_LOGIN_SERVER"
+      --registry-username "$ACR_USER"
+      --registry-password "$ACR_PASS"
+    )
+  fi
+
   if az containerapp show --name "$APP_NAME" --resource-group "$RG" >/dev/null 2>&1; then
     log "Updating Container App $APP_NAME"
-    az containerapp registry set \
+    if [[ "$IMAGE_URI" == "${ACR_LOGIN_SERVER}"/* ]]; then
+      az containerapp registry set \
+        --name "$APP_NAME" \
+        --resource-group "$RG" \
+        --server "$ACR_LOGIN_SERVER" \
+        --username "$ACR_USER" \
+        --password "$ACR_PASS" \
+        --output none
+    fi
+    az containerapp ingress update \
       --name "$APP_NAME" \
       --resource-group "$RG" \
-      --server "$ACR_LOGIN_SERVER" \
-      --username "$ACR_USER" \
-      --password "$ACR_PASS" \
-      --output none
+      --target-port "$target_port" \
+      --output none 2>/dev/null || true
     az containerapp update \
       --name "$APP_NAME" \
       --resource-group "$RG" \
@@ -321,10 +375,8 @@ step_container_app() {
       --resource-group "$RG" \
       --environment "$ENV_NAME" \
       --image "$IMAGE_URI" \
-      --registry-server "$ACR_LOGIN_SERVER" \
-      --registry-username "$ACR_USER" \
-      --registry-password "$ACR_PASS" \
-      --target-port 8080 \
+      "${registry_args[@]}" \
+      --target-port "$target_port" \
       --ingress external \
       --cpu 0.5 \
       --memory 1.0Gi \
@@ -355,6 +407,9 @@ step_container_app() {
     --output none
 
   print_summary
+  if [[ "$IMAGE_URI" == *"/k8se/quickstart"* ]]; then
+    log "Placeholder image is live. After GitHub Actions pushes to ACR, run: ./scripts/azure-provision.sh app-update"
+  fi
 }
 
 print_summary() {
@@ -383,7 +438,8 @@ run_all() {
   step_acr
   step_storage
   step_postgres
-  step_build_push
+  # Image build/push is GitHub Actions (see .github/workflows/deploy.yml).
+  SKIP_LOCAL_BUILD=1 step_build_push
   step_container_app
 }
 
