@@ -92,11 +92,10 @@ export GITHUB_REPO=parmod-arora/vihe-app
 ./scripts/github-oidc-setup.sh
 ```
 
-2. In the GitHub repo → **Settings → Secrets and variables → Actions**:
-   - Secret `AWS_ROLE_ARN` = the role ARN printed by the script
-   - Optional variables: `AWS_REGION`, `ECR_REPOSITORY`, `ECS_SERVICE` (defaults: `ap-south-1` / `vihe-app` / `vihe-app`)
-3. Create Environment **`production`** (Settings → Environments).
-4. Merge to `main`, or run **Actions → Deploy → Run workflow**.
+2. In the GitHub repo → **Settings → Secrets and variables → Actions → Variables**:
+   - `AWS_ACCOUNT_ID` = your 12-digit account id (printed by the script)
+   - Optional: `AWS_REGION`, `ECR_REPOSITORY`, `ECS_SERVICE` (defaults: `ap-south-1` / `vihe-app` / `vihe-app`)
+3. Merge to `main`, or run **Actions → Deploy → Run workflow**.
 
 The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) pushes `sha-<commit>` and `latest` to ECR, then updates the Express Mode service **image only** (existing env vars stay on the service).
 

@@ -1,10 +1,10 @@
 # Build linux/amd64 image → push ECR → roll ECS Express Mode to the new image.
 # One-time AWS bootstrap (RDS/S3/ECS create) stays in scripts/aws-provision.sh.
 #
-# Required GitHub Actions variables (Settings → Secrets and variables → Actions → Variables):
-#   AWS_ACCOUNT_ID, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE
-# Required secret:
-#   AWS_ROLE_ARN  (IAM role for GitHub OIDC — see scripts/github-oidc-setup.sh)
+# Required GitHub Actions variable:
+#   AWS_ACCOUNT_ID  (12-digit) — builds role ARN arn:aws:iam::ID:role/vihe-github-actions
+# Optional variables: AWS_REGION, ECR_REPOSITORY, ECS_SERVICE, AWS_ROLE_NAME
+# See scripts/github-oidc-setup.sh
 
 name: Deploy
 
@@ -30,17 +30,36 @@ jobs:
   deploy:
     name: Build, push, deploy
     runs-on: ubuntu-latest
-    environment: production
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Temporary: print OIDC claims so IAM trust `sub` can be matched exactly.
+      - name: Debug OIDC claims
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('sts.amazonaws.com')
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
+            core.info(JSON.stringify({
+              sub: payload.sub,
+              aud: payload.aud,
+              iss: payload.iss,
+              repository: payload.repository,
+              ref: payload.ref,
+              environment: payload.environment,
+              job_workflow_ref: payload.job_workflow_ref,
+            }, null, 2))
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME || 'vihe-github-actions' }}
           role-session-name: vihe-github-actions-deploy
 
       - name: Login to Amazon ECR
@@ -79,4 +98,3 @@ jobs:
         run: |
           chmod +x scripts/ecs-update-image.sh
           ./scripts/ecs-update-image.sh
-
