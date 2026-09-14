@@ -46,7 +46,8 @@ test.describe("admin: classroom", () => {
     await expect(page.getByRole("button", { name: "Add student" })).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/attendance`);
-    await expect(page.getByText(student.name)).toBeVisible();
+    // Attendance shows the student in summary + matrix tables.
+    await expect(page.getByRole("cell", { name: student.name, exact: true }).first()).toBeVisible();
 
     await page.getByRole("link", { name: "Assignments", exact: true }).click();
     await page.getByLabel("Title").fill(title);

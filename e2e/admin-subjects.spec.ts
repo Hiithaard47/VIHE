@@ -81,8 +81,10 @@ test("admin assigns teachers and keeps roster enrollment at course level", async
   expect(await waitForFlashAfter(page, () => rosterStudentDialog.getByRole("button", { name: "Add student" }).click())).toBe("success");
   await page.getByRole("link", { name: studentName }).click();
   await expect(page.getByRole("heading", { name: studentName })).toBeVisible();
-  await expect(page.getByRole("link", { name: courseName })).toBeVisible();
+  // Active students show enrollment as checkboxes; course name is label text.
+  await expect(page.locator("label", { hasText: courseName })).toBeVisible();
 
+  await page.goto("/admin/courses");
   await page.getByRole("link", { name: courseName }).click();
   await page.getByRole("main").getByRole("link", { name: "Roster" }).click();
   await expect(page.locator("tbody").getByText(studentName)).toBeVisible();

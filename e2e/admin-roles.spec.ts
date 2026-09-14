@@ -19,7 +19,7 @@ test.describe("admin: roles & permissions", () => {
     const roleName = `Coordinator ${unique("r")}`;
     expect(await createRole(page, roleName, "Read-only oversight")).toBe("success");
     await expect(page.getByRole("heading", { name: roleName })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Permissions" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Permissions", exact: true })).toBeVisible();
 
     await page.goto("/admin/roles");
     await expect(page.getByRole("link", { name: roleName })).toBeVisible();
