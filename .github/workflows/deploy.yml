@@ -1,10 +1,10 @@
-# Build linux/amd64 image → push ECR → roll ECS Express Mode to the new image.
-# One-time AWS bootstrap (RDS/S3/ECS create) stays in scripts/aws-provision.sh.
+# Build linux/amd64 image → push ACR → update Azure Container App.
+# One-time Azure bootstrap stays in scripts/azure-provision.sh.
 #
-# Required GitHub Actions variable:
-#   AWS_ACCOUNT_ID  (12-digit) — builds role ARN arn:aws:iam::ID:role/vihe-github-actions
-# Optional variables: AWS_REGION, ECR_REPOSITORY, ECS_SERVICE, AWS_ROLE_NAME
-# See scripts/github-oidc-setup.sh
+# Required GitHub Actions secrets:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+# Variables (optional):
+#   AZURE_RG, AZURE_APP_NAME, AZURE_ACR_NAME
 
 name: Deploy
 
@@ -22,9 +22,9 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'vihe-app' }}
-  ECS_SERVICE: ${{ vars.ECS_SERVICE || 'vihe-app' }}
+  AZURE_RG: ${{ vars.AZURE_RG || 'rg-vihe-app' }}
+  AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME || 'vihe-app' }}
+  AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
 
 jobs:
   deploy:
@@ -38,27 +38,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME || 'vihe-github-actions' }}
-          role-session-name: vihe-github-actions-deploy
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Resolve ACR
+        id: acr
+        run: |
+          set -euo pipefail
+          ACR_NAME="${AZURE_ACR_NAME}"
+          if [[ -z "$ACR_NAME" ]]; then
+            ACR_NAME="$(az acr list --resource-group "$AZURE_RG" --query '[0].name' -o tsv)"
+          fi
+          if [[ -z "$ACR_NAME" || "$ACR_NAME" == "None" ]]; then
+            echo "::error::No ACR found. Set AZURE_ACR_NAME or run ./scripts/azure-provision.sh"
+            exit 1
+          fi
+          LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
+          echo "name=$ACR_NAME" >> "$GITHUB_OUTPUT"
+          echo "login_server=$LOGIN_SERVER" >> "$GITHUB_OUTPUT"
 
       - name: Set image tags
         id: meta
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "image_tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "image_uri=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "image_uri_latest=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${{ steps.acr.outputs.login_server }}/${{ env.AZURE_APP_NAME }}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_uri_latest=${{ steps.acr.outputs.login_server }}/${{ env.AZURE_APP_NAME }}:latest" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Login to ACR
+        run: az acr login --name "${{ steps.acr.outputs.name }}"
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -72,15 +87,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Image-only update so existing Express Mode env (DATABASE_URL, AUTH_*, S3_*) is preserved.
-      # Until the Express service exists, ECR push still succeeds (ALLOW_MISSING_SERVICE=1).
-      - name: Update ECS Express Mode image
-        env:
-          IMAGE_URI: ${{ steps.meta.outputs.image_uri }}
-          SERVICE_NAME: ${{ env.ECS_SERVICE }}
-          AWS_REGION: ${{ env.AWS_REGION }}
-          ECS_SERVICE_ARN: ${{ vars.ECS_SERVICE_ARN }}
-          ALLOW_MISSING_SERVICE: "1"
+      - name: Update Container App image
         run: |
-          chmod +x scripts/ecs-update-image.sh
-          ./scripts/ecs-update-image.sh
+          set -euo pipefail
+          az containerapp update \
+            --name "$AZURE_APP_NAME" \
+            --resource-group "$AZURE_RG" \
+            --image "${{ steps.meta.outputs.image_uri }}" \
+            --output none
+          FQDN="$(az containerapp show --name "$AZURE_APP_NAME" --resource-group "$AZURE_RG" --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "Deployed ${{ steps.meta.outputs.image_uri }}"
+          echo "URL https://${FQDN}"

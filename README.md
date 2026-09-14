@@ -19,7 +19,7 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
    ```
    docker compose up -d
    ```
-   MinIO is the local S3 stand-in (`http://localhost:9000`, console `http://localhost:9001`). Production uses AWS S3 with the same `S3_*` variables (omit `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE`).
+   MinIO is the local S3 stand-in (`http://localhost:9000`, console `http://localhost:9001`). Local uses `S3_*` (+ optional `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE`). Azure production uses `AZURE_STORAGE_CONNECTION_STRING` instead.
 3. Install dependencies:
    ```
    npm install
@@ -60,46 +60,46 @@ Students sign in with the email and portal password set by an admin, then downlo
 
 There is no self sign-up: a Google account only works if an admin has already created a matching `User` record for that email.
 
-## Deploy on AWS (ECS Express Mode)
+## Deploy on Azure (Container Apps)
 
-App Runner is closed to **new** customers (as of 30 Apr 2026). Use **Amazon ECS Express Mode** instead: Docker image on Fargate + managed ALB/HTTPS.
+Primary production path. The app image runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
 
-The app image runs `prisma migrate deploy`, additive seed, then `next start` on port **8080**.
+**Prerequisites:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`brew install azure-cli`), `az login`, an **Enabled** subscription, and **Docker Desktop** running for the first image build (ACR Tasks are often blocked on new subscriptions).
 
-### First-time provision (local)
-
-Creates RDS, S3, ECS roles, builds once, and creates the Express Mode service:
+### First-time provision
 
 ```
-export AWS_REGION=ap-south-1
 export ADMIN_EMAIL=you@your.org
-./scripts/aws-provision.sh ecs-express
+./scripts/azure-provision.sh
 ```
 
-Secrets land in `.aws-deploy-secrets.local` (gitignored). Do **not** set `S3_ENDPOINT` or `S3_FORCE_PATH_STYLE` in production. Never run `npm run db:clean` or `prisma migrate reset` against RDS.
+Creates (Australia East by default): resource group `rg-vihe-app`, ACR, Postgres Flexible Server 16, Blob Storage, Container Apps environment + app with HTTPS ingress. Registers Azure resource providers on first run if needed. Secrets land in `.azure-deploy-secrets.local` (gitignored).
 
-Optional Google sign-in: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and callback `https://YOUR_HOST/api/auth/callback/google`.
+Override location: `export AZURE_LOCATION=australiaeast`.
+
+Never run `npm run db:clean` or `prisma migrate reset` against the Azure database.
+
+Optional Google sign-in: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and callback `https://YOUR_HOST/api/auth/callback/google` (set on the Container App after first deploy).
 
 ### Day-to-day deploys (GitHub Actions)
 
-After the service exists, **build → ECR → ECS** runs in CI (no Docker Desktop required).
-
-1. One-time IAM OIDC role (from a machine with AWS admin credentials):
+1. One-time Azure AD app + federated credential:
 
 ```
-export AWS_REGION=ap-south-1
 export GITHUB_REPO=parmod-arora/vihe-app
-./scripts/github-oidc-setup.sh
+./scripts/azure-oidc-setup.sh
 ```
 
-2. In the GitHub repo → **Settings → Secrets and variables → Actions → Variables**:
-   - `AWS_ACCOUNT_ID` = your 12-digit account id (printed by the script)
-   - Optional: `AWS_REGION`, `ECR_REPOSITORY`, `ECS_SERVICE` (defaults: `ap-south-1` / `vihe-app` / `vihe-app`)
+2. Add the printed secrets to the GitHub repo (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), and variable `AZURE_ACR_NAME` from `.azure-deploy-secrets.local`.
 3. Merge to `main`, or run **Actions → Deploy → Run workflow**.
 
-The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) pushes `sha-<commit>` and `latest` to ECR, then updates the Express Mode service **image only** (existing env vars stay on the service).
+The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) builds `linux/amd64`, pushes to ACR (`sha-<commit>` + `latest`), and updates the Container App image. Migrations still run on container start.
 
-Local fallback if CI is unavailable: `./scripts/aws-provision.sh ecr-push` then `./scripts/aws-provision.sh ecs-express`.
+Local image refresh: `./scripts/azure-provision.sh build-push` then `./scripts/azure-provision.sh app-update`.
+
+### AWS (legacy)
+
+AWS ECS Express scripts remain under `scripts/aws-provision.sh` but are not the primary path (org SCPs blocked Fargate on the trial account). Prefer Azure unless you have a clean AWS account without restrictive SCPs.
 
 
 ## Testing
