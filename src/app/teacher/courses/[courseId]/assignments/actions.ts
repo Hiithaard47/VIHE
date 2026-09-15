@@ -10,7 +10,12 @@ import { hasWorkspaceWrite } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
 import { parseDateInput } from "@/lib/time";
 import { deleteObject, isStorageConfigured } from "@/lib/storage";
-import { sanitizeFileName, storeAssignmentFile, validateResourceFile } from "@/lib/assignment-files";
+import {
+  collectFormFiles,
+  prepareUploadedFiles,
+  storeAssignmentUploads,
+  validateAssignmentUploads,
+} from "@/lib/assignment-files";
 
 function assignmentsPath(courseId: string, portal: CoursePortal, subjectId?: string | null) {
   return courseHref(portal, courseId, "assignments", subjectId ?? undefined);
@@ -43,13 +48,12 @@ export async function createAssignment(courseId: string, portalArg: CoursePortal
   if (dueRaw && !dueDate) redirect(flashUrl(path, "error", "Pick a valid due date."));
   const instructions = String(formData.get("instructions") ?? "").trim() || null;
 
-  const file = formData.get("file");
-  if (!(file instanceof File)) redirect(flashUrl(path, "error", "Upload the assignment test."));
-  const invalid = validateResourceFile(file);
+  const files = collectFormFiles(formData);
+  const invalid = validateAssignmentUploads(files);
   if (invalid) redirect(flashUrl(path, "error", invalid));
   if (!isStorageConfigured()) redirect(flashUrl(path, "error", "File storage is not configured."));
 
-  const fileName = sanitizeFileName(file.name);
+  const uploads = prepareUploadedFiles(files);
   const assignment = await prisma.assignment.create({
     data: {
       subjectId,
@@ -57,20 +61,30 @@ export async function createAssignment(courseId: string, portalArg: CoursePortal
       instructions,
       dueDate,
       maxMarks,
-      fileName,
-      contentType: file.type,
-      sizeBytes: file.size,
-      storageKey: `pending/${crypto.randomUUID()}`,
       createdById: session.user.id,
     },
   });
-  const storageKey = `assignments/${assignment.id}/prompt/${fileName}`;
-  const stored = await storeAssignmentFile(storageKey, file);
-  if (stored) {
+
+  const fileIds = uploads.map(() => crypto.randomUUID().replace(/-/g, "").slice(0, 24));
+  const { error, storedKeys } = await storeAssignmentUploads(
+    uploads,
+    (upload, index) => `assignments/${assignment.id}/prompt/${fileIds[index]}/${upload.fileName}`,
+  );
+  if (error) {
     await prisma.assignment.delete({ where: { id: assignment.id } }).catch(() => {});
-    redirect(flashUrl(path, "error", stored));
+    redirect(flashUrl(path, "error", error));
   }
-  await prisma.assignment.update({ where: { id: assignment.id }, data: { storageKey } });
+
+  await prisma.assignmentFile.createMany({
+    data: uploads.map((upload, index) => ({
+      id: fileIds[index],
+      assignmentId: assignment.id,
+      fileName: upload.fileName,
+      contentType: upload.file.type,
+      sizeBytes: upload.file.size,
+      storageKey: storedKeys[index],
+    })),
+  });
 
   revalidatePath(path);
   redirect(flashUrl(path, "success", `${title} was issued.`));
@@ -106,19 +120,26 @@ export async function gradeSubmission(courseId: string, assignmentId: string, st
   redirect(flashUrl(path, "success", "Marks saved."));
 }
 
-export async function deleteAssignment(courseId: string, assignmentId: string, portalArg: CoursePortal, formData: FormData) {
+export async function deleteAssignment(courseId: string, assignmentId: string, portalArg: CoursePortal, _formData: FormData) {
   const { portal } = await requireAssignmentManage(courseId, portalArg);
   const assignment = await prisma.assignment.findFirst({
     where: { id: assignmentId, subject: { courseId } },
-    include: { submissions: { select: { storageKey: true } } },
+    include: {
+      files: { select: { storageKey: true } },
+      submissions: { include: { files: { select: { storageKey: true } } } },
+    },
   });
   const path = assignmentsPath(courseId, portal, assignment?.subjectId);
   if (!assignment) redirect(flashUrl(path, "error", "That assignment was not found."));
 
   if (isStorageConfigured()) {
-    await deleteObject(assignment.storageKey).catch(() => {});
+    for (const file of assignment.files) {
+      await deleteObject(file.storageKey).catch(() => {});
+    }
     for (const submission of assignment.submissions) {
-      await deleteObject(submission.storageKey).catch(() => {});
+      for (const file of submission.files) {
+        await deleteObject(file.storageKey).catch(() => {});
+      }
     }
   }
   await prisma.assignment.delete({ where: { id: assignment.id } });

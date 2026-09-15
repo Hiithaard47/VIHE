@@ -52,7 +52,7 @@ test.describe("admin: classroom", () => {
     await page.getByRole("link", { name: "Assignments", exact: true }).click();
     await page.getByLabel("Title").fill(title);
     await page.getByLabel("Maximum marks").fill("20");
-    await page.locator('input[name="file"]').setInputFiles({
+    await page.locator('input[name="files"]').setInputFiles({
       name: "question.png",
       mimeType: "image/png",
       buffer: PNG,

@@ -3,14 +3,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertSubjectFileAccess, redirectToStoredFile } from "@/lib/file-access";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ fileId: string }> }) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const { submissionId } = await params;
-  const file = await prisma.assignmentSubmissionFile.findFirst({
-    where: { submissionId },
-    orderBy: { createdAt: "asc" },
+  const { fileId } = await params;
+  const file = await prisma.assignmentSubmissionFile.findUnique({
+    where: { id: fileId },
     select: {
       fileName: true,
       storageKey: true,

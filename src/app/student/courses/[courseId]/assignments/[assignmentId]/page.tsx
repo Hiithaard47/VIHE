@@ -19,7 +19,13 @@ export default async function StudentAssignmentDetailPage({
 
   const assignment = await prisma.assignment.findFirst({
     where: { id: assignmentId, subject: { courseId } },
-    include: { submissions: { where: { studentId: session.user.id } } },
+    include: {
+      files: { orderBy: { createdAt: "asc" } },
+      submissions: {
+        where: { studentId: session.user.id },
+        include: { files: { orderBy: { createdAt: "asc" } } },
+      },
+    },
   });
   if (!assignment) notFound();
 
@@ -40,11 +46,15 @@ export default async function StudentAssignmentDetailPage({
           Out of {assignment.maxMarks} · {assignmentStatus(submission)}
         </p>
         {assignment.instructions && <p className="mt-2 text-sm text-ink">{assignment.instructions}</p>}
-        <p className="mt-2 text-sm">
-          <a href={`/assignments/${assignment.id}/file`} className="font-medium text-accent-dark hover:underline">
-            Download assignment test · {assignment.fileName}
-          </a>
-        </p>
+        <ul className="mt-2 flex flex-col gap-1 text-sm">
+          {assignment.files.map((file) => (
+            <li key={file.id}>
+              <a href={`/assignments/files/${file.id}`} className="font-medium text-accent-dark hover:underline">
+                Download · {file.fileName}
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {graded && (
@@ -57,13 +67,19 @@ export default async function StudentAssignmentDetailPage({
         </section>
       )}
 
-      {submission && (
-        <p className="text-sm text-ink">
-          Your upload:{" "}
-          <a href={`/assignments/submissions/${submission.id}/file`} className="text-accent-dark hover:underline">
-            {submission.fileName}
-          </a>
-        </p>
+      {submission && submission.files.length > 0 && (
+        <div className="text-sm text-ink">
+          <p className="mb-1">Your upload{submission.files.length === 1 ? "" : "s"}:</p>
+          <ul className="flex flex-col gap-1">
+            {submission.files.map((file) => (
+              <li key={file.id}>
+                <a href={`/assignments/submission-files/${file.id}`} className="text-accent-dark hover:underline">
+                  {file.fileName}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {submission && pastDue && !graded && (
@@ -79,11 +95,12 @@ export default async function StudentAssignmentDetailPage({
             <p className="text-xs text-muted">This is after the due date. You can still submit once.</p>
           )}
           <label className="flex flex-col gap-1 text-sm text-ink">
-            PDF or image
+            PDF or image (you can select more than one)
             <input
-              name="file"
+              name="files"
               type="file"
               required
+              multiple
               accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
               className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent"
             />
