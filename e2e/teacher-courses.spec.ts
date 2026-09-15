@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
-import { createTeacher, createCourse, createSession, prisma } from "./db";
+import { createTeacher, createCourse, createSession, createStaffWithPermissions, prisma } from "./db";
+import { PERMISSIONS } from "../src/lib/permissions";
 import { startOfTodayUtc } from "../src/lib/time";
 
 test.describe("teacher: course visibility & session management", () => {
@@ -186,9 +187,20 @@ test.describe("teacher: course visibility & session management", () => {
     await expect(page.getByText("20 Nov 2026")).toHaveCount(0);
   });
 
-  test("does not offer a date change for today or past sessions", async ({ page }) => {
+  test("does not offer a date change for today or past sessions without manage_past", async ({ page }) => {
     const password = "TeacherPass123!";
-    const teacher = await createTeacher(`Past Session Teacher ${unique("t")}`, `${unique("pastdate")}@example.com`, password);
+    const teacher = await createStaffWithPermissions(
+      `Past Session Teacher ${unique("t")}`,
+      `${unique("pastdate")}@example.com`,
+      password,
+      [
+        PERMISSIONS.COURSES_CONFIGURE,
+        PERMISSIONS.SESSIONS_MANAGE,
+        PERMISSIONS.ATTENDANCE_MARK,
+        PERMISSIONS.ATTENDANCE_VIEW,
+        PERMISSIONS.STUDENTS_READ,
+      ],
+    );
     const course = await createCourse(`Past Session Course ${unique("c")}`, unique("PSD").toUpperCase(), teacher.id);
     await createSession(course.subjects[0].id, teacher.id, startOfTodayUtc());
     await createSession(course.subjects[0].id, teacher.id, new Date("2026-01-05T00:00:00.000Z"));

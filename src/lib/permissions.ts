@@ -9,6 +9,7 @@ export const PERMISSIONS = {
   STUDENTS_MANAGE: "students.manage",
   STUDENTS_READ: "students.read",
   SESSIONS_MANAGE: "sessions.manage",
+  SESSIONS_MANAGE_PAST: "sessions.manage_past",
   SESSIONS_READ: "sessions.read",
   ATTENDANCE_MARK: "attendance.mark",
   ATTENDANCE_VIEW: "attendance.view",
@@ -28,6 +29,10 @@ export const PERMISSION_DEFINITIONS: { key: PermissionKey; description: string }
   { key: PERMISSIONS.STUDENTS_MANAGE, description: "Add students and manage course enrollment" },
   { key: PERMISSIONS.STUDENTS_READ, description: "View students enrolled in assigned courses" },
   { key: PERMISSIONS.SESSIONS_MANAGE, description: "Create class sessions and change the date of future sessions" },
+  {
+    key: PERMISSIONS.SESSIONS_MANAGE_PAST,
+    description: "Create, move, duplicate, and remove sessions on today or past dates",
+  },
   { key: PERMISSIONS.SESSIONS_READ, description: "View class sessions for assigned subjects" },
   { key: PERMISSIONS.ATTENDANCE_MARK, description: "Mark attendance for a class session" },
   { key: PERMISSIONS.ATTENDANCE_VIEW, description: "View attendance records and reports" },
@@ -48,6 +53,7 @@ export const DEFAULT_ROLES: { name: string; description: string; isSystem: boole
     permissions: [
       PERMISSIONS.COURSES_CONFIGURE,
       PERMISSIONS.SESSIONS_MANAGE,
+      PERMISSIONS.SESSIONS_MANAGE_PAST,
       PERMISSIONS.ATTENDANCE_MARK,
       PERMISSIONS.ATTENDANCE_VIEW,
       PERMISSIONS.STUDENTS_READ,
@@ -71,6 +77,10 @@ export function hasSessionsManage(permissions: readonly string[]) {
   return permissions.includes(PERMISSIONS.SESSIONS_MANAGE);
 }
 
+export function hasSessionsManagePast(permissions: readonly string[]) {
+  return permissions.includes(PERMISSIONS.SESSIONS_MANAGE_PAST);
+}
+
 export function hasStudentsRead(permissions: readonly string[]) {
   return permissions.includes(PERMISSIONS.STUDENTS_READ) || permissions.includes(PERMISSIONS.STUDENTS_MANAGE);
 }
@@ -85,6 +95,7 @@ export const TEACHER_PORTAL_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.COURSES_MANAGE,
   PERMISSIONS.SESSIONS_READ,
   PERMISSIONS.SESSIONS_MANAGE,
+  PERMISSIONS.SESSIONS_MANAGE_PAST,
   PERMISSIONS.STUDENTS_READ,
   PERMISSIONS.STUDENTS_MANAGE,
   PERMISSIONS.ATTENDANCE_MARK,
@@ -94,12 +105,14 @@ export const TEACHER_PORTAL_PERMISSIONS: PermissionKey[] = [
 export const SESSION_VIEW_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.SESSIONS_READ,
   PERMISSIONS.SESSIONS_MANAGE,
+  PERMISSIONS.SESSIONS_MANAGE_PAST,
   PERMISSIONS.ATTENDANCE_MARK,
   PERMISSIONS.ATTENDANCE_VIEW,
 ];
 
 export const SUBJECT_ACCESS_PERMISSIONS: PermissionKey[] = [
   PERMISSIONS.SESSIONS_MANAGE,
+  PERMISSIONS.SESSIONS_MANAGE_PAST,
   PERMISSIONS.ATTENDANCE_MARK,
   PERMISSIONS.ATTENDANCE_VIEW,
   PERMISSIONS.COURSES_CONFIGURE,

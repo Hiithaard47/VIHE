@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSubjectAccess, requireAnyPermission } from "@/lib/rbac";
-import { PERMISSIONS } from "@/lib/permissions";
+import { hasSessionsManagePast, PERMISSIONS } from "@/lib/permissions";
 import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
@@ -19,7 +19,7 @@ const STATUS_VALUES = new Set(Object.values(AttendanceStatus));
 
 export async function updateSessionDate(sessionId: string, portalArg: CoursePortal, formData: FormData) {
   const portal = parseCoursePortal(portalArg);
-  await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
+  const auth = await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
 
   const classSession = await prisma.classSession.findUniqueOrThrow({
     where: { id: sessionId },
@@ -28,14 +28,15 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   await requireSubjectAccess(classSession.subjectId, portal);
   const fallback = sessionHref(portal, sessionId);
   const path = safeWorkspaceReturnTo(formData.get("returnTo"), fallback);
+  const allowPast = hasSessionsManagePast(auth.user.permissions);
 
-  if (!isFutureSessionDate(classSession.date)) {
+  if (!allowPast && !isFutureSessionDate(classSession.date)) {
     redirect(flashUrl(path, "error", "Only future sessions can change date or time."));
   }
 
   const nextDate = parseDateInput(String(formData.get("date") ?? ""));
   if (!nextDate) redirect(flashUrl(path, "error", "Pick a valid date."));
-  if (nextDate.getTime() < startOfTodayUtc().getTime()) {
+  if (!allowPast && nextDate.getTime() < startOfTodayUtc().getTime()) {
     redirect(flashUrl(path, "error", "Pick today or a future date."));
   }
   const times = parseMeetingTimes(String(formData.get("startTime") ?? ""), String(formData.get("endTime") ?? ""));
@@ -193,7 +194,7 @@ export async function deleteSession(sessionId: string, portalArg: CoursePortal, 
 
 export async function moveSession(sessionId: string, portalArg: CoursePortal, formData: FormData) {
   const portal = parseCoursePortal(portalArg);
-  await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
+  const auth = await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
   const classSession = await prisma.classSession.findUniqueOrThrow({
     where: { id: sessionId },
     select: {
@@ -209,12 +210,13 @@ export async function moveSession(sessionId: string, portalArg: CoursePortal, fo
   if (classSession._count.records > 0) {
     redirect(flashUrl(path, "error", "Cannot move a session that has attendance."));
   }
-  if (!isFutureSessionDate(classSession.date)) {
+  const allowPast = hasSessionsManagePast(auth.user.permissions);
+  if (!allowPast && !isFutureSessionDate(classSession.date)) {
     redirect(flashUrl(path, "error", "Cannot change a session on or before today."));
   }
   const nextDate = parseDateInput(String(formData.get("date") ?? ""));
   if (!nextDate) redirect(flashUrl(path, "error", "Pick a valid date."));
-  if (!isFutureSessionDate(nextDate)) {
+  if (!allowPast && !isFutureSessionDate(nextDate)) {
     redirect(flashUrl(path, "error", "Cannot move a session onto today or a past day."));
   }
   const clash = await prisma.classSession.findFirst({

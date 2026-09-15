@@ -15,6 +15,7 @@ export function SessionActionsMenu({
   attendanceHref,
   canChangeDate,
   canRemove = false,
+  allowPastDates = false,
   deleteReturnTo,
   portal,
 }: {
@@ -26,6 +27,7 @@ export function SessionActionsMenu({
   attendanceHref?: string;
   canChangeDate: boolean;
   canRemove?: boolean;
+  allowPastDates?: boolean;
   deleteReturnTo?: string;
   portal: CoursePortal;
 }) {
@@ -137,6 +139,7 @@ export function SessionActionsMenu({
               endMinute={endMinute}
               returnTo={returnTo}
               portal={portal}
+              allowPastDates={allowPastDates}
             />
           </div>
         </dialog>

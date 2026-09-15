@@ -17,7 +17,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
       />
       <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6">
         <TeacherNav showCourses={hasCoursesRead(perms)} showStudents={hasStudentsRead(perms)} />
-        <main className="flex-1">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );

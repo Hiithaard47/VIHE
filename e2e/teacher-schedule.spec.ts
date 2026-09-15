@@ -1,6 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
-import { createCourse, createSession, createStudent, createTeacher, defaultSessionCategory, prisma } from "./db";
+import {
+  createCourse,
+  createSession,
+  createStudent,
+  createStaffWithPermissions,
+  createTeacher,
+  defaultSessionCategory,
+  prisma,
+} from "./db";
+import { PERMISSIONS } from "../src/lib/permissions";
 import { mondayOf } from "../src/lib/schedule";
 import {
   addUtcDays,
@@ -182,9 +191,20 @@ test.describe("teacher: week schedule", () => {
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toHaveCount(0);
   });
 
-  test("does not let schedule remove or move a class on or before today", async ({ page }) => {
+  test("does not let schedule remove or move a class on or before today without manage_past", async ({ page }) => {
     const password = "TeacherPass123!";
-    const teacher = await createTeacher(`Lock Teacher ${unique("t")}`, `${unique("lockteacher")}@example.com`, password);
+    const teacher = await createStaffWithPermissions(
+      `Lock Teacher ${unique("t")}`,
+      `${unique("lockteacher")}@example.com`,
+      password,
+      [
+        PERMISSIONS.COURSES_CONFIGURE,
+        PERMISSIONS.SESSIONS_MANAGE,
+        PERMISSIONS.ATTENDANCE_MARK,
+        PERMISSIONS.ATTENDANCE_VIEW,
+        PERMISSIONS.STUDENTS_READ,
+      ],
+    );
     const course = await createCourse(`Lock Course ${unique("c")}`, unique("LCK").toUpperCase(), teacher.id);
     const today = startOfTodayUtc();
     const termStart = addUtcDays(mondayOf(today), -7);
