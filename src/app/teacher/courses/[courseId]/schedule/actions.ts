@@ -74,7 +74,7 @@ export async function createScheduleSession(
     startMinute: times.startMinute,
     endMinute: times.endMinute,
     createdById: session.user.id,
-    requireFuture: true,
+    requireFuture: portal === "teacher",
     requireTime: true,
   });
   if ("error" in created) return created;
@@ -92,7 +92,9 @@ export async function duplicateOneOffSession(
   await requireActiveCourse(courseId, scheduleHref(portal, courseId));
   const date = parseDateInput(input.date);
   if (!date) return { error: "Pick a valid date." };
-  if (!isFutureSessionDate(date)) return { error: "Cannot add a session on or before today." };
+  if (portal === "teacher" && !isFutureSessionDate(date)) {
+    return { error: "Cannot add a session on or before today." };
+  }
 
   const source = await prisma.classSession.findUniqueOrThrow({
     where: { id: input.sessionId },
@@ -117,7 +119,7 @@ export async function duplicateOneOffSession(
     startMinute: source.startMinute,
     endMinute: source.endMinute,
     createdById: session.user.id,
-    requireFuture: true,
+    requireFuture: portal === "teacher",
     requireTime: true,
   });
   if ("error" in created) return created;

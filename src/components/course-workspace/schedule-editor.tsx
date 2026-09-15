@@ -151,7 +151,7 @@ export function ScheduleEditor({
       }));
     const weekday = nextFreeWeekday(occupied, from.getUTCDay(), card.startMinute);
     const target = weekday == null ? undefined : days.find((item) => item.getUTCDay() === weekday);
-    if (!target || !isFutureSessionDate(target)) {
+    if (!target || (portal === "teacher" && !isFutureSessionDate(target))) {
       setAddError("Every other day already has a meeting at this time.");
       return;
     }
@@ -230,7 +230,7 @@ export function ScheduleEditor({
             setAddError(null);
             setAddDate(day);
           }}
-          canAdd={(day) => isFutureSessionDate(day)}
+          canAdd={(day) => portal === "admin" || isFutureSessionDate(day)}
           onRemove={removeCard}
           onDuplicate={duplicateCard}
           onMove={moveCard}
