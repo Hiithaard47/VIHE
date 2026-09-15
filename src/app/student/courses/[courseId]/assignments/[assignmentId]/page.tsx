@@ -5,6 +5,7 @@ import { findStudentCourseEnrollment } from "@/lib/enrollment";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, isPastDueDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
+import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
 import { submitAssignment } from "../actions";
 
 export default async function StudentAssignmentDetailPage({
@@ -95,19 +96,15 @@ export default async function StudentAssignmentDetailPage({
             <p className="text-xs text-muted">This is after the due date. You can still submit once.</p>
           )}
           <label className="flex flex-col gap-1 text-sm text-ink">
-            PDF or image (you can select more than one)
-            <input
+            Your files
+            <UploadFileInput
               name="files"
-              type="file"
               required
               multiple
               accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-              className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent"
             />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Submit assignment
-          </button>
+          <UploadSubmitButton idleLabel="Submit assignment" />
         </form>
       )}
     </div>
