@@ -22,10 +22,11 @@ test.describe("admin: session categories", () => {
     await expect(row.getByText("80")).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
-    await page.locator('input[type="date"]').fill("2026-03-15");
-    await page.locator('input[name="name"]').fill("Morning program");
-    await page.locator('select[name="categoryId"]').selectOption({ label: name });
-    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
+    const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Create session" }) });
+    await createForm.locator('input[type="date"]').fill("2026-03-15");
+    await createForm.locator('input[name="name"]').fill("Morning program");
+    await createForm.locator('select[name="categoryId"]').selectOption({ label: name });
+    expect(await waitForFlashAfter(page, () => createForm.getByRole("button", { name: "Create session" }).click())).toBe(
       "success",
     );
     await expect(page.getByRole("link", { name: new RegExp(name) })).toHaveAttribute("aria-current", "page");
@@ -116,10 +117,11 @@ test.describe("admin: session categories", () => {
     await expect(page.locator("tr", { hasText: "Class" }).getByText("Files")).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
-    await page.locator('input[type="date"]').fill("2026-03-15");
-    await page.locator('input[name="name"]').fill("Morning aarti");
-    await page.locator('select[name="categoryId"]').selectOption({ label: name });
-    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
+    const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Create session" }) });
+    await createForm.locator('input[type="date"]').fill("2026-03-15");
+    await createForm.locator('input[name="name"]').fill("Morning aarti");
+    await createForm.locator('select[name="categoryId"]').selectOption({ label: name });
+    expect(await waitForFlashAfter(page, () => createForm.getByRole("button", { name: "Create session" }).click())).toBe(
       "success",
     );
     await page.locator('a[href*="/admin/sessions/"]', { hasText: "Morning aarti" }).click();
@@ -129,10 +131,10 @@ test.describe("admin: session categories", () => {
     await expect(page.getByRole("button", { name: "Save attendance" })).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
-    await page.locator('input[type="date"]').fill("2026-03-16");
-    await page.locator('input[name="name"]').fill("Chapter 1");
-    await page.locator('select[name="categoryId"]').selectOption({ label: "Class" });
-    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Create session" }).click())).toBe(
+    await createForm.locator('input[type="date"]').fill("2026-03-16");
+    await createForm.locator('input[name="name"]').fill("Chapter 1");
+    await createForm.locator('select[name="categoryId"]').selectOption({ label: "Class" });
+    expect(await waitForFlashAfter(page, () => createForm.getByRole("button", { name: "Create session" }).click())).toBe(
       "success",
     );
     await page.locator('a[href*="/admin/sessions/"]', { hasText: "Chapter 1" }).click();
