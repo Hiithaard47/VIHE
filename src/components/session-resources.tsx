@@ -1,4 +1,5 @@
 import { deleteSessionResource, uploadSessionResource } from "@/app/sessions/actions";
+import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
 import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 export function SessionResources({
@@ -21,18 +22,14 @@ export function SessionResources({
           className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:items-end"
         >
           <label className="flex flex-1 flex-col gap-1 text-sm text-ink">
-            PDF or image
-            <input
+            File
+            <UploadFileInput
               name="file"
-              type="file"
               required
               accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-              className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent"
             />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
-            Upload
-          </button>
+          <UploadSubmitButton idleLabel="Upload" />
         </form>
       )}
       <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
