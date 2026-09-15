@@ -8,7 +8,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm">
+    <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm print:hidden">
       {ADMIN_NAV.map((item) => {
         const active = isAdminNavActive(pathname, item.href);
         return (

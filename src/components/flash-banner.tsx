@@ -32,8 +32,8 @@ function FlashBannerInner() {
       role="status"
       className={
         isError
-          ? "flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-          : "flex items-start justify-between gap-3 rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink"
+          ? "flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 print:hidden"
+          : "flex items-start justify-between gap-3 rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink print:hidden"
       }
     >
       <span>

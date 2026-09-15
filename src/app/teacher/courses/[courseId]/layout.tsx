@@ -45,7 +45,7 @@ export default async function CourseLayout({
   return (
     <div className="flex flex-col gap-5">
       <FlashBanner />
-      <div>
+      <div className="print:hidden">
         <Link href="/teacher" className="text-sm text-muted">
           &larr; Courses
         </Link>
@@ -63,9 +63,11 @@ export default async function CourseLayout({
           </p>
         )}
       </div>
-      <Suspense>
-        <CourseTabs courseId={courseId} slugs={slugs} />
-      </Suspense>
+      <div className="print:hidden">
+        <Suspense>
+          <CourseTabs courseId={courseId} slugs={slugs} />
+        </Suspense>
+      </div>
       {children}
     </div>
   );

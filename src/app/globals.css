@@ -24,3 +24,38 @@ html {
   /* Keep layout width stable when navigating between short and tall pages. */
   scrollbar-gutter: stable;
 }
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 0.6cm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .attendance-print .max-w-full.overflow-x-auto {
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  .attendance-print table {
+    font-size: 8pt;
+  }
+
+  .attendance-print th,
+  .attendance-print td {
+    padding: 0.15rem 0.3rem !important;
+  }
+
+  .attendance-print tr {
+    break-inside: avoid;
+  }
+
+  .attendance-print a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

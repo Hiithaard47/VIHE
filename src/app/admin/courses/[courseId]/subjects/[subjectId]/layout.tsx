@@ -30,30 +30,34 @@ export default async function AdminSubjectLayout({
   return (
     <div className="flex flex-col gap-5">
       <FlashBanner />
-      <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
-        <Link href="/admin/courses" className="hover:text-ink">
-          Courses
-        </Link>
-        <span>/</span>
-        <Link href={`/admin/courses/${courseId}`} className="hover:text-ink">
-          {subject.course.name}
-        </Link>
-        <span>/</span>
-        <span className="text-ink">{subject.name}</span>
-      </nav>
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-heading text-lg font-semibold text-ink">{subject.name}</h1>
-          <span className={subject.isActive ? "text-xs text-ink" : "text-xs text-muted"}>
-            {subject.isActive ? "Active" : "Archived"}
-          </span>
-          {!subject.course.isActive && <span className="text-xs text-muted">Course archived</span>}
+      <div className="print:hidden">
+        <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
+          <Link href="/admin/courses" className="hover:text-ink">
+            Courses
+          </Link>
+          <span>/</span>
+          <Link href={`/admin/courses/${courseId}`} className="hover:text-ink">
+            {subject.course.name}
+          </Link>
+          <span>/</span>
+          <span className="text-ink">{subject.name}</span>
+        </nav>
+        <div className="mt-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-heading text-lg font-semibold text-ink">{subject.name}</h1>
+            <span className={subject.isActive ? "text-xs text-ink" : "text-xs text-muted"}>
+              {subject.isActive ? "Active" : "Archived"}
+            </span>
+            {!subject.course.isActive && <span className="text-xs text-muted">Course archived</span>}
+          </div>
+          {!subject.course.isActive && (
+            <p className="mt-2 text-sm text-muted">This course is archived. Restore it to make changes.</p>
+          )}
         </div>
-        {!subject.course.isActive && (
-          <p className="mt-2 text-sm text-muted">This course is archived. Restore it to make changes.</p>
-        )}
+        <div className="mt-5">
+          <AdminSubjectTabs courseId={courseId} subjectId={subjectId} />
+        </div>
       </div>
-      <AdminSubjectTabs courseId={courseId} subjectId={subjectId} />
       {children}
     </div>
   );
