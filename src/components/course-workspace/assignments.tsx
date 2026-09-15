@@ -69,11 +69,12 @@ export async function CourseAssignmentsView({
               <textarea name="instructions" rows={3} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
             </label>
             <label className="flex flex-col gap-1 text-sm text-ink">
-              Assignment test (PDF or image)
+              Assignment files (PDF or image — you can select more than one)
               <input
-                name="file"
+                name="files"
                 type="file"
                 required
+                multiple
                 accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
                 className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent"
               />

@@ -281,42 +281,66 @@ model Assignment {
   instructions String?
   dueDate      DateTime?
   maxMarks     Int
-  fileName     String
-  contentType  String
-  sizeBytes    Int
-  storageKey   String    @unique
   createdById  String
   createdAt    DateTime  @default(now())
 
   subject     CourseSubject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   createdBy   User                   @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  files       AssignmentFile[]
   submissions AssignmentSubmission[]
 
   @@index([subjectId])
   @@map("assignments")
 }
 
+model AssignmentFile {
+  id           String   @id @default(cuid())
+  assignmentId String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String   @unique
+  createdAt    DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@map("assignment_files")
+}
+
 model AssignmentSubmission {
   id           String    @id @default(cuid())
   assignmentId String
   studentId    String
-  fileName     String
-  contentType  String
-  sizeBytes    Int
-  storageKey   String    @unique
   submittedAt  DateTime  @default(now())
   marks        Int?
   feedback     String?
   gradedById   String?
   gradedAt     DateTime?
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradedBy   User?      @relation("AssignmentGradedBy", fields: [gradedById], references: [id])
+  assignment Assignment                 @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradedBy   User?                      @relation("AssignmentGradedBy", fields: [gradedById], references: [id])
+  files      AssignmentSubmissionFile[]
 
   @@unique([assignmentId, studentId])
   @@index([studentId])
   @@map("assignment_submissions")
+}
+
+model AssignmentSubmissionFile {
+  id           String   @id @default(cuid())
+  submissionId String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String   @unique
+  createdAt    DateTime @default(now())
+
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("assignment_submission_files")
 }
 
 enum AttendanceStatus {

@@ -8,12 +8,15 @@ const PNG = Buffer.from(
   "base64",
 );
 
-function upload(page: import("@playwright/test").Page, name: string) {
-  return page.locator('input[name="file"]').setInputFiles({
-    name,
-    mimeType: "image/png",
-    buffer: PNG,
-  });
+function upload(page: import("@playwright/test").Page, names: string | string[]) {
+  const list = Array.isArray(names) ? names : [names];
+  return page.locator('input[name="files"]').setInputFiles(
+    list.map((name) => ({
+      name,
+      mimeType: "image/png",
+      buffer: PNG,
+    })),
+  );
 }
 
 test.describe("course assignments", () => {
@@ -37,7 +40,7 @@ test.describe("course assignments", () => {
     await page.goto(`/teacher/courses/${course.id}/assignments`);
     await page.getByLabel("Title").fill(title);
     await page.getByLabel("Maximum marks").fill("20");
-    await upload(page, "question.png");
+    await upload(page, ["question-a.png", "question-b.png"]);
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Issue assignment" }).click())).toBe(
       "success",
     );
@@ -48,11 +51,15 @@ test.describe("course assignments", () => {
     await page.goto(`/student/courses/${course.id}/assignments`);
     await page.getByRole("link", { name: new RegExp(title) }).click();
     await expect(page.getByText("Not submitted")).toBeVisible();
-    await upload(page, "answer.png");
+    await expect(page.getByRole("link", { name: /question-a\.png/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /question-b\.png/ })).toBeVisible();
+    await upload(page, ["answer-a.png", "answer-b.png"]);
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Submit assignment" }).click())).toBe(
       "success",
     );
     await expect(page.getByText(/Out of \d+ · Submitted/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "answer-a.png" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "answer-b.png" })).toBeVisible();
 
     await signOut(page);
     await login(page, teacher.email, teacherPassword);
@@ -61,6 +68,8 @@ test.describe("course assignments", () => {
     await expect(page.getByText(student.name)).toBeVisible();
     await expect(page.getByText("Submitted")).toBeVisible();
     const row = page.locator("tr", { hasText: student.name });
+    await expect(row.getByRole("link", { name: "answer-a.png" })).toBeVisible();
+    await expect(row.getByRole("link", { name: "answer-b.png" })).toBeVisible();
     await row.locator('input[name="marks"]').fill("16");
     await row.locator('input[name="feedback"]').fill("Clear answers.");
     expect(await waitForFlashAfter(page, () => row.getByRole("button", { name: "Save" }).click())).toBe("success");

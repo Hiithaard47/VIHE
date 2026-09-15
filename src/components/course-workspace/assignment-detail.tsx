@@ -29,6 +29,7 @@ export async function CourseAssignmentDetailView({
   const assignment = await prisma.assignment.findFirst({
     where: { id: assignmentId, ...sessionWhere(courseId, scope) },
     include: {
+      files: { orderBy: { createdAt: "asc" } },
       subject: {
         select: {
           course: {
@@ -38,7 +39,7 @@ export async function CourseAssignmentDetailView({
           },
         },
       },
-      submissions: true,
+      submissions: { include: { files: { orderBy: { createdAt: "asc" } } } },
     },
   });
   if (!assignment) notFound();
@@ -58,11 +59,15 @@ export async function CourseAssignmentDetailView({
           Out of {assignment.maxMarks}
         </p>
         {assignment.instructions && <p className="mt-2 text-sm text-ink">{assignment.instructions}</p>}
-        <p className="mt-2 text-sm">
-          <a href={`/assignments/${assignment.id}/file`} className="font-medium text-accent-dark hover:underline">
-            {assignment.fileName}
-          </a>
-        </p>
+        <ul className="mt-2 flex flex-col gap-1 text-sm">
+          {assignment.files.map((file) => (
+            <li key={file.id}>
+              <a href={`/assignments/files/${file.id}`} className="font-medium text-accent-dark hover:underline">
+                {file.fileName}
+              </a>
+            </li>
+          ))}
+        </ul>
         {canWrite && (
           <form action={deleteAssignment.bind(null, courseId, assignment.id, portal)} className="mt-3">
             <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
@@ -97,10 +102,16 @@ export async function CourseAssignmentDetailView({
                     </td>
                     <td className="px-4 py-3 text-muted">{assignmentStatus(submission ?? null)}</td>
                     <td className="px-4 py-3">
-                      {submission ? (
-                        <a href={`/assignments/submissions/${submission.id}/file`} className="hover:text-accent-dark">
-                          {submission.fileName}
-                        </a>
+                      {submission && submission.files.length > 0 ? (
+                        <ul className="flex flex-col gap-1">
+                          {submission.files.map((file) => (
+                            <li key={file.id}>
+                              <a href={`/assignments/submission-files/${file.id}`} className="hover:text-accent-dark">
+                                {file.fileName}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
                         <span className="text-muted">—</span>
                       )}
