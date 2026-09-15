@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         subtitle="Admin"
         right={<UserMenu name={displayUserName(session.user)} accountHref="/admin/account" />}
       />
-      <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6">
+      <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6 print:max-w-none print:px-0 print:py-0">
         <AdminNav />
         <main className="min-w-0 flex-1">{children}</main>
       </div>

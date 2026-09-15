@@ -47,6 +47,8 @@ test.describe("teacher: attendance matrix", () => {
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/attendance`);
 
+    await expect(page.getByRole("button", { name: "Print attendance" })).toBeVisible();
+
     const summary = page.locator("table").first().locator("tr", { hasText: student.name });
     await expect(summary.getByText("50%", { exact: true })).toBeVisible();
 

@@ -19,7 +19,8 @@ import {
 } from "@/lib/course-attendance";
 import { attendanceHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { groupSessionsByCategory, resolveCategoryTab, sessionCategoryTabs } from "@/lib/session-categories";
-import { formatDisplayDate } from "@/lib/time";
+import { formatDisplayDate, startOfTodayUtc } from "@/lib/time";
+import { PrintButton } from "@/components/print-button";
 
 export async function CourseAttendanceView({
   courseId,
@@ -37,14 +38,23 @@ export async function CourseAttendanceView({
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: {
-      lateCountsAsAttended: true,
-      excusedCountsAsAttended: true,
-      enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } },
-    },
-  });
+  const subjectId =
+    selectedSubjectId ?? (scope.kind === "ids" && scope.ids.length === 1 ? scope.ids[0] : undefined);
+
+  const [course, subject] = await Promise.all([
+    prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        name: true,
+        lateCountsAsAttended: true,
+        excusedCountsAsAttended: true,
+        enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } },
+      },
+    }),
+    subjectId
+      ? prisma.courseSubject.findUnique({ where: { id: subjectId }, select: { name: true } })
+      : Promise.resolve(null),
+  ]);
   if (!course) notFound();
 
   const [categories, tallies, matrix] = await Promise.all([
@@ -75,13 +85,29 @@ export async function CourseAttendanceView({
   const tabs = sessionCategoryTabs(groups);
   const selected = resolveCategoryTab(tabs, categoryId);
   const selectedSessions = selected?.sessions ?? [];
+  const printTitle = subject ? `${course.name} · ${subject.name}` : course.name;
 
   return (
-    <div className="flex min-w-0 flex-col gap-8">
-      <section className="flex min-w-0 flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Attendance &middot; {rows.length} student(s)
-        </h2>
+    <div className="attendance-print flex min-w-0 flex-col gap-8">
+      <div className="hidden print:block">
+        <h1 className="font-heading text-lg font-semibold text-ink">Attendance</h1>
+        <p className="mt-1 text-sm text-ink">{printTitle}</p>
+        {selected ? (
+          <p className="mt-1 text-xs text-muted">
+            {selected.name}
+            {selectedSessions.length > 0 ? ` · ${selectedSessions.length} session(s)` : ""}
+          </p>
+        ) : null}
+        <p className="mt-1 text-xs text-muted">Printed {formatDisplayDate(startOfTodayUtc())}</p>
+      </div>
+
+      <section className="flex min-w-0 flex-col gap-3 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Attendance &middot; {rows.length} student(s)
+          </h2>
+          <PrintButton label="Print attendance" />
+        </div>
         {thresholdNote ? (
           <p className="text-xs text-muted">Students below {thresholdNote} are shown in red.</p>
         ) : (
@@ -137,7 +163,7 @@ export async function CourseAttendanceView({
 
       <section className="flex min-w-0 flex-col gap-3">
         {tabs.length > 0 && (
-          <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
+          <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline print:hidden">
             {tabs.map((tab) => {
               const active = tab.id === selected?.id;
               return (
@@ -156,6 +182,12 @@ export async function CourseAttendanceView({
             })}
           </nav>
         )}
+        {selected ? (
+          <h3 className="hidden text-sm font-semibold text-ink print:block">
+            {selected.name}
+            {selectedSessions.length > 0 ? ` · ${selectedSessions.length}` : ""}
+          </h3>
+        ) : null}
         <p className="text-xs text-muted">
           {STATUS_OPTIONS.map((option) => `${statusLetter(option.value)} ${option.label}`).join(" · ")}
         </p>

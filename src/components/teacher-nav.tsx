@@ -14,7 +14,7 @@ export function TeacherNav({ showCourses, showStudents }: { showCourses: boolean
   const visible = LINKS.filter((item) => (item.key === "courses" ? showCourses : showStudents));
 
   return (
-    <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm">
+    <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm print:hidden">
       {visible.map((item) => {
         const active = isTeacherNavActive(pathname, item.href);
         return (

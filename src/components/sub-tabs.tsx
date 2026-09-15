@@ -12,7 +12,7 @@ export function SubTabs({
   isActive: (slug: string) => boolean;
 }) {
   return (
-    <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
+    <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline print:hidden">
       {tabs.map((tab) => {
         const href = hrefFor(tab.slug);
         const active = isActive(tab.slug);
