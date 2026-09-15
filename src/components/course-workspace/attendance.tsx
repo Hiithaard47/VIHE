@@ -77,8 +77,8 @@ export async function CourseAttendanceView({
   const selectedSessions = selected?.sessions ?? [];
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-8">
+      <section className="flex min-w-0 flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           Attendance &middot; {rows.length} student(s)
         </h2>
@@ -87,7 +87,7 @@ export async function CourseAttendanceView({
         ) : (
           <p className="text-xs text-muted">No minimum attendance is set on any session category used here.</p>
         )}
-        <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
+        <div className="max-w-full overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
@@ -135,7 +135,7 @@ export async function CourseAttendanceView({
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex min-w-0 flex-col gap-3">
         {tabs.length > 0 && (
           <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
             {tabs.map((tab) => {
@@ -162,14 +162,14 @@ export async function CourseAttendanceView({
         {!selected || selectedSessions.length === 0 ? (
           <p className="text-sm text-muted">No sessions in this category yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
-            <table className="w-full text-left text-sm">
+          <div className="max-w-full overflow-x-auto rounded-lg border border-hairline bg-card">
+            <table className="w-max min-w-full text-left text-sm">
               <thead className="border-b border-hairline bg-canvas text-muted">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Student</th>
-                  <th className="px-4 py-2 font-medium">Roll no.</th>
+                  <th className="whitespace-nowrap px-4 py-2 font-medium">Student</th>
+                  <th className="whitespace-nowrap px-4 py-2 font-medium">Roll no.</th>
                   {selectedSessions.map((session) => (
-                    <th key={session.id} className="px-3 py-2 text-center font-medium">
+                    <th key={session.id} className="whitespace-nowrap px-3 py-2 text-center font-medium">
                       <Link
                         href={sessionHref(portal, session.id)}
                         title={session.name}
@@ -187,10 +187,10 @@ export async function CourseAttendanceView({
                     key={student.id}
                     className={`border-b border-hairline last:border-0 ${atRisk ? "bg-red-50 text-red-700" : "text-ink"}`}
                   >
-                    <td className="px-4 py-3 font-medium">{student.name}</td>
-                    <td className="px-4 py-3">{student.rollNumber}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium">{student.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{student.rollNumber}</td>
                     {selectedSessions.map((session) => (
-                      <td key={session.id} className="px-3 py-3 text-center">
+                      <td key={session.id} className="whitespace-nowrap px-3 py-3 text-center">
                         {statusLetter(statusAt(matrix.marks, student.id, session.id))}
                       </td>
                     ))}

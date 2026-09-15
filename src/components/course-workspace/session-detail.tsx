@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canManageSubject, requireSubjectView } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
-import { hasWorkspaceWrite, PERMISSIONS } from "@/lib/permissions";
+import { hasWorkspaceWrite, hasSessionsManagePast, PERMISSIONS } from "@/lib/permissions";
 import { STATUS_OPTIONS } from "@/lib/attendance";
 import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
@@ -47,7 +47,8 @@ export async function SessionDetailView({
   const canManage = await canManageSubject(session, classSession.subject.id);
   const canManageSession = canManage && session.user.permissions.includes(PERMISSIONS.SESSIONS_MANAGE);
   const canMarkAttendance = canManage && session.user.permissions.includes(PERMISSIONS.ATTENDANCE_MARK);
-  const canChangeDate = canManageSession && isFutureSessionDate(classSession.date);
+  const canManagePastDates = hasSessionsManagePast(session.user.permissions);
+  const canChangeDate = canManageSession && (canManagePastDates || isFutureSessionDate(classSession.date));
   const canRemove = canManageSession && classSession.records.length === 0;
 
   const recordByStudent = new Map(classSession.records.map((record) => [record.studentId, record]));
@@ -92,6 +93,7 @@ export async function SessionDetailView({
               deleteReturnTo={courseHref(portal, classSession.subject.course.id, "", classSession.subject.id)}
               canChangeDate={canChangeDate}
               canRemove={canRemove}
+              allowPastDates={canManagePastDates}
               portal={portal}
             />
           )}

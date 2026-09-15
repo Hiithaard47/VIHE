@@ -6,6 +6,7 @@ import {
   hasCoursesRead,
   hasSessionsRead,
   hasSessionsManage,
+  hasSessionsManagePast,
   hasStudentsRead,
   hasAttendanceAccess,
   hasWorkspaceWrite,
@@ -40,6 +41,13 @@ describe("permission registry", () => {
     expect(teacher?.permissions).not.toContain(PERMISSIONS.STUDENTS_MANAGE);
   });
 
+  it("grants sessions.manage_past to Admin and Teacher by default", () => {
+    const admin = DEFAULT_ROLES.find((r) => r.name === "Admin");
+    const teacher = DEFAULT_ROLES.find((r) => r.name === "Teacher");
+    expect(admin?.permissions).toContain(PERMISSIONS.SESSIONS_MANAGE_PAST);
+    expect(teacher?.permissions).toContain(PERMISSIONS.SESSIONS_MANAGE_PAST);
+  });
+
   it("treats manage and configure as the matching read", () => {
     expect(hasCoursesRead([PERMISSIONS.COURSES_READ])).toBe(true);
     expect(hasCoursesRead([PERMISSIONS.COURSES_MANAGE])).toBe(true);
@@ -51,6 +59,8 @@ describe("permission registry", () => {
     expect(hasSessionsRead([PERMISSIONS.COURSES_READ])).toBe(false);
     expect(hasSessionsManage([PERMISSIONS.SESSIONS_MANAGE])).toBe(true);
     expect(hasSessionsManage([PERMISSIONS.SESSIONS_READ])).toBe(false);
+    expect(hasSessionsManagePast([PERMISSIONS.SESSIONS_MANAGE_PAST])).toBe(true);
+    expect(hasSessionsManagePast([PERMISSIONS.SESSIONS_MANAGE])).toBe(false);
 
     expect(hasStudentsRead([PERMISSIONS.STUDENTS_READ])).toBe(true);
     expect(hasStudentsRead([PERMISSIONS.STUDENTS_MANAGE])).toBe(true);
@@ -66,6 +76,7 @@ describe("permission registry", () => {
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.SESSIONS_READ);
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.STUDENTS_READ);
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.SESSIONS_MANAGE);
+    expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.SESSIONS_MANAGE_PAST);
     expect(TEACHER_PORTAL_PERMISSIONS).toContain(PERMISSIONS.ATTENDANCE_VIEW);
   });
 

@@ -32,6 +32,7 @@ export function ScheduleEditor({
   initialWeekCount,
   sessions,
   returnTo,
+  canManagePastDates,
 }: {
   courseId: string;
   portal: CoursePortal;
@@ -42,6 +43,7 @@ export function ScheduleEditor({
   initialWeekCount: number;
   sessions: ScheduleSession[];
   returnTo: string;
+  canManagePastDates: boolean;
 }) {
   const router = useRouter();
   const [termStart, setTermStart] = useState(initialTermStart);
@@ -73,9 +75,9 @@ export function ScheduleEditor({
     date: item.date,
     markedCount: item.markedCount,
     href: sessionHref(portal, item.id),
-    canRemove: item.markedCount === 0 && isEditableSessionDate(item.date),
-    canDrag: item.markedCount === 0 && isEditableSessionDate(item.date),
-    canDuplicate: item.startMinute != null && isEditableSessionDate(item.date),
+    canRemove: item.markedCount === 0 && canManageSessionDate(canManagePastDates, item.date),
+    canDrag: item.markedCount === 0 && canManageSessionDate(canManagePastDates, item.date),
+    canDuplicate: item.startMinute != null && canManageSessionDate(canManagePastDates, item.date),
   }));
 
   function persistSoon(nextTerm: string, nextWeeks: number) {
@@ -124,7 +126,7 @@ export function ScheduleEditor({
   }
 
   function removeCard(card: WeekGridCard) {
-    if (!card.sessionId || !isEditableSessionDate(card.date)) return;
+    if (!card.sessionId || !canManageSessionDate(canManagePastDates, card.date)) return;
     const formData = new FormData();
     formData.set("returnTo", returnTo);
     void deleteSession(card.sessionId, portal, formData);
@@ -132,7 +134,7 @@ export function ScheduleEditor({
 
   function moveCard(card: WeekGridCard, date: Date) {
     const next = toDateInputValue(date);
-    if (card.date === next || !card.sessionId || !isEditableSessionDate(card.date)) return;
+    if (card.date === next || !card.sessionId || !canManageSessionDate(canManagePastDates, card.date)) return;
     const formData = new FormData();
     formData.set("date", next);
     formData.set("returnTo", returnTo);
@@ -151,7 +153,7 @@ export function ScheduleEditor({
       }));
     const weekday = nextFreeWeekday(occupied, from.getUTCDay(), card.startMinute);
     const target = weekday == null ? undefined : days.find((item) => item.getUTCDay() === weekday);
-    if (!target || (portal === "teacher" && !isFutureSessionDate(target))) {
+    if (!target || (!canManagePastDates && !isFutureSessionDate(target))) {
       setAddError("Every other day already has a meeting at this time.");
       return;
     }
@@ -230,11 +232,11 @@ export function ScheduleEditor({
             setAddError(null);
             setAddDate(day);
           }}
-          canAdd={(day) => portal === "admin" || isFutureSessionDate(day)}
+          canAdd={(day) => canManagePastDates || isFutureSessionDate(day)}
           onRemove={removeCard}
           onDuplicate={duplicateCard}
           onMove={moveCard}
-          canDrop={(day) => isFutureSessionDate(day)}
+          canDrop={(day) => canManagePastDates || isFutureSessionDate(day)}
           today={startOfTodayUtc()}
         />
         {addError && addDate === null && (
@@ -263,4 +265,9 @@ export function ScheduleEditor({
 function isEditableSessionDate(value: string) {
   const date = parseDateInput(value);
   return Boolean(date && isFutureSessionDate(date));
+}
+
+function canManageSessionDate(canManagePastDates: boolean, value: string) {
+  if (canManagePastDates) return Boolean(parseDateInput(value));
+  return isEditableSessionDate(value);
 }

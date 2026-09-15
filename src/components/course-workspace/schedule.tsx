@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { subjectWhere, resolveWorkspaceScope } from "@/lib/subject-scope";
 import { requireCourseConfigure } from "@/lib/rbac";
+import { hasSessionsManagePast } from "@/lib/permissions";
 import { scheduleHref, type CoursePortal } from "@/lib/course-workspace";
 import { mondayOf } from "@/lib/schedule";
 import { startOfTodayUtc, toDateInputValue } from "@/lib/time";
@@ -84,6 +85,7 @@ export async function CourseScheduleView({
         markedCount: item._count.records,
       }))}
       returnTo={scheduleHref(portal, courseId, subject.id)}
+      canManagePastDates={hasSessionsManagePast(session.user.permissions)}
     />
   );
 }
