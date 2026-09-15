@@ -79,18 +79,23 @@ jobs:
         env:
           AUTH_URL: http://localhost:3001
 
+      # upload-artifact respects .gitignore and would skip .next-e2e.
+      - name: Pack e2e build
+        run: tar -czf next-e2e-build.tar.gz .next-e2e
+
       - name: Upload e2e build
         uses: actions/upload-artifact@v4
         with:
           name: next-e2e-build
-          path: .next-e2e
+          path: next-e2e-build.tar.gz
           retention-days: 1
+          if-no-files-found: error
 
   e2e:
     name: E2E (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     needs: e2e-build
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -136,7 +141,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: next-e2e-build
-          path: .next-e2e
+          path: .
+
+      - name: Unpack e2e build
+        run: tar -xzf next-e2e-build.tar.gz
 
       - name: Cache Playwright browsers
         id: playwright-cache
