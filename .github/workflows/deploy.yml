@@ -143,6 +143,7 @@ jobs:
     needs: should-release
     if: needs.should-release.outputs.release == 'true'
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       id-token: write
       contents: write
