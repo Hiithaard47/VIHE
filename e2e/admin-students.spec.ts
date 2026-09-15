@@ -35,7 +35,9 @@ test.describe("admin: students", () => {
 
     await row.getByRole("link", { name: studentName }).click();
     await expect(page.getByRole("heading", { name: studentName })).toBeVisible();
-    await expect(page.getByRole("link", { name: course.name })).toBeVisible();
+    // Active students edit enrollment via checkboxes (not course links).
+    await expect(page.locator(`input[name="course-${course.id}"]`)).toBeChecked();
+    await expect(page.locator("label", { hasText: course.name })).toBeVisible();
   });
 
   test("archives and restores a student from the detail page", async ({ page }) => {

@@ -2,7 +2,18 @@ import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, createSession, createStudent, createTeacher, defaultSessionCategory, prisma } from "./db";
 import { mondayOf } from "../src/lib/schedule";
-import { addUtcDays, startOfTodayUtc } from "../src/lib/time";
+import {
+  addUtcDays,
+  formatDayHeading,
+  formatDisplayDate,
+  startOfTodayUtc,
+  toDateInputValue,
+} from "../src/lib/time";
+
+/** Next calendar week's Monday — every day in that week is strictly after today. */
+function futureTermMonday() {
+  return addUtcDays(mondayOf(startOfTodayUtc()), 7);
+}
 
 test.describe("teacher: week schedule", () => {
   test("saves one meeting on that day and that subject only", async ({ page }) => {
@@ -21,15 +32,22 @@ test.describe("teacher: week schedule", () => {
       },
     });
 
+    const termStart = futureTermMonday();
+    const mon = termStart;
+    const tue = addUtcDays(termStart, 1);
+    const sun = addUtcDays(termStart, 6);
+    const mon2 = addUtcDays(termStart, 7);
+    const wed2 = addUtcDays(termStart, 9);
+
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
 
-    await page.getByLabel("Term start").fill("2026-09-14");
+    await page.getByLabel("Term start").fill(toDateInputValue(termStart));
     await page.getByLabel("Weeks").fill("2");
-    await expect(page.getByRole("region", { name: "Mon 14" })).toBeInViewport();
-    await expect(page.getByRole("region", { name: "Sun 20" })).toBeInViewport();
+    await expect(page.getByRole("region", { name: formatDayHeading(mon) })).toBeInViewport();
+    await expect(page.getByRole("region", { name: formatDayHeading(sun) })).toBeInViewport();
 
-    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon)}`) }).click();
     const add = page.getByRole("dialog", { name: "Add meeting" });
     await add.getByLabel("Name").fill("Chapter 1");
     await add.locator('select[name="categoryId"]').selectOption({ label: klass.name });
@@ -39,7 +57,7 @@ test.describe("teacher: week schedule", () => {
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
     await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(1);
 
-    await page.getByRole("button", { name: /\+ Add on Tue 15/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(tue)}`) }).click();
     const addTemple = page.getByRole("dialog", { name: "Add meeting" });
     await addTemple.getByLabel("Name").fill("Mangla Aarti");
     await addTemple.locator('select[name="categoryId"]').selectOption({ label: temple.name });
@@ -54,17 +72,14 @@ test.describe("teacher: week schedule", () => {
       where: { subjectId },
       orderBy: [{ date: "asc" }, { startMinute: "asc" }],
     });
-    expect(created.map((row) => row.date.toISOString())).toEqual([
-      "2026-09-14T00:00:00.000Z",
-      "2026-09-15T00:00:00.000Z",
-    ]);
+    expect(created.map((row) => row.date.toISOString())).toEqual([mon.toISOString(), tue.toISOString()]);
     expect(created.map((row) => row.name)).toEqual(["Chapter 1", "Mangla Aarti"]);
 
     await page.goto(`/teacher/courses/${course.id}?subject=${subjectId}`);
     await expect(page.getByText("New session")).toBeVisible();
     await expect(page.getByText("Chapter 1")).toHaveCount(1);
-    await expect(page.getByText("14 Sept 2026")).toBeVisible();
-    await expect(page.getByText("21 Sept 2026")).toHaveCount(0);
+    await expect(page.getByText(formatDisplayDate(mon))).toBeVisible();
+    await expect(page.getByText(formatDisplayDate(mon2))).toHaveCount(0);
     await page.getByRole("link", { name: new RegExp(temple.name) }).click();
     await expect(page.getByText("Mangla Aarti")).toHaveCount(1);
 
@@ -73,7 +88,7 @@ test.describe("teacher: week schedule", () => {
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toHaveCount(0);
     await expect(page.getByRole("article").filter({ hasText: "Mangla Aarti" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: /\+ Add on Mon 21/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon2)}`) }).click();
     const addWeek2 = page.getByRole("dialog", { name: "Add meeting" });
     await addWeek2.getByLabel("Name").fill("Chapter 1");
     await addWeek2.locator('select[name="categoryId"]').selectOption({ label: klass.name });
@@ -89,7 +104,7 @@ test.describe("teacher: week schedule", () => {
 
     await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
     await page.getByRole("button", { name: "Next week" }).click();
-    await page.getByRole("button", { name: /\+ Add on Mon 21/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon2)}`) }).click();
     const addAgain = page.getByRole("dialog", { name: "Add meeting" });
     await addAgain.getByLabel("Name").fill("Chapter 1");
     await addAgain.locator('select[name="categoryId"]').selectOption({ label: klass.name });
@@ -98,23 +113,26 @@ test.describe("teacher: week schedule", () => {
     await expect
       .poll(() =>
         prisma.classSession.count({
-          where: { subjectId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
+          where: { subjectId, name: "Chapter 1", date: mon2 },
         }),
       )
       .toBe(1);
     const week2Class = await prisma.classSession.findFirstOrThrow({
-      where: { subjectId, name: "Chapter 1", date: new Date("2026-09-21T00:00:00.000Z") },
+      where: { subjectId, name: "Chapter 1", date: mon2 },
     });
     expect(
       await waitForFlashAfter(page, () =>
-        page.getByRole("article").filter({ hasText: "Chapter 1" }).dragTo(page.getByRole("region", { name: "Wed 23" })),
+        page
+          .getByRole("article")
+          .filter({ hasText: "Chapter 1" })
+          .dragTo(page.getByRole("region", { name: formatDayHeading(wed2) })),
       ),
     ).toBe("success");
     expect(await prisma.classSession.findUniqueOrThrow({ where: { id: week2Class.id } })).toMatchObject({
-      date: new Date("2026-09-23T00:00:00.000Z"),
+      date: wed2,
     });
 
-    const week1Class = created.find((row) => row.date.toISOString() === "2026-09-14T00:00:00.000Z");
+    const week1Class = created.find((row) => row.date.toISOString() === mon.toISOString());
     await prisma.attendanceRecord.create({
       data: {
         sessionId: week1Class!.id,
@@ -139,12 +157,15 @@ test.describe("teacher: week schedule", () => {
     const course = await createCourse(`Dup Course ${unique("c")}`, unique("DUP").toUpperCase(), teacher.id);
     const klass = await defaultSessionCategory();
     const subjectId = course.subjects[0].id;
+    const termStart = futureTermMonday();
+    const mon = termStart;
+    const tue = addUtcDays(termStart, 1);
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/schedule`);
-    await page.getByLabel("Term start").fill("2026-09-14");
+    await page.getByLabel("Term start").fill(toDateInputValue(termStart));
     await page.getByLabel("Weeks").fill("2");
-    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon)}`) }).click();
     const add = page.getByRole("dialog", { name: "Add meeting" });
     await add.getByLabel("Name").fill("Chapter 1");
     await add.locator('select[name="categoryId"]').selectOption({ label: klass.name });
@@ -153,7 +174,7 @@ test.describe("teacher: week schedule", () => {
     await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(1);
 
     await page.getByRole("article").filter({ hasText: "Chapter 1" }).getByRole("button", { name: "Duplicate" }).click();
-    await expect(page.getByRole("region", { name: "Tue 15" }).getByText("Chapter 1")).toBeVisible();
+    await expect(page.getByRole("region", { name: formatDayHeading(tue) }).getByText("Chapter 1")).toBeVisible();
     await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Chapter 1" } })).toBe(2);
     await expect(page.getByRole("button", { name: "Apply to 2 weeks" })).toHaveCount(0);
 
@@ -189,20 +210,22 @@ test.describe("teacher: week schedule", () => {
     const course = await createCourse(`Clash Course ${unique("c")}`, unique("CLH").toUpperCase(), teacher.id);
     const klass = await defaultSessionCategory();
     const subjectId = course.subjects[0].id;
+    const termStart = futureTermMonday();
+    const mon = termStart;
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/schedule?subject=${subjectId}`);
-    await page.getByLabel("Term start").fill("2026-09-14");
+    await page.getByLabel("Term start").fill(toDateInputValue(termStart));
     await page.getByLabel("Weeks").fill("2");
 
-    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon)}`) }).click();
     const add = page.getByRole("dialog", { name: "Add meeting" });
     await add.getByLabel("Name").fill("Chapter 1");
     await add.locator('select[name="categoryId"]').selectOption({ label: klass.name });
     await add.getByRole("button", { name: "Add" }).click();
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
 
-    await page.getByRole("button", { name: /\+ Add on Mon 14/ }).click();
+    await page.getByRole("button", { name: new RegExp(`\\+ Add on ${formatDayHeading(mon)}`) }).click();
     const clash = page.getByRole("dialog", { name: "Add meeting" });
     await clash.getByLabel("Name").fill("Chapter 1 again");
     await clash.locator('select[name="categoryId"]').selectOption({ label: klass.name });

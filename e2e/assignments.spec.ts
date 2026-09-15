@@ -52,7 +52,7 @@ test.describe("course assignments", () => {
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Submit assignment" }).click())).toBe(
       "success",
     );
-    await expect(page.getByText("Submitted")).toBeVisible();
+    await expect(page.getByText(/Out of \d+ · Submitted/)).toBeVisible();
 
     await signOut(page);
     await login(page, teacher.email, teacherPassword);
