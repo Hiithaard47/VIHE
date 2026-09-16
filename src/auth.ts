@@ -64,7 +64,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (user.email) token.email = user.email;
         return token;
       }
-      if (token.kind === "student") return token;
+      if (token.kind === "student") {
+        if (token.id) {
+          const student = await prisma.student.findUnique({
+            where: { id: token.id },
+            select: { name: true, email: true },
+          });
+          if (student?.name) token.name = student.name;
+          if (student?.email) token.email = student.email;
+        }
+        return token;
+      }
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
         if (dbUser) {
@@ -79,6 +89,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
       if (token.kind === "staff" && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { name: true, email: true },
+        });
+        if (dbUser?.name) token.name = dbUser.name;
+        if (dbUser?.email) token.email = dbUser.email;
         const { roles, permissions } = await getUserPermissions(token.id);
         token.roles = roles;
         token.permissions = permissions;

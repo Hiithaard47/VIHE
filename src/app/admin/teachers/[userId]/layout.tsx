@@ -35,7 +35,7 @@ export default async function AdminTeacherLayout({
         action={
           <form action={toggleUserActive.bind(null, user.id)}>
             <input type="hidden" name="nextActive" value={(!user.isActive).toString()} />
-            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               {user.isActive ? "Archive" : "Restore"}
             </button>
           </form>

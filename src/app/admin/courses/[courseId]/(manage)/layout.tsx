@@ -32,7 +32,7 @@ export default async function AdminCourseLayout({
         action={
           <form action={toggleCourseActive.bind(null, course.id)}>
             <input type="hidden" name="nextActive" value={(!course.isActive).toString()} />
-            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               {course.isActive ? "Archive" : "Restore"}
             </button>
           </form>

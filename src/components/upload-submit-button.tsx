@@ -4,7 +4,7 @@ import { useRef, useState, type ChangeEvent, type ComponentProps, type DragEvent
 import { useFormStatus } from "react-dom";
 
 const buttonClassName =
-  "w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent disabled:cursor-wait disabled:opacity-60";
+  "w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60";
 
 function fileMatchesAccept(file: File, accept?: string) {
   if (!accept) return true;

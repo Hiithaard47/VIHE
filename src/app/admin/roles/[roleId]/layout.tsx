@@ -37,7 +37,7 @@ export default async function AdminRoleLayout({
         action={
           !role.isSystem ? (
             <form action={deleteRole.bind(null, role.id)}>
-              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
                 Delete
               </button>
             </form>

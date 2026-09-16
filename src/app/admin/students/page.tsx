@@ -269,7 +269,7 @@ function ApplicationCards({
                   required
                   className="w-32 rounded-md border border-hairline bg-input px-2 py-1.5 text-xs text-ink placeholder:text-muted"
                 />
-                <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-accent">
+                <button type="submit" className="rounded-md bg-ink px-3 py-1.5 text-xs font-semibold text-white">
                   Approve
                 </button>
               </form>

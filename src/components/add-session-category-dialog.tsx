@@ -11,7 +11,7 @@ export function AddSessionCategoryDialog() {
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add category
       </button>
@@ -56,7 +56,7 @@ export function AddSessionCategoryDialog() {
               </span>
             </span>
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Create category
           </button>
         </form>

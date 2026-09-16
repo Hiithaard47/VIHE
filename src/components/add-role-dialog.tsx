@@ -11,7 +11,7 @@ export function AddRoleDialog() {
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add role
       </button>
@@ -39,7 +39,7 @@ export function AddRoleDialog() {
             <span className="text-muted">Description</span>
             <input name="description" className="rounded-md border border-hairline bg-input px-3 py-2 text-ink placeholder:text-muted" />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Create role
           </button>
         </form>

@@ -114,7 +114,7 @@ export async function CourseSessionsView({
                 ))}
               </select>
             </label>
-            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               Create session
             </button>
           </form>

@@ -35,7 +35,7 @@ export default async function AdminTeacherDetailsPage({
             <input name="phone" type="tel" defaultValue={user.phone ?? ""} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
           {user.isActive && (
-            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               Save details
             </button>
           )}
@@ -53,7 +53,7 @@ export default async function AdminTeacherDetailsPage({
             Confirm password
             <input name="confirm" type="password" required minLength={8} className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Reset password
           </button>
         </form>

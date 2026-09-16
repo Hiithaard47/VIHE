@@ -2,10 +2,11 @@ import Link from "next/link";
 import { UserMenu } from "@/components/user-menu";
 import { AppHeader } from "@/components/app-header";
 import { requireStudent } from "@/lib/rbac";
-import { displayUserName } from "@/lib/user-name";
+import { sessionDisplayName } from "@/lib/session-display-name";
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await requireStudent();
+  const name = await sessionDisplayName(session);
 
   return (
     <div className="min-h-screen">
@@ -16,7 +17,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
             <Link href="/student" className="text-white/70 hover:text-accent">
               My courses
             </Link>
-            <UserMenu name={displayUserName(session.user)} accountHref="/student/account" />
+            <UserMenu name={name} accountHref="/student/account" />
           </nav>
         }
       />

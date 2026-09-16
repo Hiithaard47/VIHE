@@ -18,7 +18,7 @@ export function AddStudentDialog({
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add student
       </button>
@@ -91,7 +91,7 @@ export function AddStudentDialog({
               ))}
             </fieldset>
           )}
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Create student
           </button>
         </form>

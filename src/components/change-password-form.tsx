@@ -30,7 +30,7 @@ export function ChangePasswordForm({ action }: { action: (formData: FormData) =>
           className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
         />
       </label>
-      <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+      <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
         Update password
       </button>
     </form>

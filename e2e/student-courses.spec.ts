@@ -11,7 +11,8 @@ test.describe("student: my courses and sessions", () => {
     await prisma.course.update({ where: { id: completed.id }, data: { isActive: false } });
     const email = `${unique("stu")}@example.com`;
     const password = "StudentPass123!";
-    const student = await createStudent(`Portal Student ${unique("s")}`, unique("PS").toUpperCase(), active.id, {
+    const studentName = `Portal Student ${unique("s")}`;
+    const student = await createStudent(studentName, unique("PS").toUpperCase(), active.id, {
       email,
       password,
     });
@@ -31,6 +32,7 @@ test.describe("student: my courses and sessions", () => {
 
     await login(page, email, password);
     await expect(page).toHaveURL(/\/student/);
+    await expect(page.getByRole("button", { name: `Account menu for ${studentName}` })).toBeVisible();
     await expect(page.getByRole("heading", { name: "My courses" })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Active/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Completed/ })).toBeVisible();

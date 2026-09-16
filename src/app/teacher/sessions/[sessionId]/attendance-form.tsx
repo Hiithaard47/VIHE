@@ -113,7 +113,7 @@ export function AttendanceForm({
                     {STATUS_OPTIONS.map((opt) => (
                       <label
                         key={opt.value}
-                        className="inline-flex cursor-pointer items-center rounded-full border border-hairline px-3 py-1.5 text-xs text-muted has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-accent has-[:checked]:font-medium"
+                        className="inline-flex cursor-pointer items-center rounded-full border border-hairline px-3 py-1.5 text-xs text-muted has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white has-[:checked]:font-medium"
                       >
                         <input
                           type="radio"
@@ -157,7 +157,7 @@ export function AttendanceForm({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted">{saving ? "Saving…" : "Autosaves as you go"}</span>
-          <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Save attendance
           </button>
         </div>

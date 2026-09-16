@@ -40,14 +40,14 @@ export default async function AdminSessionCategoryPage({
         action={
           category.isSystem ? undefined : category.isActive ? (
             <form action={removeSessionCategory.bind(null, category.id)}>
-              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
                 Remove
               </button>
             </form>
           ) : (
             <form action={toggleSessionCategoryActive.bind(null, category.id)}>
               <input type="hidden" name="nextActive" value="true" />
-              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+              <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
                 Restore
               </button>
             </form>
@@ -98,7 +98,7 @@ export default async function AdminSessionCategoryPage({
                 </span>
               </label>
               {category.isActive && (
-                <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+                <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
                   Save details
                 </button>
               )}

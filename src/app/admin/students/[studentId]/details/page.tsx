@@ -57,7 +57,7 @@ export default async function AdminStudentDetailsPage({
             </span>
           </label>
           {student.isActive && (
-            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               Save details
             </button>
           )}

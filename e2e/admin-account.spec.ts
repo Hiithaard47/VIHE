@@ -4,11 +4,13 @@ import { createAdmin } from "./db";
 
 test.describe("admin: account password", () => {
   test("changes their own password and signs in with the new one", async ({ page }) => {
+    const name = `Own Password Admin ${unique("a")}`;
     const email = `${unique("adminpw")}@example.com`;
     const current = "AdminPass123!";
-    await createAdmin(`Own Password Admin ${unique("a")}`, email, current);
+    await createAdmin(name, email, current);
 
     await login(page, email, current);
+    await expect(page.getByRole("button", { name: `Account menu for ${name}` })).toBeVisible();
     await page.goto("/admin/account");
     await page.getByLabel("Current password").fill(current);
     await page.getByLabel("New password", { exact: true }).fill("ChangedPass123!");

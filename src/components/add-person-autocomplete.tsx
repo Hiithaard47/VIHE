@@ -49,7 +49,7 @@ export function AddPersonDialog({
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         {buttonLabel}
       </button>
@@ -109,7 +109,7 @@ export function AddPersonDialog({
           <button
             type="submit"
             disabled={!personId}
-            className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent disabled:opacity-50"
+            className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {buttonLabel}
           </button>

@@ -4,11 +4,13 @@ import { createTeacher } from "./db";
 
 test.describe("teacher: account password", () => {
   test("changes their own password and signs in with the new one", async ({ page }) => {
+    const name = `Own Password Teacher ${unique("t")}`;
     const email = `${unique("ownpw")}@example.com`;
     const current = "TeacherPass123!";
-    await createTeacher(`Own Password Teacher ${unique("t")}`, email, current);
+    await createTeacher(name, email, current);
 
     await login(page, email, current);
+    await expect(page.getByRole("button", { name: `Account menu for ${name}` })).toBeVisible();
     await page.goto("/teacher/account");
     await page.getByLabel("Current password").fill(current);
     await page.getByLabel("New password", { exact: true }).fill("ChangedPass123!");

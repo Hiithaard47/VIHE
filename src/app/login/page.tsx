@@ -44,7 +44,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader subtitle="Vrindavan Institute for Higher Education" />
+      <AppHeader />
 
       <main className="mx-auto flex max-w-sm flex-col px-4 py-16">
         <div className="rounded-xl border border-hairline bg-card p-7">
@@ -80,7 +80,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 rounded-md bg-ink px-3 py-2.5 text-sm font-semibold text-accent disabled:opacity-50"
+              className="mt-2 rounded-md bg-ink px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? "Signing in…" : "Sign in"}
             </button>

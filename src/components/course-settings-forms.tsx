@@ -42,7 +42,7 @@ export function CourseDetailsForm({
         </label>
         <LoginMonthsField value={course.loginMonths} />
         {!disabled && (
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Save details
           </button>
         )}
@@ -112,7 +112,7 @@ export function CoursePolicyForm({
         </label>
 
         {!disabled && (
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Save policy
           </button>
         )}

@@ -28,6 +28,10 @@ export async function signOut(page: Page) {
   await page.getByRole("menuitem", { name: "Sign out" }).click();
 }
 
+export function accountMenuButton(page: Page, name: string) {
+  return page.getByRole("button", { name: `Account menu for ${name}` });
+}
+
 // Triggers a server action (via `trigger`, e.g. a button click) and waits
 // for its redirect to land with a flash message, returning whether it was
 // a success or error banner.

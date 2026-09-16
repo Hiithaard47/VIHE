@@ -84,7 +84,7 @@ export default async function AdminStudentCoursesPage({
             {courses.length === 0 && <p className="text-sm text-muted">No courses in this tab.</p>}
           </fieldset>
           {courses.length > 0 && (
-            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+            <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
               Save enrollment
             </button>
           )}

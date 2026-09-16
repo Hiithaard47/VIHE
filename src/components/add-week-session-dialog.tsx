@@ -122,7 +122,7 @@ export function AddWeekSessionDialog({
         <button
           type="submit"
           disabled={busy}
-          className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent disabled:opacity-60"
+          className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {submitLabel}
         </button>

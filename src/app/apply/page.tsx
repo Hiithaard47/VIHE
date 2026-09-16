@@ -12,7 +12,7 @@ export default async function ApplyPage({
 
   return (
     <div className="min-h-screen">
-      <AppHeader subtitle="Vrindavan Institute for Higher Education" />
+      <AppHeader />
 
       <main className="mx-auto flex max-w-sm flex-col px-4 py-16">
         {submitted ? (
@@ -172,7 +172,7 @@ async function ApplicationForm() {
           </label>
         </div>
 
-        <button type="submit" className="rounded-md bg-ink px-3 py-2.5 text-sm font-semibold text-accent">
+        <button type="submit" className="rounded-md bg-ink px-3 py-2.5 text-sm font-semibold text-white">
           Submit application
         </button>
       </form>

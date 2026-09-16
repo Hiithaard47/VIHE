@@ -11,7 +11,7 @@ export function AddSubjectDialog({ courseId }: { courseId: string }) {
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add subject
       </button>
@@ -40,7 +40,7 @@ export function AddSubjectDialog({ courseId }: { courseId: string }) {
               className="rounded-md border border-hairline bg-input px-3 py-2 text-ink placeholder:text-muted"
             />
           </label>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Create subject
           </button>
         </form>

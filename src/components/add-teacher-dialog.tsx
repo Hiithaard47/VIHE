@@ -11,7 +11,7 @@ export function AddTeacherDialog({ roles }: { roles: { id: string; name: string 
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent"
+        className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add teacher
       </button>
@@ -71,7 +71,7 @@ export function AddTeacherDialog({ roles }: { roles: { id: string; name: string 
               </label>
             ))}
           </fieldset>
-          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-accent">
+          <button type="submit" className="w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Create teacher
           </button>
         </form>
