@@ -6,7 +6,7 @@ import { requireActiveCourse, requireCourseConfigure } from "@/lib/rbac";
 import { assertWritableSubject } from "@/lib/subject-scope";
 import { insertSession } from "@/lib/session-write";
 import { courseHref, parseCoursePortal, scheduleHref, type CoursePortal } from "@/lib/course-workspace";
-import { hasSessionsManagePast } from "@/lib/permissions";
+import { canManagePastSessionDates } from "@/lib/permissions";
 import { isFutureSessionDate, parseDateInput } from "@/lib/time";
 import { mondayOf, parseMeetingTimes } from "@/lib/schedule";
 
@@ -67,7 +67,7 @@ export async function createScheduleSession(
   });
   if (!category) return { error: "Pick a session category." };
 
-  const allowPast = hasSessionsManagePast(session.user.permissions);
+  const allowPast = canManagePastSessionDates(session.user.permissions, portal);
   const created = await insertSession({
     subjectId,
     categoryId: category.id,
@@ -94,7 +94,7 @@ export async function duplicateOneOffSession(
   await requireActiveCourse(courseId, scheduleHref(portal, courseId));
   const date = parseDateInput(input.date);
   if (!date) return { error: "Pick a valid date." };
-  const allowPast = hasSessionsManagePast(session.user.permissions);
+  const allowPast = canManagePastSessionDates(session.user.permissions, portal);
   if (!allowPast && !isFutureSessionDate(date)) {
     return { error: "Cannot add a session on or before today." };
   }

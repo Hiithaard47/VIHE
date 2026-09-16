@@ -5,7 +5,7 @@ import { loadCourseWorkspace } from "@/lib/rbac";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { SubjectField } from "@/components/course-workspace-fields";
 import { firstTeacherCoursePath, sessionHref, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
-import { hasSessionsManage, hasSessionsManagePast, hasSessionsRead } from "@/lib/permissions";
+import { canManagePastSessionDates, hasSessionsManage, hasSessionsRead } from "@/lib/permissions";
 import {
   DEFAULT_SESSION_CATEGORY_NAME,
   groupSessionsByCategory,
@@ -33,7 +33,7 @@ export async function CourseSessionsView({
     redirect(firstTeacherCoursePath(courseId, perms));
   }
   const canWriteSessions = canManage && hasSessionsManage(perms);
-  const canManagePastDates = hasSessionsManagePast(perms);
+  const canManagePastDates = canManagePastSessionDates(perms, portal);
 
   const [course, categories] = await Promise.all([
     prisma.course.findUnique({

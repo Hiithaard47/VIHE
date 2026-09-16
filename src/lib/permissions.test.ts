@@ -7,6 +7,7 @@ import {
   hasSessionsRead,
   hasSessionsManage,
   hasSessionsManagePast,
+  canManagePastSessionDates,
   hasStudentsRead,
   hasAttendanceAccess,
   hasWorkspaceWrite,
@@ -61,6 +62,9 @@ describe("permission registry", () => {
     expect(hasSessionsManage([PERMISSIONS.SESSIONS_READ])).toBe(false);
     expect(hasSessionsManagePast([PERMISSIONS.SESSIONS_MANAGE_PAST])).toBe(true);
     expect(hasSessionsManagePast([PERMISSIONS.SESSIONS_MANAGE])).toBe(false);
+    expect(canManagePastSessionDates([], "admin")).toBe(true);
+    expect(canManagePastSessionDates([], "teacher")).toBe(false);
+    expect(canManagePastSessionDates([PERMISSIONS.SESSIONS_MANAGE_PAST], "teacher")).toBe(true);
 
     expect(hasStudentsRead([PERMISSIONS.STUDENTS_READ])).toBe(true);
     expect(hasStudentsRead([PERMISSIONS.STUDENTS_MANAGE])).toBe(true);
