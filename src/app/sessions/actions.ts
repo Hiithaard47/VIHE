@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSubjectAccess, requireAnyPermission } from "@/lib/rbac";
-import { hasSessionsManagePast, PERMISSIONS } from "@/lib/permissions";
+import { canManagePastSessionDates, PERMISSIONS } from "@/lib/permissions";
 import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
@@ -28,7 +28,7 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   await requireSubjectAccess(classSession.subjectId, portal);
   const fallback = sessionHref(portal, sessionId);
   const path = safeWorkspaceReturnTo(formData.get("returnTo"), fallback);
-  const allowPast = hasSessionsManagePast(auth.user.permissions);
+  const allowPast = canManagePastSessionDates(auth.user.permissions, portal);
 
   if (!allowPast && !isFutureSessionDate(classSession.date)) {
     redirect(flashUrl(path, "error", "Only future sessions can change date or time."));
@@ -210,7 +210,7 @@ export async function moveSession(sessionId: string, portalArg: CoursePortal, fo
   if (classSession._count.records > 0) {
     redirect(flashUrl(path, "error", "Cannot move a session that has attendance."));
   }
-  const allowPast = hasSessionsManagePast(auth.user.permissions);
+  const allowPast = canManagePastSessionDates(auth.user.permissions, portal);
   if (!allowPast && !isFutureSessionDate(classSession.date)) {
     redirect(flashUrl(path, "error", "Cannot change a session on or before today."));
   }

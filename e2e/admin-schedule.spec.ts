@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsAdmin, unique } from "./helpers";
+import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, defaultSessionCategory, prisma } from "./db";
 import { mondayOf } from "../src/lib/schedule";
 import { addUtcDays, formatDayHeading, startOfTodayUtc, toDateInputValue } from "../src/lib/time";
@@ -10,12 +10,13 @@ function pastTermMonday() {
 }
 
 test.describe("admin: week schedule", () => {
-  test("can add a meeting on a previous day", async ({ page }) => {
+  test("can add, duplicate, and remove a meeting on a previous day", async ({ page }) => {
     const course = await createCourse(`Admin Past Schedule ${unique("c")}`, unique("APS").toUpperCase());
     const klass = await defaultSessionCategory();
     const subjectId = course.subjects[0].id;
     const termStart = pastTermMonday();
     const mon = termStart;
+    const tue = addUtcDays(termStart, 1);
 
     await loginAsAdmin(page);
     await page.goto(`/admin/courses/${course.id}/subjects/${subjectId}/schedule`);
@@ -32,7 +33,10 @@ test.describe("admin: week schedule", () => {
     await add.getByLabel("End").fill("10:30");
     await add.getByRole("button", { name: "Add" }).click();
 
-    await expect(page.getByRole("article").filter({ hasText: "Makeup class" })).toBeVisible();
+    const card = page.getByRole("article").filter({ hasText: "Makeup class" });
+    await expect(card).toBeVisible();
+    await expect(card.getByRole("button", { name: "Duplicate" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Remove" })).toBeVisible();
     await expect
       .poll(() =>
         prisma.classSession.count({
@@ -40,5 +44,16 @@ test.describe("admin: week schedule", () => {
         }),
       )
       .toBe(1);
+
+    await card.getByRole("button", { name: "Duplicate" }).click();
+    await expect(page.getByRole("region", { name: formatDayHeading(tue) }).getByText("Makeup class")).toBeVisible();
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Makeup class" } })).toBe(2);
+
+    expect(
+      await waitForFlashAfter(page, () =>
+        page.getByRole("region", { name: formatDayHeading(tue) }).getByRole("button", { name: "Remove" }).click(),
+      ),
+    ).toBe("success");
+    await expect.poll(() => prisma.classSession.count({ where: { subjectId, name: "Makeup class" } })).toBe(1);
   });
 });

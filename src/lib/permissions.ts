@@ -81,6 +81,14 @@ export function hasSessionsManagePast(permissions: readonly string[]) {
   return permissions.includes(PERMISSIONS.SESSIONS_MANAGE_PAST);
 }
 
+/** Admin portal always may edit past/today sessions; teachers need sessions.manage_past. */
+export function canManagePastSessionDates(
+  permissions: readonly string[],
+  portal?: "teacher" | "admin",
+) {
+  return portal === "admin" || hasSessionsManagePast(permissions);
+}
+
 export function hasStudentsRead(permissions: readonly string[]) {
   return permissions.includes(PERMISSIONS.STUDENTS_READ) || permissions.includes(PERMISSIONS.STUDENTS_MANAGE);
 }
