@@ -21,6 +21,11 @@ test.describe("admin: teachers", () => {
     const side = page.getByRole("navigation").filter({ hasText: "Dashboard" });
     await expect(side.getByRole("link", { name: "Teachers" })).toHaveAttribute("aria-current", "page");
     await expect(side.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current", "page");
+    await expect(side.getByRole("button", { name: "Settings" })).toBeVisible();
+    await expect(side.getByRole("link", { name: "Session categories" })).toHaveCount(0);
+    await side.getByRole("button", { name: "Settings" }).click();
+    await expect(side.getByRole("link", { name: "Session categories" })).toBeVisible();
+    await expect(side.getByRole("link", { name: "Roles & permissions" })).toBeVisible();
 
     await side.getByRole("link", { name: "Courses" }).click();
     await expect(page).toHaveURL(/\/admin\/courses/);
