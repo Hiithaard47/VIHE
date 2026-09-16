@@ -74,7 +74,7 @@ export async function SessionDetailView({
           &larr; {classSession.subject.course.name}
         </Link>
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h1 className="font-heading text-lg font-semibold text-ink">{classSession.name}</h1>
             <p className="text-sm text-muted">
               {classSession.category.name} · {formatDisplayDate(classSession.date)}

@@ -14,7 +14,10 @@ export function TeacherNav({ showCourses, showStudents }: { showCourses: boolean
   const visible = LINKS.filter((item) => (item.key === "courses" ? showCourses : showStudents));
 
   return (
-    <nav className="flex w-44 shrink-0 flex-col gap-1 text-sm print:hidden">
+    <nav
+      aria-label="Teacher"
+      className="flex gap-1 overflow-x-auto text-sm print:hidden md:w-44 md:shrink-0 md:flex-col"
+    >
       {visible.map((item) => {
         const active = isTeacherNavActive(pathname, item.href);
         return (
@@ -22,7 +25,7 @@ export function TeacherNav({ showCourses, showStudents }: { showCourses: boolean
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-md px-3 py-2 ${
+            className={`shrink-0 rounded-md px-3 py-2 ${
               active
                 ? "bg-card font-semibold text-accent-dark"
                 : "text-ink hover:bg-card hover:text-accent-dark"

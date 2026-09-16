@@ -88,24 +88,24 @@ export async function CourseSessionsView({
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">New session</h2>
           <form
             action={createSession.bind(null, courseId, portal)}
-            className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end"
           >
             <SubjectField subjects={writableSubjects} />
-            <label className="flex flex-col gap-1 text-sm text-ink">
+            <label className="flex min-w-0 flex-col gap-1 text-sm text-ink">
               Date
-              <input type="date" name="date" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
+              <input type="date" name="date" required className="w-full min-w-0 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink" />
             </label>
-            <label className="flex flex-1 flex-col gap-1 text-sm text-ink">
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-ink">
               Name
-              <input name="name" required className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
+              <input name="name" required className="w-full min-w-0 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted" />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-ink">
+            <label className="flex min-w-0 flex-col gap-1 text-sm text-ink">
               Category
               <select
                 name="categoryId"
                 required
                 defaultValue={createCategoryId}
-                className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
+                className="w-full min-w-0 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
               >
                 {categories.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -114,7 +114,7 @@ export async function CourseSessionsView({
                 ))}
               </select>
             </label>
-            <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
+            <button type="submit" className="w-full rounded-md bg-ink px-3 py-2.5 text-sm font-semibold text-white sm:w-auto sm:py-2">
               Create session
             </button>
           </form>
@@ -123,7 +123,7 @@ export async function CourseSessionsView({
 
       <section>
         {tabs.length > 0 && (
-          <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-hairline">
+          <nav className="-mx-4 -mb-px flex gap-1 overflow-x-auto border-b border-hairline px-4 md:mx-0 md:px-0">
             {tabs.map((tab) => {
               const active = tab.id === selected?.id;
               return (
@@ -162,9 +162,9 @@ export async function CourseSessionsView({
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-card p-4"
+                  className="flex items-start justify-between gap-3 rounded-lg border border-hairline bg-card p-4 sm:items-center"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     {hasSessionsRead(perms) ? (
                       <Link href={sessionHref(portal, item.id)} className="hover:opacity-80">
                         {heading}
@@ -173,7 +173,7 @@ export async function CourseSessionsView({
                       heading
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <span className="text-xs text-muted">{item._count.records} marked</span>
                     {canWriteSessions && (
                       <SessionActionsMenu

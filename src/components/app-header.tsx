@@ -14,7 +14,7 @@ export function AppHeader({ subtitle, right }: { subtitle?: string; right?: Reac
             className="h-10 w-32 shrink-0 object-cover object-left sm:h-16 sm:w-auto"
           />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-white">Vihe Attendance</span>
+            <span className="truncate text-sm font-semibold text-white max-sm:sr-only">Vihe Attendance</span>
             {subtitle ? <span className="block truncate text-[11px] text-accent">{subtitle}</span> : null}
           </span>
         </Link>

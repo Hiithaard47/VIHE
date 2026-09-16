@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Source_Serif_4, Work_Sans } from "next/font/google";
 import { AppFooter } from "@/components/app-footer";
 import "./globals.css";
@@ -18,6 +18,12 @@ const workSans = Work_Sans({
 export const metadata: Metadata = {
   title: "Vihe Attendance",
   description: "Attendance tracking for teachers and admins",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

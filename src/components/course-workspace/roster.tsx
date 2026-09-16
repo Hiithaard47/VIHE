@@ -58,7 +58,7 @@ export async function CourseRosterView({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           Roster &middot; {rows.length} student(s)
         </h2>

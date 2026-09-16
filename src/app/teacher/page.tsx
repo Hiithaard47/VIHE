@@ -69,9 +69,9 @@ export default async function TeacherHome({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-hairline bg-canvas text-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Course</th>
-                <th className="px-4 py-2 font-medium">Subjects</th>
-                <th className="px-4 py-2 font-medium">Students</th>
+                <th className="px-3 py-2 font-medium sm:px-4">Course</th>
+                <th className="px-3 py-2 font-medium sm:px-4">Subjects</th>
+                <th className="px-3 py-2 font-medium sm:px-4">Students</th>
               </tr>
             </thead>
             <tbody>
@@ -79,13 +79,13 @@ export default async function TeacherHome({
                 const studentCount = course._count.enrollments;
                 return (
                   <tr key={course.id} className="border-b border-hairline text-ink last:border-0 align-top">
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 sm:px-4">
                       <Link href={`/teacher/courses/${course.id}`} className="font-heading font-medium hover:text-accent-dark">
                         {course.name}
                       </Link>
                       <p className="text-xs text-muted">{course.code}</p>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 sm:px-4">
                       <ul className="flex flex-col gap-1">
                         {course.subjects.map((subject) => (
                           <li key={subject.id}>
@@ -99,7 +99,7 @@ export default async function TeacherHome({
                         ))}
                       </ul>
                     </td>
-                    <td className="px-4 py-3">{studentCount}</td>
+                    <td className="px-3 py-3 sm:px-4">{studentCount}</td>
                   </tr>
                 );
               })}

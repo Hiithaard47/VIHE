@@ -173,11 +173,11 @@ export function ScheduleEditor({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
           <h2 className="font-heading text-base font-semibold text-ink">Schedule · {subjectName}</h2>
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-sm text-ink">
+            <label className="flex min-w-0 flex-col gap-1 text-sm text-ink">
               Term start
               <input
                 type="date"
@@ -188,7 +188,7 @@ export function ScheduleEditor({
                   setTermStart(next);
                   persistSoon(next, safeCount);
                 }}
-                className="rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
+                className="w-full min-w-0 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm text-ink">

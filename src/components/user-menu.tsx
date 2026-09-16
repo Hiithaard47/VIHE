@@ -32,7 +32,7 @@ export function UserMenu({ name, accountHref }: { name: string; accountHref: str
         aria-expanded={open}
         aria-label={`Account menu for ${name}`}
         onClick={() => setOpen((value) => !value)}
-        className="flex max-w-48 items-center gap-1 text-sm text-white hover:text-accent"
+        className="flex max-w-28 items-center gap-1 text-sm text-white hover:text-accent sm:max-w-48"
       >
         <span className="truncate">{name}</span>
         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" aria-hidden>

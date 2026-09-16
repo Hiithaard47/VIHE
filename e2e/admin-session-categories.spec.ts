@@ -19,7 +19,7 @@ test.describe("admin: session categories", () => {
     await expect(page).toHaveURL(/\/admin\/session-categories(\?|$)/);
     const row = page.locator("tr", { hasText: name });
     await expect(row).toBeVisible();
-    await expect(row.getByText("80")).toBeVisible();
+    await expect(row.getByText("80", { exact: true })).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
     const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Create session" }) });

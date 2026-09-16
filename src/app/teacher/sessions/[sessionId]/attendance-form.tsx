@@ -74,18 +74,18 @@ export function AttendanceForm({
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <input
           type="text"
           placeholder="Search by name, roll no., email, or mobile"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-56 rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted"
+          className="w-full rounded-md border border-hairline bg-input px-3 py-2 text-sm text-ink placeholder:text-muted sm:max-w-xs sm:flex-1"
         />
         <button
           type="button"
           onClick={() => markAll("PRESENT")}
-          className="rounded-md border border-hairline px-3 py-2 text-xs font-medium text-ink hover:bg-canvas"
+          className="w-full rounded-md border border-hairline px-3 py-2 text-xs font-medium text-ink hover:bg-canvas sm:w-auto"
         >
           Mark all present
         </button>
@@ -93,7 +93,7 @@ export function AttendanceForm({
 
       <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-hairline bg-canvas text-muted">
+          <thead className="hidden border-b border-hairline bg-canvas text-muted sm:table-header-group">
             <tr>
               <th className="px-4 py-2 font-medium">Roll no.</th>
               <th className="px-4 py-2 font-medium">Student</th>
@@ -104,16 +104,21 @@ export function AttendanceForm({
             {students.map((student) => (
               <tr
                 key={student.id}
-                className={`border-b border-hairline text-ink last:border-0 ${visibleIds.has(student.id) ? "" : "hidden"}`}
+                className={`border-b border-hairline text-ink last:border-0 ${
+                  visibleIds.has(student.id) ? "flex flex-col gap-2 px-3 py-3 sm:table-row sm:px-0 sm:py-0" : "hidden"
+                }`}
               >
-                <td className="px-4 py-3">{student.rollNumber}</td>
-                <td className="px-4 py-3">{student.name}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                <td className="hidden px-4 py-3 sm:table-cell">{student.rollNumber}</td>
+                <td className="px-0 py-0 sm:px-4 sm:py-3">
+                  <p>{student.name}</p>
+                  <p className="text-xs text-muted sm:hidden">{student.rollNumber}</p>
+                </td>
+                <td className="px-0 py-0 sm:px-4 sm:py-3">
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     {STATUS_OPTIONS.map((opt) => (
                       <label
                         key={opt.value}
-                        className="inline-flex cursor-pointer items-center rounded-full border border-hairline px-3 py-1.5 text-xs text-muted has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white has-[:checked]:font-medium"
+                        className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-hairline px-3 py-2 text-xs text-muted has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:font-medium has-[:checked]:text-white sm:min-h-0 sm:justify-start sm:py-1.5"
                       >
                         <input
                           type="radio"
@@ -148,14 +153,14 @@ export function AttendanceForm({
         </table>
       </div>
 
-      <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-card px-4 py-3 shadow-[0_4px_16px_rgba(32,36,46,0.08)]">
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t border-hairline bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(32,36,46,0.08)] sm:bottom-4 sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:rounded-lg sm:border sm:pb-3 sm:shadow-[0_4px_16px_rgba(32,36,46,0.08)]">
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
           <span className="font-medium text-ink">{counts.PRESENT} present</span>
           <span>{counts.ABSENT} absent</span>
           <span>{counts.LATE} late</span>
           <span>{counts.EXCUSED} excused</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
           <span className="text-xs text-muted">{saving ? "Saving…" : "Autosaves as you go"}</span>
           <button type="submit" className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white">
             Save attendance

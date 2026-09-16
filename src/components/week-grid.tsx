@@ -86,7 +86,7 @@ export function WeekGrid({
               isToday ? "border-ink" : "border-hairline"
             } ${isOver ? "bg-canvas" : "bg-card"}`}
           >
-            <h3 className="w-16 shrink-0 pt-1 text-sm font-semibold text-ink">{formatDayHeading(day)}</h3>
+            <h3 className="w-16 shrink-0 pt-1 text-sm font-semibold text-ink sm:w-20">{formatDayHeading(day)}</h3>
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               {cardsOn(day).map((card) => (
                 <WeekCard

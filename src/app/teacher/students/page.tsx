@@ -57,21 +57,26 @@ export default async function TeacherStudentsPage({
         <table className="w-full text-left text-sm">
           <thead className="border-b border-hairline bg-canvas text-muted">
             <tr>
-              <th className="px-4 py-2 font-medium">Roll no.</th>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Mobile</th>
-              <th className="px-4 py-2 font-medium">Courses</th>
+              <th className="px-3 py-2 font-medium sm:px-4">Roll no.</th>
+              <th className="px-3 py-2 font-medium sm:px-4">Name</th>
+              <th className="hidden px-4 py-2 font-medium sm:table-cell">Email</th>
+              <th className="hidden px-4 py-2 font-medium sm:table-cell">Mobile</th>
+              <th className="px-3 py-2 font-medium sm:px-4">Courses</th>
             </tr>
           </thead>
           <tbody>
             {students.map((student) => (
               <tr key={student.id} className="border-b border-hairline text-ink last:border-0">
-                <td className="px-4 py-3">{student.rollNumber}</td>
-                <td className="px-4 py-3">{student.name}</td>
-                <td className="px-4 py-3 text-muted">{student.email || "—"}</td>
-                <td className="px-4 py-3 text-muted">{student.phone || "—"}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3 sm:px-4">{student.rollNumber}</td>
+                <td className="px-3 py-3 sm:px-4">
+                  {student.name}
+                  <p className="text-xs text-muted sm:hidden">
+                    {[student.email, student.phone].filter(Boolean).join(" · ") || "No contact"}
+                  </p>
+                </td>
+                <td className="hidden px-4 py-3 text-muted sm:table-cell">{student.email || "—"}</td>
+                <td className="hidden px-4 py-3 text-muted sm:table-cell">{student.phone || "—"}</td>
+                <td className="px-3 py-3 sm:px-4">
                   <div className="flex flex-wrap gap-1">
                     {student.enrollments.map((e) => (
                       <span key={e.courseId} className="rounded-full bg-canvas px-2 py-0.5 text-xs text-muted">

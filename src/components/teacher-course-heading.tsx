@@ -18,7 +18,7 @@ export function TeacherCourseHeading({
 
   return (
     <>
-      <h1 className="font-heading text-lg font-semibold text-ink">{name}</h1>
+      <h1 className="font-heading text-lg font-semibold break-words text-ink">{name}</h1>
       <p className="text-sm text-muted">
         {code}
         {selectedSubject ? ` · ${selectedSubject.name}` : ""}
