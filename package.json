@@ -7,19 +7,19 @@
     "build": "next build",
     "start": "next start",
     "start:prod": "sh scripts/start-prod.sh",
-    "lint": "eslint .",
+    "lint": "eslint . --cache",
     "prisma:generate": "prisma generate",
     "migrate": "prisma generate && prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "db:clean": "prisma migrate reset --force --skip-seed",
     "db:migrate": "prisma generate && prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "ci": "npm run db:migrate && npm run db:seed && npm run build",
+    "bootstrap": "npm run db:migrate && npm run db:seed && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e:prepare": "tsx scripts/e2e-prepare.ts",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e": "npm run test:e2e:prepare && playwright test",
+    "test:e2e:ui": "npm run test:e2e:prepare && playwright test --ui"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

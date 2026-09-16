@@ -1,9 +1,10 @@
 # Unit tests + sharded Playwright e2e on every PR / push to main.
 # Any failing job marks the check red (require these checks to block merges).
+# Production deploy is invoked from this workflow after green CI on main.
 #
 # Speed notes:
 # - Shared Next build artifact → shards use `next start` (no per-route compile)
-# - Playwright browser cache avoids re-downloading Chromium each shard
+# - npm, Next.js, ESLint, and Playwright caches reuse work across runs
 # - DB prepare runs once per shard before Playwright (webServer only boots the app)
 name: CI
 
@@ -15,7 +16,7 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -41,14 +42,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
+      - name: Setup Node app
+        uses: ./.github/actions/setup-node-app
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Cache ESLint and TypeScript
+        uses: actions/cache@v4
+        with:
+          path: |
+            .eslintcache
+            tsconfig.tsbuildinfo
+            .next-e2e/cache
+          key: lint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs', 'tsconfig.json') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          restore-keys: |
+            lint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs', 'tsconfig.json') }}-
+            lint-${{ runner.os }}-
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
 
       - name: Run unit tests
         run: npm test
@@ -62,17 +75,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node app
+        uses: ./.github/actions/setup-node-app
         with:
-          node-version: "22"
-          cache: npm
+          generate-prisma: "true"
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
+      - name: Cache Next.js
+        uses: actions/cache@v4
+        with:
+          path: .next-e2e/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.mjs') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.mjs') }}-
+            nextjs-${{ runner.os }}-
 
       - name: Build Next.js for e2e
         run: npx next build
@@ -99,7 +114,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2]
 
     services:
       postgres:
@@ -120,22 +135,16 @@ jobs:
         image: mcr.microsoft.com/azure-storage/azurite
         ports:
           - 10000:10000
+        options: --health-cmd "node -e \"require('net').connect(10000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\"" --health-interval 5s --health-timeout 5s --health-retries 12
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node app
+        uses: ./.github/actions/setup-node-app
         with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
+          generate-prisma: "true"
 
       - name: Download e2e build
         uses: actions/download-artifact@v4
@@ -152,6 +161,8 @@ jobs:
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install Playwright Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -161,18 +172,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Wait for Azurite
-        run: |
-          for i in $(seq 1 30); do
-            if (echo >/dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; then
-              echo "Azurite is up"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Azurite did not become ready in time" >&2
-          exit 1
-
       - name: Prepare e2e database
         run: npm run test:e2e:prepare
 
@@ -181,8 +180,15 @@ jobs:
         env:
           CI: true
           AUTH_URL: http://localhost:3001
-          E2E_SKIP_PREPARE: "1"
           E2E_SERVER_MODE: start
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-shard-${{ matrix.shard }}
+          path: test-results
+          if-no-files-found: ignore
 
   e2e-ok:
     name: E2E
@@ -196,3 +202,17 @@ jobs:
             echo "One or more e2e shards failed (${{ needs.e2e.result }})"
             exit 1
           fi
+
+  deploy:
+    name: Deploy
+    needs: [test, e2e-ok]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.test.result == 'success' && needs.e2e-ok.result == 'success'
+    permissions:
+      id-token: write
+      contents: write
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      sha: ${{ github.sha }}
+      before_sha: ${{ github.event.before }}
+      caller_event: push

@@ -16,10 +16,11 @@ export function ListSearch({
 }) {
   const router = useRouter();
   const [value, setValue] = useState(q);
-
-  useEffect(() => {
+  const [query, setQuery] = useState(q);
+  if (q !== query) {
+    setQuery(q);
     setValue(q);
-  }, [q]);
+  }
 
   useEffect(() => {
     const next = value.trim();

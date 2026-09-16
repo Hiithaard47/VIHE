@@ -1,24 +1,40 @@
 # Build linux/amd64 image → push ACR → update Azure Container App (if present) → GitHub Release.
 # One-time Azure bootstrap stays in scripts/azure-provision.sh (infra only; image via this workflow).
 #
+# Invoked after green CI on main (see ci.yml), or manually via workflow_dispatch.
+#
 # Required GitHub Actions secrets:
 #   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
-# Variables (optional):
+# Variables (on the production GitHub Environment):
 #   AZURE_RG, AZURE_APP_NAME, AZURE_ACR_NAME
 #
 # Production release (SemVer vMAJOR.MINOR.PATCH) only when:
 # - workflow_dispatch (manual; choose patch / minor / major), or
-# - push to main with both:
+# - CI-called push to main with both:
 #   1) a feat/fix commit (conventional), and
 #   2) app runtime path changes (src/, prisma/, package.json, Dockerfile, …)
-# Bump from commits: fix→patch, feat→minor, breaking (!)→major.
+# Bump from commits: fix→patch, feat→minor, breaking (!) / BREAKING CHANGE→major.
 # Azure Portal: match image tag, revision suffix, or env RELEASE_TAG / GIT_SHA.
 
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    inputs:
+      sha:
+        description: Commit to release
+        type: string
+        required: true
+      before_sha:
+        description: Previous main tip (github.event.before)
+        type: string
+        required: false
+        default: ""
+      caller_event:
+        description: Originating GitHub event (push or workflow_dispatch)
+        type: string
+        required: false
+        default: "workflow_call"
   workflow_dispatch:
     inputs:
       bump:
@@ -35,11 +51,6 @@ permissions:
   id-token: write
   contents: write
 
-env:
-  AZURE_RG: ${{ vars.AZURE_RG || 'rg-vihe-mumbai' }}
-  AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME || 'vihe-app' }}
-  AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
-
 jobs:
   should-release:
     name: Gate production release
@@ -52,91 +63,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Setup Node app
+        uses: ./.github/actions/setup-node-app
 
       - name: Decide whether to release
         id: gate
-        run: |
-          set -euo pipefail
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "bump=${{ github.event.inputs.bump || 'patch' }}" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch — releasing"
-            exit 0
-          fi
-
-          BEFORE="${{ github.event.before }}"
-          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
-            RANGE="${{ github.sha }}"
-            COMMITS="$(git log -1 --format=%s "$RANGE")"
-            FILES="$(git show --pretty='' --name-only "$RANGE")"
-          else
-            RANGE="${BEFORE}..${{ github.sha }}"
-            COMMITS="$(git log --format=%s "$RANGE")"
-            FILES="$(git diff --name-only "$BEFORE" "${{ github.sha }}")"
-          fi
-
-          echo "Commit subjects in range:"
-          printf '%s\n' "$COMMITS"
-          echo "Changed files:"
-          printf '%s\n' "$FILES"
-
-          APP_CHANGE=false
-          while IFS= read -r file; do
-            [[ -z "$file" ]] && continue
-            case "$file" in
-              src/*|prisma/*|public/*|scripts/start-prod.sh|package.json|package-lock.json|Dockerfile|Dockerfile.*|next.config.*|next.config.js|next.config.mjs|next.config.ts|auth.ts|middleware.ts)
-                APP_CHANGE=true
-                break
-                ;;
-            esac
-          done <<< "$FILES"
-
-          HAS_FIX=false
-          HAS_FEAT=false
-          HAS_BREAKING=false
-          while IFS= read -r subject; do
-            [[ -z "$subject" ]] && continue
-            if printf '%s\n' "$subject" | grep -Eq '^(feat|fix|perf)(\([^)]+\))?!:' \
-              || printf '%s\n' "$subject" | grep -Eq '^BREAKING[- ]CHANGE:'; then
-              HAS_BREAKING=true
-            fi
-            if printf '%s\n' "$subject" | grep -Eq '^feat(\([^)]+\))?(!)?:'; then
-              HAS_FEAT=true
-            elif printf '%s\n' "$subject" | grep -Eq '^(fix|perf)(\([^)]+\))?(!)?:'; then
-              HAS_FIX=true
-            fi
-          done <<< "$COMMITS"
-
-          if [[ "$APP_CHANGE" != true ]]; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "bump=patch" >> "$GITHUB_OUTPUT"
-            echo "Skip: no app runtime path changes"
-            exit 0
-          fi
-
-          if [[ "$HAS_BREAKING" == true ]]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "bump=major" >> "$GITHUB_OUTPUT"
-            echo "Release: breaking change → major"
-            exit 0
-          fi
-          if [[ "$HAS_FEAT" == true ]]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "bump=minor" >> "$GITHUB_OUTPUT"
-            echo "Release: feat → minor"
-            exit 0
-          fi
-          if [[ "$HAS_FIX" == true ]]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "bump=patch" >> "$GITHUB_OUTPUT"
-            echo "Release: fix/perf → patch"
-            exit 0
-          fi
-
-          echo "release=false" >> "$GITHUB_OUTPUT"
-          echo "bump=patch" >> "$GITHUB_OUTPUT"
-          echo "Skip: no feat/fix/perf commit in push"
+        env:
+          CALLER_EVENT: ${{ inputs.caller_event || github.event_name }}
+          INPUT_BUMP: ${{ github.event.inputs.bump || 'patch' }}
+          BEFORE_SHA: ${{ inputs.before_sha }}
+          RELEASE_SHA: ${{ inputs.sha || github.sha }}
+        run: npx tsx scripts/should-release.ts
 
   deploy:
     name: Build, push, deploy, release
@@ -144,6 +83,10 @@ jobs:
     if: needs.should-release.outputs.release == 'true'
     runs-on: ubuntu-latest
     environment: production
+    env:
+      AZURE_RG: ${{ vars.AZURE_RG }}
+      AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME || 'vihe-app' }}
+      AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
     permissions:
       id-token: write
       contents: write
@@ -153,6 +96,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Setup Node app
+        uses: ./.github/actions/setup-node-app
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -165,12 +112,13 @@ jobs:
         id: acr
         run: |
           set -euo pipefail
+          if [[ -z "$AZURE_RG" ]]; then
+            echo "::error::Set AZURE_RG on the production environment"
+            exit 1
+          fi
           ACR_NAME="${AZURE_ACR_NAME}"
           if [[ -z "$ACR_NAME" ]]; then
-            ACR_NAME="$(az acr list --resource-group "$AZURE_RG" --query '[0].name' -o tsv)"
-          fi
-          if [[ -z "$ACR_NAME" || "$ACR_NAME" == "None" ]]; then
-            echo "::error::No ACR found. Set AZURE_ACR_NAME or run ./scripts/azure-provision.sh"
+            echo "::error::Set AZURE_ACR_NAME on the production environment"
             exit 1
           fi
           LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
@@ -179,56 +127,11 @@ jobs:
 
       - name: Set release metadata
         id: meta
-        run: |
-          set -euo pipefail
-          git fetch --tags --force
-
-          BUMP="${{ needs.should-release.outputs.bump }}"
-          LATEST="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1 || true)"
-
-          if [[ -z "$LATEST" ]]; then
-            BASE="$(node -p "require('./package.json').version")"
-            # First SemVer release: ship package.json as-is (ignore bump).
-            VERSION="$BASE"
-            BUMP="initial"
-          else
-            BASE="${LATEST#v}"
-            IFS=. read -r MAJOR MINOR PATCH <<< "$BASE"
-            case "$BUMP" in
-              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-              patch) PATCH=$((PATCH + 1)) ;;
-              *)
-                echo "::error::Unknown bump '$BUMP' (expected patch|minor|major)"
-                exit 1
-                ;;
-            esac
-            VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          fi
-
-          SHORT_SHA="${GITHUB_SHA::7}"
-          RELEASE_TAG="v${VERSION}"
-          # Azure revision suffixes allow [a-z0-9-] only (max 20).
-          REVISION_SUFFIX="$(echo "$RELEASE_TAG" | tr '[:upper:]' '[:lower:]' | tr '.' '-' | cut -c1-20)"
-          LOGIN="${{ steps.acr.outputs.login_server }}"
-          APP="${{ env.AZURE_APP_NAME }}"
-
-          if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
-            echo "::error::Tag ${RELEASE_TAG} already exists"
-            exit 1
-          fi
-
-          {
-            echo "version=$VERSION"
-            echo "short_sha=$SHORT_SHA"
-            echo "release_tag=$RELEASE_TAG"
-            echo "revision_suffix=$REVISION_SUFFIX"
-            echo "bump=$BUMP"
-            echo "image_uri=${LOGIN}/${APP}:${RELEASE_TAG}"
-            echo "image_uri_sha=${LOGIN}/${APP}:sha-${SHORT_SHA}"
-            echo "image_uri_latest=${LOGIN}/${APP}:latest"
-          } >> "$GITHUB_OUTPUT"
-          echo "Next release: ${RELEASE_TAG} (from ${LATEST:-package.json ${BASE}}, bump=${BUMP})"
+        env:
+          RELEASE_BUMP: ${{ needs.should-release.outputs.bump }}
+          RELEASE_SHA: ${{ inputs.sha || github.sha }}
+          ACR_LOGIN_SERVER: ${{ steps.acr.outputs.login_server }}
+        run: npx tsx scripts/next-release.ts --bump "$RELEASE_BUMP" --sha "$RELEASE_SHA" --login-server "$ACR_LOGIN_SERVER" --app "$AZURE_APP_NAME"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -247,41 +150,57 @@ jobs:
             ${{ steps.meta.outputs.image_uri_sha }}
             ${{ steps.meta.outputs.image_uri_latest }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ inputs.sha || github.sha }}
             org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update Container App (if exists)
-        id: app
+      - name: Create git tag
+        env:
+          TAG: ${{ steps.meta.outputs.release_tag }}
+          TARGET: ${{ inputs.sha || github.sha }}
         run: |
           set -euo pipefail
-          RELEASE_TAG="${{ steps.meta.outputs.release_tag }}"
-          SHORT_SHA="${{ steps.meta.outputs.short_sha }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            POINTED="$(git rev-parse "${TAG}^{commit}")"
+            if [[ "$POINTED" != "$TARGET" ]]; then
+              echo "::error::Tag ${TAG} already points at ${POINTED}, not ${TARGET}"
+              exit 1
+            fi
+          else
+            git tag "$TAG" "$TARGET"
+            git push origin "refs/tags/${TAG}"
+          fi
+
+      - name: Update Container App
+        id: app
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+          IMAGE_URI: ${{ steps.meta.outputs.image_uri }}
+          REVISION_SUFFIX: ${{ steps.meta.outputs.revision_suffix }}
+          GIT_COMMIT: ${{ inputs.sha || github.sha }}
+        run: |
+          set -euo pipefail
           RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/${RELEASE_TAG}"
           if ! az containerapp show --name "$AZURE_APP_NAME" --resource-group "$AZURE_RG" >/dev/null 2>&1; then
-            echo "Container App '$AZURE_APP_NAME' not in '$AZURE_RG' yet — image pushed; create app with azure-provision.sh app-update"
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::error::Container App '$AZURE_APP_NAME' not in resource group '$AZURE_RG'"
+            exit 1
           fi
-          az containerapp ingress update \
-            --name "$AZURE_APP_NAME" \
-            --resource-group "$AZURE_RG" \
-            --target-port 8080 \
-            --output none 2>/dev/null || true
-          az containerapp update \
-            --name "$AZURE_APP_NAME" \
-            --resource-group "$AZURE_RG" \
-            --image "${{ steps.meta.outputs.image_uri }}" \
-            --revision-suffix "${{ steps.meta.outputs.revision_suffix }}" \
-            --set-env-vars \
-              "RELEASE_TAG=$RELEASE_TAG" \
-              "GIT_SHA=$SHORT_SHA" \
-              "GIT_COMMIT=${{ github.sha }}" \
-              "RELEASE_URL=$RELEASE_URL" \
-              "PORT=8080" \
-            --output none
+          ./scripts/container-app-apply.sh \
+            "$AZURE_APP_NAME" \
+            "$AZURE_RG" \
+            "$IMAGE_URI" \
+            8080 \
+            "$REVISION_SUFFIX" \
+            "RELEASE_TAG=$RELEASE_TAG" \
+            "GIT_SHA=$SHORT_SHA" \
+            "GIT_COMMIT=$GIT_COMMIT" \
+            "RELEASE_URL=$RELEASE_URL" \
+            "PORT=8080"
           FQDN="$(az containerapp show --name "$AZURE_APP_NAME" --resource-group "$AZURE_RG" --query properties.configuration.ingress.fqdn -o tsv)"
           echo "updated=true" >> "$GITHUB_OUTPUT"
           echo "Deployed release $RELEASE_TAG → https://${FQDN}"
@@ -289,19 +208,24 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.release_tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          BUMP: ${{ steps.meta.outputs.bump }}
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+          IMAGE_URI: ${{ steps.meta.outputs.image_uri }}
+          UPDATED: ${{ steps.app.outputs.updated }}
+          TARGET: ${{ inputs.sha || github.sha }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.meta.outputs.release_tag }}"
-          VERSION="${{ steps.meta.outputs.version }}"
           BODY="$(cat <<EOF
           ## ${TAG}
 
           - **Version:** \`${VERSION}\`
-          - **Bump:** \`${{ steps.meta.outputs.bump }}\`
-          - **Commit:** [\`${{ steps.meta.outputs.short_sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
-          - **Image:** \`${{ steps.meta.outputs.image_uri }}\`
+          - **Bump:** \`${BUMP}\`
+          - **Commit:** [\`${SHORT_SHA}\`](${{ github.server_url }}/${{ github.repository }}/commit/${TARGET})
+          - **Image:** \`${IMAGE_URI}\`
           - **Workflow run:** [${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          - **Container App updated:** ${{ steps.app.outputs.updated }}
+          - **Container App updated:** ${UPDATED}
 
           Match in Azure Portal → Container App → Revisions / env \`RELEASE_TAG\`.
           EOF
@@ -310,4 +234,4 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$BODY" \
-            --target "${{ github.sha }}"
+            --target "$TARGET"

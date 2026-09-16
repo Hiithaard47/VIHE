@@ -349,25 +349,20 @@ step_container_app() {
         --password "$ACR_PASS" \
         --output none
     fi
-    az containerapp ingress update \
-      --name "$APP_NAME" \
-      --resource-group "$RG" \
-      --target-port "$target_port" \
-      --output none 2>/dev/null || true
-    az containerapp update \
-      --name "$APP_NAME" \
-      --resource-group "$RG" \
-      --image "$IMAGE_URI" \
-      --set-env-vars \
-        "DATABASE_URL=$DATABASE_URL" \
-        "AUTH_URL=$AUTH_URL" \
-        "AUTH_SECRET=$AUTH_SECRET" \
-        "ADMIN_EMAIL=$ADMIN_EMAIL" \
-        "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
-        "AZURE_STORAGE_CONNECTION_STRING=$AZURE_STORAGE_CONNECTION_STRING" \
-        "AZURE_STORAGE_CONTAINER=$STORAGE_CONTAINER" \
-        "PORT=8080" \
-      --output none
+    "$ROOT/scripts/container-app-apply.sh" \
+      "$APP_NAME" \
+      "$RG" \
+      "$IMAGE_URI" \
+      "$target_port" \
+      "" \
+      "DATABASE_URL=$DATABASE_URL" \
+      "AUTH_URL=$AUTH_URL" \
+      "AUTH_SECRET=$AUTH_SECRET" \
+      "ADMIN_EMAIL=$ADMIN_EMAIL" \
+      "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
+      "AZURE_STORAGE_CONNECTION_STRING=$AZURE_STORAGE_CONNECTION_STRING" \
+      "AZURE_STORAGE_CONTAINER=$STORAGE_CONTAINER" \
+      "PORT=8080"
   else
     log "Creating Container App $APP_NAME"
     az containerapp create \

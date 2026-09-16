@@ -38,7 +38,7 @@ Access is driven by a flexible RBAC model, not hardcoded role checks:
    ```
    Or one shot: apply migrations, seed admin, and production-build:
    ```
-   npm run ci
+   npm run bootstrap
    ```
 6. Run the app:
    ```
@@ -92,10 +92,10 @@ export GITHUB_REPO=parmod-arora/vihe-app
 ./scripts/azure-oidc-setup.sh
 ```
 
-2. Add the printed secrets to the GitHub repo (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), and variable `AZURE_ACR_NAME` from `.azure-deploy-secrets.local`.
-3. Merge to `main`, or run **Actions → Deploy → Run workflow**.
+2. Add the printed secrets to the GitHub repo (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`), and production-environment variables `AZURE_ACR_NAME` and `AZURE_RG` from `.azure-deploy-secrets.local`.
+3. Merge to `main` (CI must pass first; deploy is invoked from the CI workflow), or run **Actions → Deploy → Run workflow** to release without waiting for a new CI run.
 
-The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) builds `linux/amd64`, pushes to ACR (`sha-<commit>` + `latest`), and updates the Container App image. Migrations still run on container start.
+The workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) runs only after CI is green on `main` (or on manual dispatch). It builds `linux/amd64`, pushes to ACR (`vMAJOR.MINOR.PATCH` + `sha-<commit>` + `latest`), and updates the Container App image. Migrations still run on container start.
 
 Local image refresh: `./scripts/azure-provision.sh build-push` then `./scripts/azure-provision.sh app-update`.
 
@@ -105,7 +105,7 @@ End-to-end coverage lives in [e2e/](e2e/) using Playwright — auth & access con
 
 ```
 npx playwright install chromium   # first time only
-npm run test:e2e                  # headless run
+npm run test:e2e                  # migrate/seed test DB, then headless run
 npm run test:e2e:ui               # interactive UI mode
 ```
 

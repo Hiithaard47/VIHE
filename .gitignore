@@ -15,6 +15,7 @@ blob-report
 playwright/.cache
 .superpowers
 tsconfig.tsbuildinfo
+.eslintcache
 
 .azure-mumbai-provision.log
 .azure-mumbai-provision.nohup.out
