@@ -45,7 +45,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader />
+      <AppHeader title={null} />
 
       <main className="mx-auto flex max-w-sm flex-col px-4 py-16">
         <div className="rounded-xl border border-hairline bg-card p-7">

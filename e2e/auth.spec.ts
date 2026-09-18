@@ -30,7 +30,7 @@ test.describe("authentication & access control", () => {
     });
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await expect(page).toHaveURL(/\/admin/);
-    await expect(page.getByText("Vihe Attendance")).toBeVisible();
+    await expect(page.getByRole("banner").getByText("Vihe")).toBeVisible();
     const menu = accountMenuButton(page, admin.name);
     await expect(menu).toBeVisible();
     await expect(menu).toContainText(admin.name);
