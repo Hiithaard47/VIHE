@@ -6,6 +6,8 @@ import { useFormStatus } from "react-dom";
 const buttonClassName =
   "w-fit rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60";
 
+const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/*";
+
 function fileMatchesAccept(file: File, accept?: string) {
   if (!accept) return true;
   return accept
@@ -23,23 +25,34 @@ function fileNames(files: FileList | null) {
   return files && files.length > 0 ? Array.from(files).map((file) => file.name) : [];
 }
 
+function acceptsImages(accept?: string) {
+  if (!accept) return true;
+  return accept.split(",").some((token) => {
+    const value = token.trim().toLowerCase();
+    return value === "image/*" || value.startsWith("image/") || value === ".jpg" || value === ".jpeg" || value === ".png" || value === ".webp" || value === ".gif";
+  });
+}
+
 export function UploadFileInput({
   disabled,
   multiple,
   accept,
   onChange,
+  name,
   ...props
 }: ComponentProps<"input">) {
   const { pending } = useFormStatus();
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [names, setNames] = useState<string[]>([]);
   const [rejectHint, setRejectHint] = useState<string | null>(null);
   const isDisabled = Boolean(pending || disabled);
   const acceptValue = typeof accept === "string" ? accept : undefined;
+  const showCamera = acceptsImages(acceptValue);
 
-  function applyFiles(list: File[]) {
+  function applyFiles(list: File[], { append = false }: { append?: boolean } = {}) {
     const input = inputRef.current;
     if (!input || isDisabled) return;
 
@@ -49,10 +62,15 @@ export function UploadFileInput({
       return;
     }
 
-    const picked = multiple ? allowed : allowed.slice(0, 1);
     const data = new DataTransfer();
-    for (const file of picked) data.items.add(file);
-    input.files = data.files;
+    if (append && multiple && input.files) {
+      for (const file of Array.from(input.files)) data.items.add(file);
+    }
+    for (const file of allowed) data.items.add(file);
+    const next = multiple ? Array.from(data.files) : Array.from(data.files).slice(0, 1);
+    const trimmed = new DataTransfer();
+    for (const file of next) trimmed.items.add(file);
+    input.files = trimmed.files;
     setNames(fileNames(input.files));
     setRejectHint(null);
     onChange?.({ target: input } as ChangeEvent<HTMLInputElement>);
@@ -62,6 +80,11 @@ export function UploadFileInput({
     setNames(fileNames(event.target.files));
     setRejectHint(null);
     onChange?.(event);
+  }
+
+  function handleCameraChange(event: ChangeEvent<HTMLInputElement>) {
+    applyFiles(Array.from(event.target.files ?? []), { append: Boolean(multiple) });
+    event.target.value = "";
   }
 
   function handleDragEnter(event: DragEvent<HTMLDivElement>) {
@@ -97,6 +120,18 @@ export function UploadFileInput({
   return (
     <div className="flex flex-col gap-2">
       <div
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
+        onClick={() => {
+          if (!isDisabled) inputRef.current?.click();
+        }}
+        onKeyDown={(event) => {
+          if (isDisabled) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -112,16 +147,38 @@ export function UploadFileInput({
           {...props}
           ref={inputRef}
           type="file"
+          name={name}
           multiple={multiple}
           accept={accept}
           disabled={isDisabled}
           onChange={handleChange}
+          onClick={(event) => event.stopPropagation()}
           className="sr-only"
         />
+        {showCamera ? (
+          <input
+            ref={cameraRef}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            capture="environment"
+            disabled={isDisabled}
+            onChange={handleCameraChange}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+          />
+        ) : null}
         <p className="text-ink">
-          {dragging ? "Drop files to attach" : multiple ? "Drop files here, or click to browse" : "Drop a file here, or click to browse"}
+          {dragging
+            ? "Drop files to attach"
+            : multiple
+              ? "Drop files here, or tap to browse"
+              : "Drop a file here, or tap to browse"}
         </p>
-        <p className="mt-1 text-xs text-muted">PDF or image{multiple ? " — you can select more than one" : ""}</p>
+        <p className="mt-1 text-xs text-muted">
+          PDF or image{multiple ? " — you can select more than one" : ""}
+          {showCamera ? " — on phones you can also take a photo" : ""}
+        </p>
         {names.length > 0 ? (
           <ul className="mt-2 flex flex-col gap-0.5 text-xs text-ink">
             {names.map((name) => (
@@ -130,6 +187,16 @@ export function UploadFileInput({
           </ul>
         ) : null}
       </div>
+      {showCamera ? (
+        <button
+          type="button"
+          disabled={isDisabled}
+          onClick={() => cameraRef.current?.click()}
+          className="w-fit text-xs font-medium text-accent-dark underline hover:text-ink disabled:cursor-wait disabled:opacity-60 sm:hidden"
+        >
+          Take photo
+        </button>
+      ) : null}
       {rejectHint ? (
         <p className="text-xs text-red-700" role="status">
           {rejectHint}
