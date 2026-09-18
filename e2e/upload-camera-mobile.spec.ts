@@ -18,16 +18,17 @@ test.describe("upload camera on mobile", () => {
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/assignments`);
 
-    await expect(page.getByRole("button", { name: "Take photo" })).toBeVisible();
+    const issueForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Issue assignment" }) });
+    await expect(issueForm.getByRole("button", { name: "Take photo", exact: true })).toBeVisible();
 
-    const camera = page.locator('input[capture="environment"]');
+    const camera = issueForm.locator('input[capture="environment"]');
     await expect(camera).toHaveCount(1);
     await camera.setInputFiles({
       name: "photo.png",
       mimeType: "image/png",
       buffer: PNG,
     });
-    await expect(page.getByText("photo.png")).toBeVisible();
+    await expect(issueForm.getByText("photo.png")).toBeVisible();
   });
 
   test("hides Take photo on desktop widths", async ({ page }) => {
@@ -38,6 +39,7 @@ test.describe("upload camera on mobile", () => {
 
     await login(page, teacher.email, password);
     await page.goto(`/teacher/courses/${course.id}/assignments`);
-    await expect(page.getByRole("button", { name: "Take photo" })).toBeHidden();
+    const issueForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Issue assignment" }) });
+    await expect(issueForm.getByRole("button", { name: "Take photo", exact: true })).toBeHidden();
   });
 });

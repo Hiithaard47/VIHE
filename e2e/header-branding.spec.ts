@@ -31,11 +31,12 @@ test.describe("header branding", () => {
 
     await page.setViewportSize({ width: 1280, height: 800 });
     const banner = page.getByRole("banner");
-    await expect(banner.getByText("Vihe", { exact: true })).toBeVisible();
-    await expect(banner.getByText("Admin")).toBeVisible();
+    const brand = banner.getByRole("link", { name: "Vihe" });
+    await expect(brand.getByText("Vihe", { exact: true })).toBeVisible();
+    await expect(brand.getByText("Admin")).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(banner.getByText("Admin")).toBeHidden();
+    await expect(brand.getByText("Admin")).toBeHidden();
     await expect(banner.locator('img[src="/vihe-header.jpg"]')).toBeVisible();
   });
 });

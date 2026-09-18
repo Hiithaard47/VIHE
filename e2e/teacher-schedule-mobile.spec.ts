@@ -36,8 +36,8 @@ test.describe("teacher: mobile schedule move", () => {
     await expect(page.getByRole("article").filter({ hasText: "Chapter 1" })).toBeVisible();
 
     const card = page.getByRole("article").filter({ hasText: "Chapter 1" });
-    await expect(card.getByRole("button", { name: "Move" })).toBeVisible();
-    await card.getByRole("button", { name: "Move" }).click();
+    await expect(card.getByRole("button", { name: "Move", exact: true })).toBeVisible();
+    await card.getByRole("button", { name: "Move", exact: true }).click();
     await expect(page.getByText(/Moving Chapter 1/)).toBeVisible();
 
     expect(
