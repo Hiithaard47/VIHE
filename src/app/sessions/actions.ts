@@ -192,7 +192,11 @@ export async function deleteSession(sessionId: string, portalArg: CoursePortal, 
   redirect(flashUrl(path, "success", "Session removed."));
 }
 
-export async function moveSession(sessionId: string, portalArg: CoursePortal, formData: FormData) {
+export async function moveSession(
+  sessionId: string,
+  portalArg: CoursePortal,
+  formData: FormData,
+): Promise<{ ok: true } | { error: string }> {
   const portal = parseCoursePortal(portalArg);
   const auth = await requireAnyPermission([PERMISSIONS.SESSIONS_MANAGE]);
   const classSession = await prisma.classSession.findUniqueOrThrow({
@@ -208,16 +212,16 @@ export async function moveSession(sessionId: string, portalArg: CoursePortal, fo
   await requireSubjectAccess(classSession.subjectId, portal);
   const path = safeWorkspaceReturnTo(formData.get("returnTo"), courseHref(portal, classSession.subject.courseId, "", classSession.subjectId));
   if (classSession._count.records > 0) {
-    redirect(flashUrl(path, "error", "Cannot move a session that has attendance."));
+    return { error: "Cannot move a session that has attendance." };
   }
   const allowPast = canManagePastSessionDates(auth.user.permissions, portal);
   if (!allowPast && !isFutureSessionDate(classSession.date)) {
-    redirect(flashUrl(path, "error", "Cannot change a session on or before today."));
+    return { error: "Cannot change a session on or before today." };
   }
   const nextDate = parseDateInput(String(formData.get("date") ?? ""));
-  if (!nextDate) redirect(flashUrl(path, "error", "Pick a valid date."));
+  if (!nextDate) return { error: "Pick a valid date." };
   if (!allowPast && !isFutureSessionDate(nextDate)) {
-    redirect(flashUrl(path, "error", "Cannot move a session onto today or a past day."));
+    return { error: "Cannot move a session onto today or a past day." };
   }
   const clash = await prisma.classSession.findFirst({
     where: {
@@ -228,9 +232,9 @@ export async function moveSession(sessionId: string, portalArg: CoursePortal, fo
     },
     select: { id: true },
   });
-  if (clash) redirect(flashUrl(path, "error", "That day already has a session at this time."));
+  if (clash) return { error: "That day already has a session at this time." };
   await prisma.classSession.update({ where: { id: sessionId }, data: { date: nextDate } });
   revalidatePath(path);
   revalidatePath(courseHref(portal, classSession.subject.courseId, "", classSession.subjectId));
-  redirect(flashUrl(path, "success", "Session moved."));
+  return { ok: true };
 }

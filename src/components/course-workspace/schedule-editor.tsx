@@ -7,6 +7,7 @@ import { deleteSession, moveSession } from "@/app/sessions/actions";
 import { AddWeekSessionDialog } from "@/components/add-week-session-dialog";
 import { WeekGrid, type WeekGridCard } from "@/components/week-grid";
 import { WeekNavigator } from "@/components/week-navigator";
+import { flashUrl } from "@/lib/flash";
 import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { clampWeek, daysOfWeek, mondayOf, nextFreeWeekday, parseMeetingTimes, weekStart } from "@/lib/schedule";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc, toDateInputValue } from "@/lib/time";
@@ -49,6 +50,8 @@ export function ScheduleEditor({
   const [termStart, setTermStart] = useState(initialTermStart);
   const [weekCount, setWeekCount] = useState(initialWeekCount);
   const [week, setWeek] = useState(1);
+  const [items, setItems] = useState(sessions);
+  const [seenSessions, setSeenSessions] = useState(sessions);
   const [addDate, setAddDate] = useState<Date | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -56,13 +59,18 @@ export function ScheduleEditor({
   const [, startTransition] = useTransition();
   const saveTimer = useRef<number | null>(null);
 
+  if (sessions !== seenSessions) {
+    setSeenSessions(sessions);
+    setItems(sessions);
+  }
+
   const monday = mondayOf(new Date(`${termStart}T00:00:00.000Z`));
   const safeCount = Math.min(52, Math.max(1, weekCount || 1));
   const safeWeek = clampWeek(week, safeCount);
   const visibleMonday = weekStart(monday, safeWeek);
   const days = daysOfWeek(visibleMonday);
   const weekDates = new Set(days.map((day) => toDateInputValue(day)));
-  const weekSessions = sessions.filter((item) => weekDates.has(item.date));
+  const weekSessions = items.filter((item) => weekDates.has(item.date));
   const subjectId = subjects[0]?.id;
 
   const cards: WeekGridCard[] = weekSessions.map((item) => ({
@@ -135,10 +143,25 @@ export function ScheduleEditor({
   function moveCard(card: WeekGridCard, date: Date) {
     const next = toDateInputValue(date);
     if (card.date === next || !card.sessionId || !canManageSessionDate(canManagePastDates, card.date)) return;
+
+    const previous = items;
+    setItems((current) => current.map((item) => (item.id === card.sessionId ? { ...item, date: next } : item)));
+    setAddError(null);
+
     const formData = new FormData();
     formData.set("date", next);
     formData.set("returnTo", returnTo);
-    void moveSession(card.sessionId, portal, formData);
+
+    startTransition(async () => {
+      const result = await moveSession(card.sessionId!, portal, formData);
+      if ("error" in result) {
+        setItems(previous);
+        setAddError(result.error);
+        return;
+      }
+      router.replace(flashUrl(returnTo, "success", "Session moved."), { scroll: false });
+      router.refresh();
+    });
   }
 
   function duplicateCard(card: WeekGridCard) {
