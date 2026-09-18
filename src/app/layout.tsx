@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Source_Serif_4, Work_Sans } from "next/font/google";
 import { AppFooter } from "@/components/app-footer";
+import { NavigationProgress } from "@/components/navigation-progress";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sourceSerif.variable} ${workSans.variable}`}>
       <body className="min-h-screen antialiased">
+        <NavigationProgress />
         {children}
         <AppFooter />
       </body>
