@@ -16,7 +16,7 @@ export function AppHeader({
       <div
         className={
           brandOnly
-            ? "flex w-full items-center justify-center px-0 py-0"
+            ? "mx-auto flex w-full max-w-5xl items-center justify-center px-0 py-0 sm:px-6 sm:py-2"
             : `mx-auto flex max-w-5xl items-center gap-2 px-0 py-0 sm:gap-3 sm:px-6 sm:py-2 ${
                 right ? "justify-between" : "justify-center"
               }`
@@ -25,7 +25,9 @@ export function AppHeader({
         <Link
           href="/"
           aria-label={title ?? "Home"}
-          className={`flex min-w-0 items-center gap-3 ${brandOnly || right ? "min-w-0 flex-1" : ""} ${brandOnly ? "w-full" : ""}`}
+          className={`flex min-w-0 items-center gap-3 ${right ? "min-w-0 flex-1" : ""} ${
+            brandOnly ? "w-full sm:w-auto" : ""
+          }`}
         >
           <img
             src="/vihe-header.jpg"
@@ -35,7 +37,7 @@ export function AppHeader({
             fetchPriority="high"
             className={
               brandOnly
-                ? "h-16 w-full object-cover object-center sm:h-20"
+                ? "h-14 w-full object-cover object-center sm:h-16 sm:w-auto"
                 : "h-12 w-full min-w-0 object-cover object-left sm:h-16 sm:w-auto sm:shrink-0"
             }
           />
