@@ -114,6 +114,7 @@ test.describe("teacher: attendance matrix", () => {
 
     await expect(printHeading).toBeVisible();
     await expect(page.getByText(`${course.name} · ${DEFAULT_SUBJECT_NAME}`)).toBeVisible();
+    await expect(page.getByText(`Teacher(s): ${teacher.name}`)).toBeVisible();
     await expect(page.getByText(`Printed ${formatDisplayDate(startOfTodayUtc())}`)).toBeVisible();
     await expect(page.getByText(/Class · 1 session/)).toBeVisible();
     await expect(summaryHeading).toBeHidden();

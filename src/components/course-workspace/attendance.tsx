@@ -41,7 +41,7 @@ export async function CourseAttendanceView({
   const subjectId =
     selectedSubjectId ?? (scope.kind === "ids" && scope.ids.length === 1 ? scope.ids[0] : undefined);
 
-  const [course, subject] = await Promise.all([
+  const [course, subject, teachers] = await Promise.all([
     prisma.course.findUnique({
       where: { id: courseId },
       select: {
@@ -54,6 +54,17 @@ export async function CourseAttendanceView({
     subjectId
       ? prisma.courseSubject.findUnique({ where: { id: subjectId }, select: { name: true } })
       : Promise.resolve(null),
+    prisma.user.findMany({
+      where: {
+        taughtSubjects: {
+          some: subjectId
+            ? { subjectId }
+            : { subject: { courseId, ...(scope.kind === "ids" ? { id: { in: [...scope.ids] } } : { isActive: true }) } },
+        },
+      },
+      orderBy: { name: "asc" },
+      select: { name: true },
+    }),
   ]);
   if (!course) notFound();
 
@@ -86,12 +97,14 @@ export async function CourseAttendanceView({
   const selected = resolveCategoryTab(tabs, categoryId);
   const selectedSessions = selected?.sessions ?? [];
   const printTitle = subject ? `${course.name} · ${subject.name}` : course.name;
+  const teacherNames = teachers.map((teacher) => teacher.name).join(", ");
 
   return (
     <div className="attendance-print flex min-w-0 flex-col gap-8">
       <div className="hidden print:block">
         <h1 className="font-heading text-lg font-semibold text-ink">Attendance</h1>
         <p className="mt-1 text-sm text-ink">{printTitle}</p>
+        {teacherNames ? <p className="mt-1 text-sm text-ink">Teacher(s): {teacherNames}</p> : null}
         {selected ? (
           <p className="mt-1 text-xs text-muted">
             {selected.name}
