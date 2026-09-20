@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useRef, useState } from "react";
+import { openDialog } from "@/lib/dialog";
 
 export type PersonOption = { id: string; title: string; subtitle: string; keywords?: string };
 
@@ -48,7 +49,7 @@ export function AddPersonDialog({
     <>
       <button
         type="button"
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => openDialog(dialog.current)}
         className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         {buttonLabel}

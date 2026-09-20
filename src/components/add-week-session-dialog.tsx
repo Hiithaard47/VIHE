@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { openDialog } from "@/lib/dialog";
 import { formatDisplayDate, toDateInputValue } from "@/lib/time";
 
 export function AddWeekSessionDialog({
@@ -30,7 +31,7 @@ export function AddWeekSessionDialog({
   useEffect(() => {
     const node = dialog.current;
     if (!node) return;
-    if (open) node.showModal();
+    if (open) openDialog(node);
     else if (node.open) node.close();
   }, [open]);
 

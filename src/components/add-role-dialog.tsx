@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { createRole } from "@/app/admin/roles/actions";
+import { openDialog } from "@/lib/dialog";
 
 export function AddRoleDialog() {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -10,7 +11,7 @@ export function AddRoleDialog() {
     <div className="shrink-0">
       <button
         type="button"
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => openDialog(dialog.current)}
         className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add role

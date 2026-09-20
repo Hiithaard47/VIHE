@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { createStudent } from "@/app/admin/students/actions";
+import { openDialog } from "@/lib/dialog";
 
 export function AddStudentDialog({
   courses,
@@ -17,7 +18,7 @@ export function AddStudentDialog({
     <>
       <button
         type="button"
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => openDialog(dialog.current)}
         className="rounded-md bg-ink px-3 py-2 text-sm font-semibold text-white"
       >
         Add student

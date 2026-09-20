@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChangeSessionDateForm } from "@/components/change-session-date-form";
 import { deleteSession } from "@/app/sessions/actions";
+import { openDialog } from "@/lib/dialog";
 import type { CoursePortal } from "@/lib/course-workspace";
 
 export function SessionActionsMenu({
@@ -54,7 +55,7 @@ export function SessionActionsMenu({
 
   function openChangeDate() {
     setOpen(false);
-    dialog.current?.showModal();
+    openDialog(dialog.current);
   }
 
   return (
