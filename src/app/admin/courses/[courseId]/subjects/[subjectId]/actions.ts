@@ -7,6 +7,7 @@ import { flashUrl, isForeignKeyError, isUniqueConstraintError } from "@/lib/flas
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { ARCHIVED_COURSE_MESSAGE, requirePermission } from "@/lib/rbac";
+import { deleteObject, isStorageConfigured } from "@/lib/storage";
 
 const subjectSchema = z.object({ name: z.string().trim().min(1, "Subject name is required.") });
 const teacherSchema = z.object({ teacherId: z.string().min(1, "Pick a teacher.") });
@@ -52,6 +53,61 @@ export async function toggleSubjectActive(courseId: string, subjectId: string, f
   revalidatePath(path);
   revalidatePath(`/admin/courses/${courseId}`);
   redirect(flashUrl(path, "success", nextActive ? "Subject restored." : "Subject archived."));
+}
+
+export async function deleteSubject(courseId: string, subjectId: string) {
+  await requireSubject(courseId, subjectId);
+  const path = subjectPath(courseId, subjectId);
+  const coursePath = `/admin/courses/${courseId}`;
+
+  const [subjectCount, attendanceCount, subject] = await Promise.all([
+    prisma.courseSubject.count({ where: { courseId } }),
+    prisma.attendanceRecord.count({ where: { session: { subjectId } } }),
+    prisma.courseSubject.findUniqueOrThrow({
+      where: { id: subjectId },
+      select: {
+        name: true,
+        sessions: { select: { resources: { select: { storageKey: true } } } },
+        assignments: {
+          select: {
+            files: { select: { storageKey: true } },
+            submissions: { select: { files: { select: { storageKey: true } } } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  if (subjectCount <= 1) {
+    redirect(flashUrl(path, "error", "A course needs at least one subject."));
+  }
+  if (attendanceCount > 0) {
+    redirect(
+      flashUrl(path, "error", "Cannot delete a subject that has attendance. Archive it instead."),
+    );
+  }
+
+  if (isStorageConfigured()) {
+    for (const session of subject.sessions) {
+      for (const resource of session.resources) {
+        await deleteObject(resource.storageKey).catch(() => {});
+      }
+    }
+    for (const assignment of subject.assignments) {
+      for (const file of assignment.files) {
+        await deleteObject(file.storageKey).catch(() => {});
+      }
+      for (const submission of assignment.submissions) {
+        for (const file of submission.files) {
+          await deleteObject(file.storageKey).catch(() => {});
+        }
+      }
+    }
+  }
+
+  await prisma.courseSubject.delete({ where: { id: subjectId } });
+  revalidatePath(coursePath);
+  redirect(flashUrl(coursePath, "success", `${subject.name} was deleted.`));
 }
 
 export async function addSubjectTeacher(courseId: string, subjectId: string, formData: FormData) {
