@@ -99,10 +99,17 @@ export async function gradeSubmission(courseId: string, assignmentId: string, st
   const path = courseHref(portal, courseId, `assignments/${assignmentId}`, assignment?.subjectId);
   if (!assignment) redirect(flashUrl(assignmentsPath(courseId, portal), "error", "That assignment was not found."));
 
-  const submission = await prisma.assignmentSubmission.findUnique({
-    where: { assignmentId_studentId: { assignmentId, studentId } },
-    select: { id: true },
-  });
+  const submissionId = String(formData.get("submissionId") ?? "").trim();
+  const submission = submissionId
+    ? await prisma.assignmentSubmission.findFirst({
+        where: { id: submissionId, assignmentId, studentId },
+        select: { id: true, attemptNumber: true },
+      })
+    : await prisma.assignmentSubmission.findFirst({
+        where: { assignmentId, studentId },
+        orderBy: { attemptNumber: "desc" },
+        select: { id: true, attemptNumber: true },
+      });
   if (!submission) redirect(flashUrl(path, "error", "This student has not submitted yet."));
 
   const marks = Number.parseInt(String(formData.get("marks") ?? ""), 10);
@@ -117,7 +124,13 @@ export async function gradeSubmission(courseId: string, assignmentId: string, st
   });
 
   revalidatePath(path);
-  redirect(flashUrl(path, "success", "Marks saved."));
+  redirect(
+    flashUrl(
+      path,
+      "success",
+      submission.attemptNumber > 1 ? `Marks saved for attempt ${submission.attemptNumber}.` : "Marks saved.",
+    ),
+  );
 }
 
 export async function deleteAssignment(courseId: string, assignmentId: string, portalArg: CoursePortal, _formData: FormData) {

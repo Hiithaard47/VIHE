@@ -39,12 +39,20 @@ export async function CourseAssignmentDetailView({
           },
         },
       },
-      submissions: { include: { files: { orderBy: { createdAt: "asc" } } } },
+      submissions: {
+        include: { files: { orderBy: { createdAt: "asc" } } },
+        orderBy: [{ studentId: "asc" }, { attemptNumber: "desc" }],
+      },
     },
   });
   if (!assignment) notFound();
 
-  const submissionByStudent = new Map(assignment.submissions.map((item) => [item.studentId, item]));
+  const attemptsByStudent = new Map<string, typeof assignment.submissions>();
+  for (const item of assignment.submissions) {
+    const list = attemptsByStudent.get(item.studentId) ?? [];
+    list.push(item);
+    attemptsByStudent.set(item.studentId, list);
+  }
   const listHref = courseHref(portal, courseId, "assignments", selectedSubjectId);
 
   return (
@@ -93,57 +101,76 @@ export async function CourseAssignmentDetailView({
             </thead>
             <tbody>
               {assignment.subject.course.enrollments.map(({ student }) => {
-                const submission = submissionByStudent.get(student.id);
+                const attempts = attemptsByStudent.get(student.id) ?? [];
+                const latest = attempts[0] ?? null;
                 return (
                   <tr key={student.id} className="border-b border-hairline text-ink last:border-0 align-top">
                     <td className="px-4 py-3">
                       <p>{student.name}</p>
                       <p className="text-xs text-muted">{student.rollNumber}</p>
                     </td>
-                    <td className="px-4 py-3 text-muted">{assignmentStatus(submission ?? null)}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {assignmentStatus(latest)}
+                      {latest ? (
+                        <span className="block text-xs">
+                          Attempt {latest.attemptNumber}
+                          {attempts.length > 1 ? ` · ${attempts.length} total` : ""}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3">
-                      {submission && submission.files.length > 0 ? (
+                      {latest && latest.files.length > 0 ? (
                         <ul className="flex flex-col gap-1">
-                          {submission.files.map((file) => (
+                          {latest.files.map((file) => (
                             <li key={file.id}>
                               <a href={`/assignments/submission-files/${file.id}`} className="hover:text-accent-dark">
                                 {file.fileName}
                               </a>
                             </li>
                           ))}
+                          {attempts.length > 1 && (
+                            <li className="pt-1 text-xs text-muted">
+                              Earlier attempts:{" "}
+                              {attempts
+                                .slice(1)
+                                .map((attempt) => `Attempt ${attempt.attemptNumber}`)
+                                .join(", ")}
+                            </li>
+                          )}
                         </ul>
                       ) : (
                         <span className="text-muted">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {canWrite && submission ? (
+                      {canWrite && latest ? (
                         <form
                           action={gradeSubmission.bind(null, courseId, assignment.id, student.id, portal)}
                           className="flex flex-col gap-2 sm:flex-row sm:items-center"
                         >
+                          <input type="hidden" name="submissionId" value={latest.id} />
                           <input
                             name="marks"
                             type="number"
                             min={0}
                             max={assignment.maxMarks}
                             required
-                            defaultValue={submission.marks ?? ""}
+                            defaultValue={latest.marks ?? ""}
                             className="w-20 rounded-md border border-hairline bg-input px-2 py-1.5 text-sm text-ink"
                           />
                           <input
                             name="feedback"
                             placeholder="Comment"
-                            defaultValue={submission.feedback ?? ""}
+                            defaultValue={latest.feedback ?? ""}
                             className="min-w-32 flex-1 rounded-md border border-hairline bg-input px-2 py-1.5 text-sm text-ink placeholder:text-muted"
                           />
                           <button type="submit" className="text-xs font-semibold text-accent-dark underline">
                             Save
                           </button>
                         </form>
-                      ) : submission?.marks !== null && submission?.marks !== undefined ? (
+                      ) : latest?.marks !== null && latest?.marks !== undefined ? (
                         <span>
-                          {submission.marks}/{assignment.maxMarks}
+                          {latest.marks}/{assignment.maxMarks}
                         </span>
                       ) : (
                         <span className="text-muted">—</span>

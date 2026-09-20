@@ -123,6 +123,77 @@ test.describe("course assignments", () => {
       "success",
     );
     await expect(page.getByText("cannot be replaced")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Submit assignment" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Submit/ })).toHaveCount(0);
+  });
+
+  test("student can submit a new attempt after grading", async ({ page }) => {
+    const teacherPassword = "TeacherPass123!";
+    const studentPassword = "StudentPass123!";
+    const teacher = await createTeacher(
+      `Retry Teacher ${unique("t")}`,
+      `${unique("retryteacher")}@example.com`,
+      teacherPassword,
+    );
+    const course = await createCourse(`Retry Course ${unique("c")}`, unique("RTY").toUpperCase(), teacher.id);
+    const studentEmail = `${unique("retrystudent")}@example.com`;
+    const student = await createStudent(`Retry Student ${unique("s")}`, unique("RS"), course.id, {
+      email: studentEmail,
+      password: studentPassword,
+    });
+    const title = `Retry essay ${unique("asg")}`;
+
+    await login(page, teacher.email, teacherPassword);
+    await page.goto(`/teacher/courses/${course.id}/assignments`);
+    await page.getByLabel("Title").fill(title);
+    await page.getByLabel("Maximum marks").fill("10");
+    await upload(page, "question.png");
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Issue assignment" }).click())).toBe(
+      "success",
+    );
+
+    await signOut(page);
+    await login(page, studentEmail, studentPassword);
+    await page.goto(`/student/courses/${course.id}/assignments`);
+    await page.getByRole("link", { name: new RegExp(title) }).click();
+    await upload(page, "attempt-1.png");
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Submit assignment" }).click())).toBe(
+      "success",
+    );
+
+    await signOut(page);
+    await login(page, teacher.email, teacherPassword);
+    await page.goto(`/teacher/courses/${course.id}/assignments`);
+    await page.getByRole("link", { name: new RegExp(title) }).click();
+    const row = page.locator("tr", { hasText: student.name });
+    await expect(row.getByText("Attempt 1")).toBeVisible();
+    await row.locator('input[name="marks"]').fill("4");
+    expect(await waitForFlashAfter(page, () => row.getByRole("button", { name: "Save" }).click())).toBe("success");
+
+    await signOut(page);
+    await login(page, studentEmail, studentPassword);
+    await page.goto(`/student/courses/${course.id}/assignments`);
+    await page.getByRole("link", { name: new RegExp(title) }).click();
+    await expect(page.getByText("Submit a new attempt if you need to revise")).toBeVisible();
+    await upload(page, "attempt-2.png");
+    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Submit new attempt" }).click())).toBe(
+      "success",
+    );
+    await expect(page.getByText(/Out of 10 · Submitted · Attempt 2/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "attempt-2.png" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "attempt-1.png" })).toBeVisible();
+
+    await signOut(page);
+    await login(page, teacher.email, teacherPassword);
+    await page.goto(`/teacher/courses/${course.id}/assignments`);
+    await page.getByRole("link", { name: new RegExp(title) }).click();
+    const gradedRow = page.locator("tr", { hasText: student.name });
+    await expect(gradedRow.getByText("Attempt 2")).toBeVisible();
+    await expect(gradedRow.getByText("2 total")).toBeVisible();
+    await expect(gradedRow.getByRole("link", { name: "attempt-2.png" })).toBeVisible();
+    await gradedRow.locator('input[name="marks"]').fill("9");
+    expect(await waitForFlashAfter(page, () => gradedRow.getByRole("button", { name: "Save" }).click())).toBe(
+      "success",
+    );
+    await expect(gradedRow.getByText("Graded")).toBeVisible();
   });
 });

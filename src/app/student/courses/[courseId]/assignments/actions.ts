@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { findStudentCourseEnrollment } from "@/lib/enrollment";
 import { requireStudent } from "@/lib/rbac";
 import { flashUrl } from "@/lib/flash";
-import { deleteObject, isStorageConfigured } from "@/lib/storage";
+import { isStorageConfigured } from "@/lib/storage";
 import {
   collectFormFiles,
   prepareUploadedFiles,
@@ -30,15 +30,17 @@ export async function submitAssignment(courseId: string, assignmentId: string, f
   });
   if (!assignment) redirect(flashUrl(`/student/courses/${courseId}/assignments`, "error", "That assignment was not found."));
 
-  const existing = await prisma.assignmentSubmission.findUnique({
-    where: { assignmentId_studentId: { assignmentId, studentId: session.user.id } },
-    include: { files: { select: { id: true, storageKey: true } } },
+  const attempts = await prisma.assignmentSubmission.findMany({
+    where: { assignmentId, studentId: session.user.id },
+    orderBy: { attemptNumber: "desc" },
+    select: { id: true, attemptNumber: true, marks: true },
   });
-  if (existing?.marks !== null && existing?.marks !== undefined) {
-    redirect(flashUrl(path, "error", "This assignment has already been graded."));
-  }
-  if (existing && isPastDueDate(assignment.dueDate)) {
-    redirect(flashUrl(path, "error", "You cannot replace your upload after the due date."));
+  const latest = attempts[0] ?? null;
+  const latestGraded = latest?.marks !== null && latest?.marks !== undefined;
+  const pastDue = isPastDueDate(assignment.dueDate);
+
+  if (latest && !latestGraded && pastDue) {
+    redirect(flashUrl(path, "error", "You cannot replace your upload after the due date until it is graded."));
   }
 
   const files = collectFormFiles(formData);
@@ -47,17 +49,14 @@ export async function submitAssignment(courseId: string, assignmentId: string, f
   if (!isStorageConfigured()) redirect(flashUrl(path, "error", "File storage is not configured."));
 
   const uploads = prepareUploadedFiles(files);
-  const submission = existing
-    ? await prisma.assignmentSubmission.update({
-        where: { id: existing.id },
-        data: { submittedAt: new Date() },
-      })
-    : await prisma.assignmentSubmission.create({
-        data: {
-          assignmentId,
-          studentId: session.user.id,
-        },
-      });
+  const attemptNumber = (latest?.attemptNumber ?? 0) + 1;
+  const submission = await prisma.assignmentSubmission.create({
+    data: {
+      assignmentId,
+      studentId: session.user.id,
+      attemptNumber,
+    },
+  });
 
   const fileIds = uploads.map(() => crypto.randomUUID().replace(/-/g, "").slice(0, 24));
   const { error, storedKeys } = await storeAssignmentUploads(
@@ -65,17 +64,8 @@ export async function submitAssignment(courseId: string, assignmentId: string, f
     (upload, index) => `assignments/${assignmentId}/submissions/${submission.id}/${fileIds[index]}/${upload.fileName}`,
   );
   if (error) {
-    if (!existing) await prisma.assignmentSubmission.delete({ where: { id: submission.id } }).catch(() => {});
+    await prisma.assignmentSubmission.delete({ where: { id: submission.id } }).catch(() => {});
     redirect(flashUrl(path, "error", error));
-  }
-
-  if (existing) {
-    await prisma.assignmentSubmissionFile.deleteMany({ where: { submissionId: existing.id } });
-    if (isStorageConfigured()) {
-      for (const file of existing.files) {
-        await deleteObject(file.storageKey).catch(() => {});
-      }
-    }
   }
 
   await prisma.assignmentSubmissionFile.createMany({
@@ -91,5 +81,11 @@ export async function submitAssignment(courseId: string, assignmentId: string, f
 
   revalidatePath(path);
   revalidatePath(`/student/courses/${courseId}/assignments`);
-  redirect(flashUrl(path, "success", "Assignment submitted."));
+  redirect(
+    flashUrl(
+      path,
+      "success",
+      attemptNumber === 1 ? "Assignment submitted." : `Attempt ${attemptNumber} submitted.`,
+    ),
+  );
 }

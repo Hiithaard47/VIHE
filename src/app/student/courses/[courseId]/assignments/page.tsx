@@ -14,7 +14,13 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
 
   const assignments = await prisma.assignment.findMany({
     where: { subject: { courseId } },
-    include: { submissions: { where: { studentId: session.user.id } } },
+    include: {
+      submissions: {
+        where: { studentId: session.user.id },
+        orderBy: { attemptNumber: "desc" },
+        take: 1,
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -40,6 +46,7 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
                 {submission?.marks !== null && submission?.marks !== undefined
                   ? ` · ${submission.marks}/${assignment.maxMarks}`
                   : ""}
+                {submission && submission.attemptNumber > 1 ? ` · Attempt ${submission.attemptNumber}` : ""}
               </p>
             </Link>
           );

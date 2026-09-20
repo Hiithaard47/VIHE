@@ -309,21 +309,23 @@ model AssignmentFile {
 }
 
 model AssignmentSubmission {
-  id           String    @id @default(cuid())
-  assignmentId String
-  studentId    String
-  submittedAt  DateTime  @default(now())
-  marks        Int?
-  feedback     String?
-  gradedById   String?
-  gradedAt     DateTime?
+  id            String    @id @default(cuid())
+  assignmentId  String
+  studentId     String
+  attemptNumber Int       @default(1)
+  submittedAt   DateTime  @default(now())
+  marks         Int?
+  feedback      String?
+  gradedById    String?
+  gradedAt      DateTime?
 
   assignment Assignment                 @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student    Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   gradedBy   User?                      @relation("AssignmentGradedBy", fields: [gradedById], references: [id])
   files      AssignmentSubmissionFile[]
 
-  @@unique([assignmentId, studentId])
+  @@unique([assignmentId, studentId, attemptNumber])
+  @@index([assignmentId, studentId])
   @@index([studentId])
   @@map("assignment_submissions")
 }

@@ -30,8 +30,7 @@ export async function CourseAssignmentsView({
     prisma.assignment.findMany({
     where: sessionWhere(courseId, scope),
     include: {
-      _count: { select: { submissions: true } },
-      submissions: { select: { marks: true } },
+      submissions: { select: { studentId: true, marks: true, attemptNumber: true } },
       subject: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -91,7 +90,15 @@ export async function CourseAssignmentsView({
         <div className="flex flex-col gap-2">
           {assignments.length === 0 && <p className="text-sm text-muted">No assignments issued yet.</p>}
           {assignments.map((assignment) => {
-            const graded = assignment.submissions.filter((item) => item.marks !== null).length;
+            const latestByStudent = new Map<string, (typeof assignment.submissions)[number]>();
+            for (const item of assignment.submissions) {
+              const current = latestByStudent.get(item.studentId);
+              if (!current || item.attemptNumber > current.attemptNumber) {
+                latestByStudent.set(item.studentId, item);
+              }
+            }
+            const submitted = latestByStudent.size;
+            const graded = [...latestByStudent.values()].filter((item) => item.marks !== null).length;
             return (
               <Link
                 key={assignment.id}
@@ -102,7 +109,7 @@ export async function CourseAssignmentsView({
                 <p className="text-xs text-muted">
                   {showSubjectName ? `${assignment.subject.name} · ` : ""}
                   {assignment.dueDate ? `Due ${formatDisplayDate(assignment.dueDate)} · ` : ""}
-                  {assignment._count.submissions}/{enrollmentCount} submitted · {graded} graded
+                  {submitted}/{enrollmentCount} submitted · {graded} graded
                 </p>
               </Link>
             );
