@@ -20,8 +20,8 @@ Built for Vrindavan Institute for Higher Education.
 
 ```mermaid
 flowchart LR
-  Visitor([Visitor]) --> Login[/login]
-  Visitor --> Apply[/apply]
+  Visitor([Visitor]) --> Login["/login"]
+  Visitor --> Apply["/apply"]
   Login --> Admin[Admin portal]
   Login --> Teacher[Teacher portal]
   Login --> Student[Student portal]
@@ -66,9 +66,9 @@ flowchart TB
   Dash --> Students
   Dash --> Settings
   Settings --> Cats[Session categories]
-  Settings --> Roles[Roles & permissions]
+  Settings --> Roles["Roles and permissions"]
   Courses --> Subjects
-  Subjects --> Workspace[Sessions / Schedule / Attendance / Uploads / Assignments]
+  Subjects --> Workspace["Sessions, Schedule, Attendance, Uploads, Assignments"]
 ```
 
 **People**
@@ -142,10 +142,10 @@ sequenceDiagram
   participant S as Student
   A->>A: Create course, subject, enroll students
   A->>T: Assign teacher to subject
-  T->>T: Schedule / create session
+  T->>T: Schedule or create session
   T->>T: Mark attendance
-  S->>S: View materials & submit work
-  A->>A: Reports / policy / oversight
+  S->>S: View materials and submit work
+  A->>A: Reports, policy, oversight
 ```
 
 Session categories can set a **minimum attendance %** used for at-risk flags on the roster.
