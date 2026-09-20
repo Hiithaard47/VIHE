@@ -35,14 +35,23 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
             </thead>
             <tbody>
               {subjects.map((subject) => (
-                <tr key={subject.id} className="border-b border-hairline text-ink last:border-0">
+                <tr
+                  key={subject.id}
+                  className={`border-b border-hairline last:border-0 ${subject.isActive ? "text-ink" : "text-muted"}`}
+                >
                   <td className="px-4 py-3">
-                    <Link href={`/admin/courses/${courseId}/subjects/${subject.id}`} className="font-medium hover:text-accent-dark">
+                    <Link
+                      href={`/admin/courses/${courseId}/subjects/${subject.id}`}
+                      className={`font-medium hover:text-accent-dark ${subject.isActive ? "" : "text-muted"}`}
+                    >
                       {subject.name}
                     </Link>
+                    {!subject.isActive && <span className="ml-2 text-xs text-muted">Archived</span>}
                   </td>
-                  <td className="px-4 py-3">
-                    {subject.teachers.map(({ teacher }) => teacher.name).join(", ") || <span className="text-muted">Unassigned</span>}
+                  <td className={`px-4 py-3 ${subject.isActive ? "" : "text-muted"}`}>
+                    {subject.teachers.map(({ teacher }) => teacher.name).join(", ") || (
+                      <span className="text-muted">Unassigned</span>
+                    )}
                   </td>
                 </tr>
               ))}

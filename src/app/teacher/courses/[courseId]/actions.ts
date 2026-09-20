@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireActiveCourse, requireCourseAccess, requireAnyPermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl } from "@/lib/flash";
-import { assertWritableSubject } from "@/lib/subject-scope";
+import { assertWritableSubject, subjectWriteDeniedMessage } from "@/lib/subject-scope";
 import { insertSession } from "@/lib/session-write";
 import { courseHref, parseCoursePortal, sessionListHref, type CoursePortal } from "@/lib/course-workspace";
 import { parseDateInput } from "@/lib/time";
@@ -28,8 +28,11 @@ export async function createSession(courseId: string, portalArg: CoursePortal, f
     ? await prisma.sessionCategory.findFirst({ where: { id: categoryHint, isActive: true }, select: { id: true } })
     : null;
   if (!category) redirect(flashUrl(path, "error", "Pick a session category."));
-  const subjectId = await assertWritableSubject(session, courseId, String(formData.get("subjectId") ?? "") || null);
-  if (!subjectId) redirect(flashUrl(path, "error", "You are not assigned to that subject."));
+  const requestedSubjectId = String(formData.get("subjectId") ?? "").trim() || null;
+  const subjectId = await assertWritableSubject(session, courseId, requestedSubjectId);
+  if (!subjectId) {
+    redirect(flashUrl(path, "error", await subjectWriteDeniedMessage(courseId, requestedSubjectId)));
+  }
   const startRaw = String(formData.get("startTime") ?? "").trim();
   const endRaw = String(formData.get("endTime") ?? "").trim();
   const times = startRaw || endRaw ? parseMeetingTimes(startRaw, endRaw) : null;

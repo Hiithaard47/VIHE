@@ -41,10 +41,11 @@ export async function CourseSessionsView({
       select: {
         description: true,
         subjects: {
-          where: { isActive: true },
+          where: selectedSubjectId ? { id: selectedSubjectId } : { isActive: true },
           select: {
             id: true,
             name: true,
+            isActive: true,
             sessions: {
               orderBy: [{ date: "asc" }, { startMinute: "asc" }],
               include: { category: { select: { id: true, name: true } }, _count: { select: { records: true } } },
@@ -65,12 +66,19 @@ export async function CourseSessionsView({
     (subject) => scope.kind === "all" || scope.ids.includes(subject.id),
   );
   const sessions = visibleSubjects
-    .flatMap((subject) => subject.sessions.map((item) => ({ ...item, subjectName: subject.name })))
+    .flatMap((subject) =>
+      subject.sessions.map((item) => ({ ...item, subjectName: subject.name, subjectActive: subject.isActive })),
+    )
     .sort((a, b) => a.date.getTime() - b.date.getTime() || (a.startMinute ?? 0) - (b.startMinute ?? 0));
   const groups = groupSessionsByCategory(sessions);
   const tabs = sessionCategoryTabs(groups);
   const selected = resolveCategoryTab(tabs, categoryId);
-  const writableSubjects = visibleSubjects.map((subject) => ({ id: subject.id, name: subject.name }));
+  const writableSubjects = visibleSubjects
+    .filter((subject) => subject.isActive)
+    .map((subject) => ({ id: subject.id, name: subject.name }));
+  const canCreateSessions = canWriteSessions && writableSubjects.length > 0;
+  const selectedSubjectArchived =
+    Boolean(selectedSubjectId) && visibleSubjects.some((subject) => subject.id === selectedSubjectId && !subject.isActive);
   const showSubjectName = visibleSubjects.length > 1;
   const createCategoryId =
     categories.find((category) => category.id === selected?.id)?.id ??
@@ -83,7 +91,11 @@ export async function CourseSessionsView({
     <div className="flex flex-col gap-6">
       {course.description && <p className="text-sm text-ink">{course.description}</p>}
 
-      {canWriteSessions && (
+      {selectedSubjectArchived && (
+        <p className="text-sm text-muted">This subject is archived. Restore it to add sessions.</p>
+      )}
+
+      {canCreateSessions && (
         <section>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">New session</h2>
           <form
@@ -175,7 +187,7 @@ export async function CourseSessionsView({
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="text-xs text-muted">{item._count.records} marked</span>
-                    {canWriteSessions && (
+                    {canWriteSessions && item.subjectActive && (
                       <SessionActionsMenu
                         sessionId={item.id}
                         date={item.date.toISOString()}

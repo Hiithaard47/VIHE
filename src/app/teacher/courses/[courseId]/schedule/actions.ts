@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireActiveCourse, requireCourseConfigure } from "@/lib/rbac";
-import { assertWritableSubject } from "@/lib/subject-scope";
+import { assertWritableSubject, subjectWriteDeniedMessage } from "@/lib/subject-scope";
 import { insertSession } from "@/lib/session-write";
 import { courseHref, parseCoursePortal, scheduleHref, type CoursePortal } from "@/lib/course-workspace";
 import { canManagePastSessionDates } from "@/lib/permissions";
@@ -32,7 +32,7 @@ export async function saveSchedule(
     return { error: "Weeks must be between 1 and 52." };
   }
   const subjectId = await assertWritableSubject(session, courseId, input.subjectId);
-  if (!subjectId) return { error: "You are not assigned to that subject." };
+  if (!subjectId) return { error: await subjectWriteDeniedMessage(courseId, input.subjectId) };
 
   await prisma.courseSubject.update({
     where: { id: subjectId },
@@ -59,7 +59,7 @@ export async function createScheduleSession(
   const times = parseMeetingTimes(input.startTime, input.endTime);
   if (!times) return { error: "Pick a valid start and end time." };
   const subjectId = await assertWritableSubject(session, courseId, input.subjectId);
-  if (!subjectId) return { error: "You are not assigned to that subject." };
+  if (!subjectId) return { error: await subjectWriteDeniedMessage(courseId, input.subjectId) };
 
   const category = await prisma.sessionCategory.findFirst({
     where: { id: input.categoryId, isActive: true },
@@ -112,7 +112,7 @@ export async function duplicateOneOffSession(
   });
   if (source.subject.courseId !== courseId) return { error: "That session is not on this course." };
   const subjectId = await assertWritableSubject(session, courseId, source.subjectId);
-  if (!subjectId) return { error: "You are not assigned to that subject." };
+  if (!subjectId) return { error: await subjectWriteDeniedMessage(courseId, source.subjectId) };
 
   const created = await insertSession({
     subjectId,

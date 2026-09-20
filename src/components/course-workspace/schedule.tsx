@@ -31,6 +31,7 @@ export async function CourseScheduleView({
           select: {
             id: true,
             name: true,
+            isActive: true,
             termStart: true,
             weekCount: true,
             sessions: {
@@ -61,6 +62,9 @@ export async function CourseScheduleView({
     course.subjects.find((item) => item.id === selectedSubjectId) ?? course.subjects[0];
   if (!subject) {
     return <p className="text-sm text-muted">Assign a subject before setting a schedule.</p>;
+  }
+  if (!subject.isActive) {
+    return <p className="text-sm text-muted">This subject is archived. Restore it to edit the schedule.</p>;
   }
 
   const termStart = subject.termStart ? mondayOf(subject.termStart) : mondayOf(startOfTodayUtc());

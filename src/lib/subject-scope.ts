@@ -69,3 +69,17 @@ export async function assertWritableSubject(
   });
   return subject?.id ?? null;
 }
+
+/** Distinct error when a subject exists on the course but is archived. */
+export async function subjectWriteDeniedMessage(
+  courseId: string,
+  requestedSubjectId?: string | null,
+): Promise<string> {
+  if (!requestedSubjectId) return "Pick a subject.";
+  const subject = await prisma.courseSubject.findFirst({
+    where: { id: requestedSubjectId, courseId },
+    select: { isActive: true },
+  });
+  if (subject && !subject.isActive) return "This subject is archived. Restore it to add sessions.";
+  return "You are not assigned to that subject.";
+}
