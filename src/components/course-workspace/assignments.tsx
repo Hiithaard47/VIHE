@@ -8,6 +8,7 @@ import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/a
 import { SubjectField } from "@/components/course-workspace-fields";
 import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
+import { ASSIGNMENT_FILE_ACCEPT } from "@/lib/assignment-files";
 import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
 export async function CourseAssignmentsView({
@@ -75,7 +76,7 @@ export async function CourseAssignmentsView({
                 name="files"
                 required
                 multiple
-                accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+                accept={ASSIGNMENT_FILE_ACCEPT}
               />
             </label>
             <UploadSubmitButton idleLabel="Issue assignment" />

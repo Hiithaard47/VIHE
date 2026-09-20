@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { findStudentCourseEnrollment } from "@/lib/enrollment";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, isPastDueDate } from "@/lib/time";
-import { assignmentStatus } from "@/lib/assignment-files";
+import { assignmentStatus, ASSIGNMENT_FILE_ACCEPT } from "@/lib/assignment-files";
 import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
 import { submitAssignment } from "../actions";
 
@@ -101,7 +101,7 @@ export default async function StudentAssignmentDetailPage({
               name="files"
               required
               multiple
-              accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+              accept={ASSIGNMENT_FILE_ACCEPT}
             />
           </label>
           <UploadSubmitButton idleLabel="Submit assignment" />
