@@ -127,7 +127,7 @@ test.describe("admin: session categories", () => {
     await page.locator('a[href*="/admin/sessions/"]', { hasText: "Morning aarti" }).click();
     await expect(page).toHaveURL(/\/admin\/sessions\//);
     await expect(page.getByRole("heading", { name: "Resources" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Upload" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Upload file" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Save attendance" })).toBeVisible();
 
     await page.goto(`/admin/courses/${course.id}/subjects/${course.subjects[0].id}/sessions`);
@@ -140,6 +140,6 @@ test.describe("admin: session categories", () => {
     await page.locator('a[href*="/admin/sessions/"]', { hasText: "Chapter 1" }).click();
     await expect(page).toHaveURL(/\/admin\/sessions\//);
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Upload" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Upload file" })).toBeVisible();
   });
 });

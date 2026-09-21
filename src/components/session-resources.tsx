@@ -1,5 +1,5 @@
-import { deleteSessionResource, uploadSessionResource } from "@/app/sessions/actions";
-import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
+import { deleteSessionResource } from "@/app/sessions/actions";
+import { UploadSessionResourceDialog } from "@/components/upload-session-resource-dialog";
 import { sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 export function SessionResources({
@@ -15,64 +15,42 @@ export function SessionResources({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Resources</h2>
-      {canManage && (
-        <form
-          action={uploadSessionResource.bind(null, sessionId, portal)}
-          className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4 sm:flex-row sm:items-end"
-        >
-          <label className="flex flex-1 flex-col gap-1 text-sm text-ink">
-            File
-            <UploadFileInput
-              name="file"
-              required
-              accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-            />
-          </label>
-          <UploadSubmitButton idleLabel="Upload" />
-        </form>
-      )}
-      <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-hairline bg-canvas text-muted">
-            <tr>
-              <th className="px-4 py-2 font-medium">File</th>
-              <th className="px-4 py-2 font-medium">Size</th>
-              {canManage && <th className="px-4 py-2 font-medium" />}
-            </tr>
-          </thead>
-          <tbody>
-            {resources.map((resource) => (
-              <tr key={resource.id} className="border-b border-hairline text-ink last:border-0">
-                <td className="px-4 py-3">
-                  <a href={`/resources/${resource.id}`} className="font-medium hover:text-accent-dark">
-                    {resource.fileName}
-                  </a>
-                  <p className="text-xs text-muted">{resource.contentType}</p>
-                </td>
-                <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
-                {canManage && (
-                  <td className="px-4 py-3 text-right">
-                    <form action={deleteSessionResource.bind(null, sessionId, resource.id, portal)}>
-                      <input type="hidden" name="returnTo" value={sessionHref(portal, sessionId)} />
-                      <button type="submit" className="text-xs text-muted underline hover:text-ink">
-                        Remove
-                      </button>
-                    </form>
-                  </td>
-                )}
-              </tr>
-            ))}
-            {resources.length === 0 && (
-              <tr>
-                <td colSpan={canManage ? 3 : 2} className="px-4 py-3 text-sm text-muted">
-                  No files uploaded yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Resources</h2>
+        {canManage && <UploadSessionResourceDialog sessionId={sessionId} portal={portal} />}
       </div>
+
+      {resources.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-hairline bg-card px-4 py-6 text-sm text-muted">
+          {canManage ? "No files yet. Upload a PDF or image for this session." : "No files uploaded yet."}
+        </p>
+      ) : (
+        <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-card">
+          {resources.map((resource) => (
+            <li
+              key={resource.id}
+              className="flex flex-col gap-2 px-4 py-3 text-sm text-ink sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <a href={`/resources/${resource.id}`} className="font-medium hover:text-accent-dark break-all">
+                  {resource.fileName}
+                </a>
+                <p className="text-xs text-muted">
+                  {resource.contentType} · {formatSize(resource.sizeBytes)}
+                </p>
+              </div>
+              {canManage && (
+                <form action={deleteSessionResource.bind(null, sessionId, resource.id, portal)} className="shrink-0">
+                  <input type="hidden" name="returnTo" value={sessionHref(portal, sessionId)} />
+                  <button type="submit" className="text-xs text-muted underline hover:text-ink">
+                    Remove
+                  </button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

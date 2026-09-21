@@ -33,22 +33,24 @@ test.describe("session homework", () => {
     const title = `Reading notes ${unique("hw")}`;
 
     await login(page, teacher.email, teacherPassword);
-    await page.goto(`/teacher/courses/${course.id}/homework`);
-    await expect(page.getByRole("link", { name: "Homework", exact: true })).toHaveAttribute("aria-current", "page");
-    await page.getByLabel("Session").selectOption(today.id);
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Instructions (optional)").fill("Bring one page of notes.");
-    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Assign homework" }).click())).toBe(
-      "success",
-    );
+    await page.goto(`/teacher/sessions/${today.id}`);
+    await page.getByRole("button", { name: "Assign homework" }).click();
+    const todayDialog = page.getByRole("dialog");
+    await todayDialog.getByLabel("Title").fill(title);
+    await todayDialog.getByLabel("Instructions (optional)").fill("Bring one page of notes.");
+    expect(
+      await waitForFlashAfter(page, () => todayDialog.getByRole("button", { name: "Assign homework" }).click()),
+    ).toBe("success");
     await expect(page.getByText(title)).toBeVisible();
     await expect(page.getByText(/0\/1 submitted · not graded/)).toBeVisible();
 
     await page.goto(`/teacher/sessions/${past.id}`);
-    await page.getByLabel("Title").fill(`Past homework ${unique("hw")}`);
-    expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Assign homework" }).click())).toBe(
-      "success",
-    );
+    await page.getByRole("button", { name: "Assign homework" }).click();
+    const pastDialog = page.getByRole("dialog");
+    await pastDialog.getByLabel("Title").fill(`Past homework ${unique("hw")}`);
+    expect(
+      await waitForFlashAfter(page, () => pastDialog.getByRole("button", { name: "Assign homework" }).click()),
+    ).toBe("success");
 
     await signOut(page);
     await login(page, studentEmail, studentPassword);
@@ -81,7 +83,7 @@ test.describe("session homework", () => {
     await login(page, teacher.email, teacherPassword);
     await page.goto(`/teacher/sessions/${today.id}`);
     await expect(page.getByText("1/1 submitted · not graded")).toBeVisible();
-    const row = page.locator("tr", { hasText: student.name });
+    const row = page.locator("li", { hasText: student.name });
     await expect(row.getByText(/Submitted/)).toBeVisible();
     await expect(row.getByRole("link", { name: "notes.png" })).toBeVisible();
     await expect(page.getByLabel("Marks")).toHaveCount(0);
