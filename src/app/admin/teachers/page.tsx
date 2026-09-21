@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AddTeacherDialog } from "@/components/add-teacher-dialog";
+import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
@@ -8,6 +9,7 @@ import { ADMIN_PAGE_SIZE, adminListHref, containsInsensitive, parseAdminListPage
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { importTeachers } from "@/app/admin/bulk-import-actions";
 
 const PATH = "/admin/teachers";
 
@@ -46,7 +48,26 @@ export default async function TeachersPage({
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Teachers</h2>
-          {isActive && <AddTeacherDialog roles={roles} />}
+          {isActive && (
+            <div className="flex items-center gap-2">
+              <BulkImportDialog
+                title="Import teachers"
+                action={importTeachers}
+                hint="CSV columns: name, email, phone (optional), password (optional if you set a default below). Each row gets the Teacher role."
+              >
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-muted">Default temporary password (optional)</span>
+                  <input
+                    name="defaultPassword"
+                    type="password"
+                    minLength={8}
+                    className="rounded-md border border-hairline bg-input px-3 py-2 text-ink"
+                  />
+                </label>
+              </BulkImportDialog>
+              <AddTeacherDialog roles={roles} />
+            </div>
+          )}
         </div>
         <AdminStatusTabs tab={tab} hrefForTab={(nextTab) => adminListHref(PATH, nextTab, 1, q)} />
         <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name, email, or mobile" />

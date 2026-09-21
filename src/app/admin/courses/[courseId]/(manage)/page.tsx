@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AddSubjectDialog } from "@/components/add-subject-dialog";
+import { BulkImportDialog } from "@/components/bulk-import-dialog";
+import { importSubjects } from "@/app/admin/bulk-import-actions";
 
 export default async function AdminCourseSubjectsPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;
@@ -23,7 +25,16 @@ export default async function AdminCourseSubjectsPage({ params }: { params: Prom
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Subjects</h2>
-          {course?.isActive && <AddSubjectDialog courseId={courseId} />}
+          {course?.isActive && (
+            <div className="flex items-center gap-2">
+              <BulkImportDialog
+                title="Import subjects"
+                action={importSubjects.bind(null, courseId)}
+                hint="CSV columns: name"
+              />
+              <AddSubjectDialog courseId={courseId} />
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
           <table className="w-full text-left text-sm">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AddStudentDialog } from "@/components/add-student-dialog";
+import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
 import { ListSearch } from "@/components/list-search";
@@ -9,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { approveApplication, rejectApplication } from "./actions";
+import { importStudents } from "@/app/admin/bulk-import-actions";
 
 const PATH = "/admin/students";
 const MODE_LABELS = { ONLINE: "Online", HYBRID: "Hybrid", ON_SITE: "On-site" } as const;
@@ -113,10 +115,29 @@ export default async function StudentsPage({
     <div className="flex flex-col gap-8">
       <FlashBanner />
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
-          {isActive && <AddStudentDialog courses={courses} />}
-        </div>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Students</h2>
+            {isActive && (
+              <div className="flex items-center gap-2">
+                <BulkImportDialog
+                  title="Import students"
+                  action={importStudents}
+                  hint="CSV columns: name, rollNumber, email (optional), phone (optional), password (optional), courseCode (optional)."
+                >
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-muted">Default portal password (optional)</span>
+                    <input
+                      name="defaultPassword"
+                      type="password"
+                      minLength={8}
+                      className="rounded-md border border-hairline bg-input px-3 py-2 text-ink"
+                    />
+                  </label>
+                </BulkImportDialog>
+                <AddStudentDialog courses={courses} />
+              </div>
+            )}
+          </div>
         <StudentTabs tab={tab} />
         <ListSearch action={PATH} tab={tab} q={q} placeholder="Search by name, roll number, email, or mobile" />
         <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
