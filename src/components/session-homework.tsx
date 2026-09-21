@@ -32,81 +32,102 @@ export function SessionHomeworkPanel({
   students: { id: string; name: string; rollNumber: string }[];
 }) {
   const submissionByStudent = new Map(homework?.submissions.map((item) => [item.student.id, item]) ?? []);
+  const submittedCount = homework?.submissions.length ?? 0;
+  const summaryLabel = homework
+    ? `${homework.title} · ${submittedCount}/${students.length} submitted`
+    : "No homework assigned";
 
   return (
-    <section className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Homework</h2>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Homework</p>
         {!homework && canManage && <AssignSessionHomeworkDialog sessionId={sessionId} portal={portal} />}
       </div>
 
-      {!homework && (
-        <p className="rounded-lg border border-dashed border-hairline bg-card px-4 py-6 text-sm text-muted">
-          {canManage
-            ? "No homework for this session yet. Assign one when you want students to upload work."
-            : "No homework for this session."}
-        </p>
-      )}
+      <details
+        className="group rounded-lg border border-hairline bg-card"
+        open={!homework}
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span aria-hidden className="text-muted transition-transform group-open:rotate-90">
+            ▸
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm text-ink">{summaryLabel}</span>
+        </summary>
 
-      {homework && (
-        <div className="flex flex-col gap-3 rounded-lg border border-hairline bg-card p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="font-medium text-ink">{homework.title}</p>
-              {homework.instructions && <p className="mt-1 text-sm text-ink">{homework.instructions}</p>}
-              <p className="mt-1 text-xs text-muted">
-                {homework.submissions.length}/{students.length} submitted · not graded
-              </p>
-            </div>
-            {canManage && (
-              <form action={removeSessionHomework.bind(null, sessionId, portal)} className="shrink-0">
-                <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
-                  Remove
-                </button>
-              </form>
-            )}
-          </div>
+        <div className="flex flex-col gap-3 border-t border-hairline px-4 py-3">
+          {!homework && (
+            <p className="text-sm text-muted">
+              {canManage
+                ? "Assign homework when you want students to upload work for this session day."
+                : "No homework for this session."}
+            </p>
+          )}
 
-          <ul className="divide-y divide-hairline overflow-hidden rounded-md border border-hairline">
-            {students.map((student) => {
-              const submission = submissionByStudent.get(student.id);
-              return (
-                <li key={student.id} className="flex flex-col gap-2 px-3 py-3 text-sm text-ink sm:flex-row sm:justify-between">
-                  <div>
-                    <p className="font-medium">{student.name}</p>
-                    <p className="text-xs text-muted">{student.rollNumber}</p>
-                    <p className="mt-1 text-xs text-muted">
-                      {submission ? `Submitted ${formatDisplayDate(submission.submittedAt)}` : "Not submitted"}
-                    </p>
-                  </div>
-                  <div className="sm:text-right">
-                    {submission && submission.files.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {submission.files.map((file) => (
-                          <li key={file.id}>
-                            <a
-                              href={`/homework/submission-files/${file.id}`}
-                              className="break-all hover:text-accent-dark"
-                            >
-                              {file.fileName}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-            {students.length === 0 && (
-              <li className="px-3 py-3 text-sm text-muted">No students enrolled in this course yet.</li>
-            )}
-          </ul>
+          {homework && (
+            <>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{homework.title}</p>
+                  {homework.instructions && <p className="mt-1 text-sm text-ink">{homework.instructions}</p>}
+                  <p className="mt-1 text-xs text-muted">
+                    {submittedCount}/{students.length} submitted · not graded
+                  </p>
+                </div>
+                {canManage && (
+                  <form action={removeSessionHomework.bind(null, sessionId, portal)} className="shrink-0">
+                    <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
+                      Remove
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <ul className="divide-y divide-hairline overflow-hidden rounded-md border border-hairline">
+                {students.map((student) => {
+                  const submission = submissionByStudent.get(student.id);
+                  return (
+                    <li
+                      key={student.id}
+                      className="flex flex-col gap-2 px-3 py-3 text-sm text-ink sm:flex-row sm:justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{student.name}</p>
+                        <p className="text-xs text-muted">{student.rollNumber}</p>
+                        <p className="mt-1 text-xs text-muted">
+                          {submission ? `Submitted ${formatDisplayDate(submission.submittedAt)}` : "Not submitted"}
+                        </p>
+                      </div>
+                      <div className="sm:text-right">
+                        {submission && submission.files.length > 0 ? (
+                          <ul className="flex flex-col gap-1">
+                            {submission.files.map((file) => (
+                              <li key={file.id}>
+                                <a
+                                  href={`/homework/submission-files/${file.id}`}
+                                  className="break-all hover:text-accent-dark"
+                                >
+                                  {file.fileName}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+                {students.length === 0 && (
+                  <li className="px-3 py-3 text-sm text-muted">No students enrolled in this course yet.</li>
+                )}
+              </ul>
+            </>
+          )}
         </div>
-      )}
-    </section>
+      </details>
+    </div>
   );
 }
 

@@ -41,8 +41,7 @@ test.describe("session homework", () => {
     expect(
       await waitForFlashAfter(page, () => todayDialog.getByRole("button", { name: "Assign homework" }).click()),
     ).toBe("success");
-    await expect(page.getByText(title)).toBeVisible();
-    await expect(page.getByText(/0\/1 submitted · not graded/)).toBeVisible();
+    await expect(page.getByText(`${title} · 0/1 submitted`)).toBeVisible();
 
     await page.goto(`/teacher/sessions/${past.id}`);
     await page.getByRole("button", { name: "Assign homework" }).click();
@@ -82,7 +81,8 @@ test.describe("session homework", () => {
     await signOut(page);
     await login(page, teacher.email, teacherPassword);
     await page.goto(`/teacher/sessions/${today.id}`);
-    await expect(page.getByText("1/1 submitted · not graded")).toBeVisible();
+    await expect(page.getByText(`${title} · 1/1 submitted`)).toBeVisible();
+    await page.locator("details").filter({ hasText: title }).locator("summary").click();
     const row = page.locator("li", { hasText: student.name });
     await expect(row.getByText(/Submitted/)).toBeVisible();
     await expect(row.getByRole("link", { name: "notes.png" })).toBeVisible();
