@@ -53,7 +53,12 @@ export default async function TeachersPage({
               <BulkImportDialog
                 title="Import teachers"
                 action={importTeachers}
-                hint="CSV columns: name, email, phone (optional), password (optional if you set a default below). Each row gets the Teacher role."
+                hint="Required columns: name, email. Optional: phone, password (or set a default below). Each row gets the Teacher role. First row must be the header."
+                sampleFileName="teachers-sample.csv"
+                sampleCsv={`name,email,phone,password
+Jane Teacher,jane.teacher@example.com,555-0100,TempPass123!
+Sam Mentor,sam.mentor@example.com,,TempPass123!
+`}
               >
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-muted">Default temporary password (optional)</span>

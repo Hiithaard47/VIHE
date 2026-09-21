@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireActiveCourse, requirePermission } from "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { flashUrl, isUniqueConstraintError } from "@/lib/flash";
 import { hashPassword } from "@/lib/password";
@@ -158,41 +158,6 @@ export async function importStudents(formData: FormData) {
     } catch (err) {
       if (isUniqueConstraintError(err)) {
         skipped.push(`${rowLabel} (roll number or email already exists)`);
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  revalidatePath(path);
-  redirect(flashUrl(path, created > 0 ? "success" : "error", summarizeImport(created, skipped)));
-}
-
-export async function importSubjects(courseId: string, formData: FormData) {
-  await requirePermission(PERMISSIONS.COURSES_MANAGE);
-  const path = `/admin/courses/${courseId}`;
-  await requireActiveCourse(courseId, path);
-  const { headers, rows } = await readCsvFile(formData, path);
-  const missing = requireColumns(headers, ["name"]);
-  if (missing) redirect(flashUrl(path, "error", missing));
-
-  let created = 0;
-  const skipped: string[] = [];
-
-  for (let index = 0; index < rows.length; index++) {
-    const row = rows[index];
-    const rowLabel = `row ${index + 2}`;
-    const name = row.name?.trim() ?? "";
-    if (!name) {
-      skipped.push(`${rowLabel} (name required)`);
-      continue;
-    }
-    try {
-      await prisma.courseSubject.create({ data: { courseId, name } });
-      created += 1;
-    } catch (err) {
-      if (isUniqueConstraintError(err)) {
-        skipped.push(`${rowLabel} (subject already exists)`);
         continue;
       }
       throw err;

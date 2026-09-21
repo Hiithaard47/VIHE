@@ -11,17 +11,18 @@ function csvFile(name: string, content: string) {
 }
 
 test.describe("admin bulk import", () => {
-  test("imports teachers, subjects, and students from CSV", async ({ page }) => {
+  test("imports teachers and students from CSV", async ({ page }) => {
     const course = await createCourse(`Import Course ${unique("c")}`, unique("IMP").toUpperCase());
     const teacherEmail = `${unique("bulkteacher")}@example.com`;
     const studentRoll = unique("BR").toUpperCase();
-    const subjectName = `Imported ${unique("sub")}`;
 
     await loginAsAdmin(page);
 
     await page.goto("/admin/teachers");
     await page.getByRole("button", { name: "Import CSV" }).click();
     const teacherDialog = page.getByRole("dialog");
+    await expect(teacherDialog.getByText(/Required columns: name, email/)).toBeVisible();
+    await expect(teacherDialog.getByRole("button", { name: "Download sample CSV" })).toBeVisible();
     await teacherDialog.getByLabel("Default temporary password (optional)").fill("TempPass123!");
     await teacherDialog.locator('input[name="file"]').setInputFiles(
       csvFile(
@@ -40,15 +41,8 @@ test.describe("admin bulk import", () => {
     expect(teacher.roles.map((item) => item.role.name)).toContain("Teacher");
 
     await page.goto(`/admin/courses/${course.id}`);
-    await page.getByRole("button", { name: "Import CSV" }).click();
-    const subjectDialog = page.getByRole("dialog");
-    await subjectDialog.locator('input[name="file"]').setInputFiles(
-      csvFile("subjects.csv", `name\n${subjectName}\n`),
-    );
-    expect(await waitForFlashAfter(page, () => subjectDialog.getByRole("button", { name: "Import" }).click())).toBe(
-      "success",
-    );
-    await expect(page.getByRole("link", { name: subjectName })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Import CSV" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add subject" })).toBeVisible();
 
     await page.goto("/admin/students");
     await page.getByRole("button", { name: "Import CSV" }).click();
