@@ -32,6 +32,7 @@ model User {
   uploadedResources    SessionResource[]      @relation("SessionResourceUploadedBy")
   createdAssignments   Assignment[]           @relation("AssignmentCreatedBy")
   gradedSubmissions    AssignmentSubmission[] @relation("AssignmentGradedBy")
+  createdHomeworks     SessionHomework[]      @relation("SessionHomeworkCreatedBy")
 
   @@map("users")
 }
@@ -203,6 +204,7 @@ model Student {
   enrollments CourseEnrollment[]
   attendance  AttendanceRecord[]
   submissions AssignmentSubmission[]
+  homeworkSubmissions SessionHomeworkSubmission[]
 
   @@map("students")
 }
@@ -252,9 +254,55 @@ model ClassSession {
   createdBy User               @relation("SessionCreatedBy", fields: [createdById], references: [id])
   records   AttendanceRecord[]
   resources SessionResource[]
+  homework  SessionHomework?
 
   @@index([subjectId, date, startMinute])
   @@map("class_sessions")
+}
+
+model SessionHomework {
+  id           String   @id @default(cuid())
+  sessionId    String   @unique
+  title        String
+  instructions String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  session     ClassSession                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy   User                         @relation("SessionHomeworkCreatedBy", fields: [createdById], references: [id])
+  submissions SessionHomeworkSubmission[]
+
+  @@map("session_homeworks")
+}
+
+model SessionHomeworkSubmission {
+  id          String   @id @default(cuid())
+  homeworkId  String
+  studentId   String
+  submittedAt DateTime @default(now())
+
+  homework SessionHomework                 @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  student  Student                         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  files    SessionHomeworkSubmissionFile[]
+
+  @@unique([homeworkId, studentId])
+  @@index([studentId])
+  @@map("session_homework_submissions")
+}
+
+model SessionHomeworkSubmissionFile {
+  id           String   @id @default(cuid())
+  submissionId String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String   @unique
+  createdAt    DateTime @default(now())
+
+  submission SessionHomeworkSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("session_homework_submission_files")
 }
 
 model SessionResource {

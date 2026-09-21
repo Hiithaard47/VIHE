@@ -9,6 +9,7 @@ import { STATUS_OPTIONS } from "@/lib/attendance";
 import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
 import { SessionResources } from "@/components/session-resources";
+import { SessionHomeworkPanel } from "@/components/session-homework";
 import { markAttendance } from "@/app/sessions/actions";
 import { AttendanceForm } from "@/app/teacher/sessions/[sessionId]/attendance-form";
 import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
@@ -39,6 +40,17 @@ export async function SessionDetailView({
       },
       records: { include: { markedBy: { select: { name: true } } } },
       resources: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, contentType: true, sizeBytes: true } },
+      homework: {
+        include: {
+          submissions: {
+            include: {
+              student: { select: { id: true, name: true, rollNumber: true } },
+              files: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true } },
+            },
+            orderBy: { student: { rollNumber: "asc" } },
+          },
+        },
+      },
     },
   });
   if (!classSession) notFound();
@@ -113,6 +125,17 @@ export async function SessionDetailView({
           portal={portal}
         />
       )}
+      <SessionHomeworkPanel
+        sessionId={sessionId}
+        homework={classSession.homework}
+        canManage={canManage && hasWorkspaceWrite(session.user.permissions)}
+        portal={portal}
+        students={students.map((student) => ({
+          id: student.id,
+          name: student.name,
+          rollNumber: student.rollNumber,
+        }))}
+      />
       {canMarkAttendance ? (
         <AttendanceForm action={markAttendance.bind(null, sessionId, portal)} students={students} />
       ) : (
