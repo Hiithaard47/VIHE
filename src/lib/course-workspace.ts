@@ -2,7 +2,7 @@ import { hasAttendanceAccess, hasCoursesRead, hasSessionsRead, hasStudentsRead }
 
 export type CoursePortal = "teacher" | "admin";
 
-const ADMIN_CLASSROOM = new Set(["sessions", "schedule", "attendance", "uploads", "assignments"]);
+const ADMIN_CLASSROOM = new Set(["sessions", "schedule", "attendance", "uploads", "assignments", "homework"]);
 
 export function parseCoursePortal(value: unknown): CoursePortal {
   return value === "admin" ? "admin" : "teacher";
@@ -59,7 +59,7 @@ export function teacherCourseTabSlugs(permissions: readonly string[], canConfigu
   if (hasStudentsRead(permissions)) slugs.push("roster");
   if (hasAttendanceAccess(permissions)) slugs.push("attendance");
   if (hasCoursesRead(permissions)) {
-    slugs.push("uploads", "assignments");
+    slugs.push("uploads", "homework", "assignments");
   }
   if (canConfigure) slugs.push("settings");
   return slugs;

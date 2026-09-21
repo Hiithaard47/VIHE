@@ -23,6 +23,7 @@ test.describe("admin: classroom", () => {
     await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Roster", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Attendance", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Homework", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Assignments", exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Sessions", exact: true }).click();

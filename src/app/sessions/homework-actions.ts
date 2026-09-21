@@ -15,7 +15,7 @@ import {
 } from "@/lib/assignment-files";
 import { findStudentCourseEnrollment } from "@/lib/enrollment";
 import { sessionTiming } from "@/lib/time";
-import { parseCoursePortal, sessionHref, type CoursePortal } from "@/lib/course-workspace";
+import { parseCoursePortal, courseHref, safeWorkspaceReturnTo, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 async function requireHomeworkManage(sessionId: string, portalArg: CoursePortal) {
   const portal = parseCoursePortal(portalArg);
@@ -24,6 +24,7 @@ async function requireHomeworkManage(sessionId: string, portalArg: CoursePortal)
     select: {
       id: true,
       subjectId: true,
+      subject: { select: { courseId: true } },
       homework: { select: { id: true } },
     },
   });
@@ -35,9 +36,23 @@ async function requireHomeworkManage(sessionId: string, portalArg: CoursePortal)
   return { portal, classSession, session };
 }
 
+function homeworkReturnPath(
+  portal: CoursePortal,
+  classSession: { id: string; subjectId: string; subject: { courseId: string } },
+  formData: FormData,
+) {
+  const list = courseHref(portal, classSession.subject.courseId, "homework", classSession.subjectId);
+  const fallback = sessionHref(portal, classSession.id);
+  const raw = formData.get("returnTo");
+  if (typeof raw === "string" && raw.trim()) {
+    return safeWorkspaceReturnTo(raw, list);
+  }
+  return fallback;
+}
+
 export async function assignSessionHomework(sessionId: string, portalArg: CoursePortal, formData: FormData) {
   const { portal, classSession, session } = await requireHomeworkManage(sessionId, portalArg);
-  const path = sessionHref(portal, sessionId);
+  const path = homeworkReturnPath(portal, classSession, formData);
   if (classSession.homework) redirect(flashUrl(path, "error", "This session already has homework."));
 
   const title = String(formData.get("title") ?? "").trim();
@@ -54,12 +69,32 @@ export async function assignSessionHomework(sessionId: string, portalArg: Course
   });
 
   revalidatePath(path);
+  revalidatePath(sessionHref(portal, sessionId));
+  revalidatePath(courseHref(portal, classSession.subject.courseId, "homework", classSession.subjectId));
   redirect(flashUrl(path, "success", "Homework assigned for this session."));
 }
 
-export async function removeSessionHomework(sessionId: string, portalArg: CoursePortal, _formData: FormData) {
+export async function assignCourseHomework(courseId: string, portalArg: CoursePortal, formData: FormData) {
+  const portal = parseCoursePortal(portalArg);
+  const sessionId = String(formData.get("sessionId") ?? "").trim();
+  const listFallback = courseHref(portal, courseId, "homework");
+  if (!sessionId) redirect(flashUrl(listFallback, "error", "Choose a session."));
+
+  const classSession = await prisma.classSession.findFirst({
+    where: { id: sessionId, subject: { courseId } },
+    select: { id: true, subjectId: true },
+  });
+  if (!classSession) redirect(flashUrl(listFallback, "error", "That session was not found."));
+
+  if (!String(formData.get("returnTo") ?? "").trim()) {
+    formData.set("returnTo", courseHref(portal, courseId, "homework", classSession.subjectId));
+  }
+  await assignSessionHomework(sessionId, portal, formData);
+}
+
+export async function removeSessionHomework(sessionId: string, portalArg: CoursePortal, formData: FormData) {
   const { portal, classSession } = await requireHomeworkManage(sessionId, portalArg);
-  const path = sessionHref(portal, sessionId);
+  const path = homeworkReturnPath(portal, classSession, formData);
   if (!classSession.homework) redirect(flashUrl(path, "error", "This session has no homework."));
 
   const homework = await prisma.sessionHomework.findUnique({
@@ -77,6 +112,8 @@ export async function removeSessionHomework(sessionId: string, portalArg: Course
   }
   await prisma.sessionHomework.delete({ where: { id: homework.id } });
   revalidatePath(path);
+  revalidatePath(sessionHref(portal, sessionId));
+  revalidatePath(courseHref(portal, classSession.subject.courseId, "homework", classSession.subjectId));
   redirect(flashUrl(path, "success", "Homework removed."));
 }
 

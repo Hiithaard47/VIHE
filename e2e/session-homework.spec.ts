@@ -33,14 +33,16 @@ test.describe("session homework", () => {
     const title = `Reading notes ${unique("hw")}`;
 
     await login(page, teacher.email, teacherPassword);
-    await page.goto(`/teacher/sessions/${today.id}`);
+    await page.goto(`/teacher/courses/${course.id}/homework`);
+    await expect(page.getByRole("link", { name: "Homework", exact: true })).toHaveAttribute("aria-current", "page");
+    await page.getByLabel("Session").selectOption(today.id);
     await page.getByLabel("Title").fill(title);
     await page.getByLabel("Instructions (optional)").fill("Bring one page of notes.");
     expect(await waitForFlashAfter(page, () => page.getByRole("button", { name: "Assign homework" }).click())).toBe(
       "success",
     );
     await expect(page.getByText(title)).toBeVisible();
-    await expect(page.getByText("0/1 submitted · not graded")).toBeVisible();
+    await expect(page.getByText(/0\/1 submitted · not graded/)).toBeVisible();
 
     await page.goto(`/teacher/sessions/${past.id}`);
     await page.getByLabel("Title").fill(`Past homework ${unique("hw")}`);
