@@ -50,12 +50,15 @@ test.describe("session homework", () => {
 
     await signOut(page);
     await login(page, studentEmail, studentPassword);
-    await page.goto(`/student/courses/${course.id}`);
-    await page.getByRole("link", { name: /Past class/ }).click();
+    await page.goto(`/student/courses/${course.id}/homework`);
+    await expect(page.getByRole("heading", { name: /Pending/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(title) })).toBeVisible();
+    await page.getByRole("link", { name: /Past homework/ }).click();
     await expect(page.getByText("You can submit homework only on the session day.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit homework" })).toHaveCount(0);
 
-    await page.goto(`/student/courses/${course.id}/sessions/${today.id}`);
+    await page.goto(`/student/courses/${course.id}/homework`);
+    await page.getByRole("link", { name: new RegExp(title) }).click();
     await expect(page.getByText(title)).toBeVisible();
     await page.locator('input[name="files"]').setInputFiles({
       name: "notes.png",
@@ -66,6 +69,11 @@ test.describe("session homework", () => {
       "success",
     );
     await expect(page.getByRole("link", { name: "notes.png" })).toBeVisible();
+
+    await page.goto(`/student/courses/${course.id}/homework`);
+    await expect(page.getByRole("heading", { name: /Submitted/ })).toBeVisible();
+    const submitted = page.locator("section", { has: page.getByRole("heading", { name: /Submitted/ }) });
+    await expect(submitted.getByRole("link", { name: new RegExp(title) })).toBeVisible();
 
     await signOut(page);
     await login(page, teacher.email, teacherPassword);

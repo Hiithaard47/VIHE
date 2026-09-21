@@ -78,6 +78,7 @@ test.describe("course assignments", () => {
     await signOut(page);
     await login(page, studentEmail, studentPassword);
     await page.goto(`/student/courses/${course.id}/assignments`);
+    await expect(page.getByRole("heading", { name: /Submitted/ })).toBeVisible();
     await expect(page.getByText("Graded · 16/20")).toBeVisible();
     await page.getByRole("link", { name: new RegExp(title) }).click();
     await expect(page.getByText("16/20")).toBeVisible();

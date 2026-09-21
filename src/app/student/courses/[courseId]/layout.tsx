@@ -38,6 +38,7 @@ export default async function StudentCourseLayout({
         tabs={[
           { slug: "", label: "Sessions" },
           { slug: "documents", label: "Documents" },
+          { slug: "homework", label: "Homework" },
           { slug: "assignments", label: "Assignments" },
         ]}
       />

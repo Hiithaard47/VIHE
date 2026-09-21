@@ -44,6 +44,8 @@ test.describe("student: my courses and sessions", () => {
     await expect(page.getByRole("heading", { name: active.name })).toBeVisible();
     await expect(page.getByRole("link", { name: "Sessions" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Homework" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Assignments" })).toBeVisible();
     await expect(page.getByText("5 Jan 2026")).toBeVisible();
     await expect(page.getByText("20 Nov 2026")).toBeVisible();
     await expect(page.getByText("Previous", { exact: true })).toBeVisible();

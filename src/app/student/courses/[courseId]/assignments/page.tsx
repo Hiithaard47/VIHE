@@ -24,14 +24,52 @@ export default async function StudentAssignmentsPage({ params }: { params: Promi
     orderBy: { createdAt: "desc" },
   });
 
+  const pending = assignments.filter((item) => item.submissions.length === 0);
+  const submitted = assignments.filter((item) => item.submissions.length > 0);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <AssignmentGroup
+        courseId={courseId}
+        title="Pending"
+        items={pending}
+        empty="No pending assignments."
+      />
+      <AssignmentGroup
+        courseId={courseId}
+        title="Submitted"
+        items={submitted}
+        empty="No submitted assignments yet."
+      />
+    </div>
+  );
+}
+
+function AssignmentGroup({
+  courseId,
+  title,
+  items,
+  empty,
+}: {
+  courseId: string;
+  title: string;
+  items: Array<{
+    id: string;
+    title: string;
+    dueDate: Date | null;
+    maxMarks: number;
+    submissions: Array<{ marks: number | null; attemptNumber: number }>;
+  }>;
+  empty: string;
+}) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        Assignments &middot; {assignments.length}
+        {title} &middot; {items.length}
       </h2>
-      {assignments.length === 0 && <p className="text-sm text-muted">No assignments have been issued yet.</p>}
+      {items.length === 0 && <p className="text-sm text-muted">{empty}</p>}
       <div className="flex flex-col gap-2">
-        {assignments.map((assignment) => {
+        {items.map((assignment) => {
           const submission = assignment.submissions[0] ?? null;
           return (
             <Link

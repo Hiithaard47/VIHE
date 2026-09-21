@@ -56,8 +56,15 @@ export default async function StudentSessionDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href={`/student/courses/${courseId}`} className="text-sm text-muted">
-          &larr; Sessions
+        <Link
+          href={
+            homework
+              ? `/student/courses/${courseId}/homework`
+              : `/student/courses/${courseId}`
+          }
+          className="text-sm text-muted"
+        >
+          &larr; {homework ? "Homework" : "Sessions"}
         </Link>
         <h2 className="font-heading text-lg font-semibold text-ink">{classSession.name}</h2>
         <p className="text-sm text-muted">
