@@ -1,4 +1,4 @@
-import { CourseScheduleView } from "@/components/course-workspace/schedule";
+import { CourseScheduleView } from "@/modules/schedule/ui/course-schedule-view";
 
 export default async function CourseSchedulePage({
   params,

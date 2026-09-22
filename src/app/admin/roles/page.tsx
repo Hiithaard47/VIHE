@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AddRoleDialog } from "@/components/add-role-dialog";
+import { AddRoleDialog } from "@/modules/roles/ui/add-role-dialog";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
 import { ListSearch } from "@/components/list-search";

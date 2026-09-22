@@ -1,10 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEFAULT_SUBJECT_NAME } from "../src/lib/subjects";
+import { DEFAULT_SUBJECT_NAME } from "../src/modules/subjects/service/subjects";
 import {
   DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
   DEFAULT_SESSION_CATEGORY_NAME,
-} from "../src/lib/session-categories";
+} from "../src/modules/session-categories/service/session-categories";
 
 // Separate client for fixture setup/assertions. Playwright sets DATABASE_URL
 // to TEST_DATABASE_URL in playwright.config.ts before this module loads.

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { requireStudent } from "@/lib/rbac";
 import { StudentCourseHomeworkView } from "@/modules/session-homework";
 

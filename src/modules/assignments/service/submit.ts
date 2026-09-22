@@ -4,7 +4,7 @@ import {
   storeAssignmentUploads,
   validateAssignmentUploads,
 } from "@/lib/assignment-files";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { deleteObject, isStorageConfigured } from "@/lib/storage";
 import { isPastDueDate } from "@/lib/time";
 import * as db from "../db/repository";

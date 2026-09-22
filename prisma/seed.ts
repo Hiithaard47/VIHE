@@ -4,7 +4,7 @@ import { PERMISSION_DEFINITIONS, DEFAULT_ROLES } from "../src/lib/permissions";
 import {
   DEFAULT_SESSION_CATEGORY_MIN_PERCENT,
   DEFAULT_SESSION_CATEGORY_NAME,
-} from "../src/lib/session-categories";
+} from "../src/modules/session-categories";
 
 const prisma = new PrismaClient();
 

@@ -1,0 +1,90 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { sessionWhere } from "@/lib/subject-scope";
+import { loadCourseWorkspace } from "@/lib/rbac";
+import { deleteSessionResource } from "@/modules/session-resources/actions";
+import { courseHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
+import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
+import { formatDisplayDate } from "@/lib/time";
+import { getCourseResources } from "@/modules/session-resources/service/queries";
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export async function CourseUploadsView({
+  courseId,
+  portal,
+  selectedSubjectId,
+}: {
+  courseId: string;
+  portal: CoursePortal;
+  selectedSubjectId?: string;
+}) {
+  const { session, scope, canManage } = await loadCourseWorkspace(courseId, portal, selectedSubjectId);
+  const canWrite = canManage && hasWorkspaceWrite(session.user.permissions);
+  if (portal === "teacher" && !hasCoursesRead(session.user.permissions)) {
+    redirect(firstTeacherCoursePath(courseId, session.user.permissions));
+  }
+  const returnTo = courseHref(portal, courseId, "uploads", selectedSubjectId);
+
+  const resources = await getCourseResources(sessionWhere(courseId, scope));
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+        Uploads &middot; {resources.length} file(s)
+      </h2>
+      <div className="overflow-x-auto rounded-lg border border-hairline bg-card">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-hairline bg-canvas text-muted">
+            <tr>
+              <th className="px-4 py-2 font-medium">File</th>
+              <th className="px-4 py-2 font-medium">Session</th>
+              <th className="px-4 py-2 font-medium">Size</th>
+              {canWrite && <th className="px-4 py-2" />}
+            </tr>
+          </thead>
+          <tbody>
+            {resources.map((resource) => (
+              <tr key={resource.id} className="border-b border-hairline text-ink last:border-0">
+                <td className="px-4 py-3">
+                  <a href={`/resources/${resource.id}`} className="font-medium hover:text-accent-dark">
+                    {resource.fileName}
+                  </a>
+                  <p className="text-xs text-muted">{resource.contentType}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <Link href={sessionHref(portal, resource.session.id)} className="hover:text-accent-dark">
+                    {formatDisplayDate(resource.session.date)}
+                  </Link>
+                  <p className="text-xs text-muted">{resource.session.name}</p>
+                </td>
+                <td className="px-4 py-3 text-muted">{formatSize(resource.sizeBytes)}</td>
+                {canWrite && (
+                  <td className="px-4 py-3 text-right">
+                    <form action={deleteSessionResource.bind(null, resource.session.id, resource.id, portal)}>
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <button type="submit" className="text-xs text-muted underline hover:text-accent-dark">
+                        Remove
+                      </button>
+                    </form>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {resources.length === 0 && (
+              <tr>
+                <td colSpan={canWrite ? 4 : 3} className="px-4 py-3 text-sm text-muted">
+                  No files uploaded for this course yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}

@@ -4,7 +4,7 @@ import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { removeSessionCategory, toggleSessionCategoryActive, updateSessionCategory } from "../actions";
+import { removeSessionCategory, toggleSessionCategoryActive, updateSessionCategory } from "@/modules/session-categories/actions";
 
 export default async function AdminSessionCategoryPage({
   params,

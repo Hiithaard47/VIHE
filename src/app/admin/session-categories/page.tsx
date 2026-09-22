@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { AddSessionCategoryDialog } from "@/components/add-session-category-dialog";
+import { AddSessionCategoryDialog } from "@/modules/session-categories/ui/add-session-category-dialog";
 import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { removeSessionCategory, toggleSessionCategoryActive } from "./actions";
+import { removeSessionCategory, toggleSessionCategoryActive } from "@/modules/session-categories/actions";
 
 export default async function AdminSessionCategoriesPage({
   searchParams,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { studentEnrollmentWhere } from "@/lib/enrollment";
+import { studentEnrollmentWhere } from "@/modules/roster/service/enrollment";
 import { requireStudent } from "@/lib/rbac";
 
 export default async function StudentHome() {

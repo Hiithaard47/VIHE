@@ -10,7 +10,7 @@ import {
   prisma,
 } from "./db";
 import { PERMISSIONS } from "../src/lib/permissions";
-import { mondayOf } from "../src/lib/schedule";
+import { mondayOf } from "../src/modules/schedule/service/schedule";
 import {
   addUtcDays,
   formatDayHeading,

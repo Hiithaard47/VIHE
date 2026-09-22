@@ -3,7 +3,7 @@ import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { addSubjectTeacher, removeSubjectTeacher } from "../actions";
+import { addSubjectTeacher, removeSubjectTeacher } from "@/modules/subjects/actions";
 import { contactKeywords } from "@/lib/admin-list";
 
 export default async function AdminSubjectTeachersPage({

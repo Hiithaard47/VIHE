@@ -1,4 +1,4 @@
-import { CourseSessionsView } from "@/components/course-workspace/sessions";
+import { CourseSessionsView } from "@/modules/sessions/ui/course-sessions-view";
 
 export default async function AdminSubjectSessionsPage({
   params,

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { updateUserRoles } from "../../actions";
+import { updateUserRoles } from "@/modules/teachers/actions";
 
 export default async function AdminTeacherRolesPage({
   params,

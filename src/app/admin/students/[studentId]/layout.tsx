@@ -5,7 +5,7 @@ import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/rbac";
-import { toggleStudentActive } from "../actions";
+import { toggleStudentActive } from "@/modules/students/actions";
 
 export default async function AdminStudentLayout({
   children,

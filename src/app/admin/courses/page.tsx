@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
-import { AddCourseDialog } from "@/components/add-course-dialog";
+import { AddCourseDialog } from "@/modules/courses/ui/add-course-dialog";
 import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";

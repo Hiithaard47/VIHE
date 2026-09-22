@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { updateCourseDetails, updateCoursePolicy } from "@/app/courses/actions";
-import { CourseDetailsForm, CoursePolicyForm } from "@/components/course-settings-forms";
+import { updateCourseDetails, updateCoursePolicy } from "@/modules/courses/actions";
+import { CourseDetailsForm, CoursePolicyForm } from "@/modules/courses/ui/course-settings-forms";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isCourseAdmin } from "@/lib/subject-scope";

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, sessionTiming } from "@/lib/time";
-import { formatTime } from "@/lib/schedule";
+import { formatTime } from "@/modules/schedule/service/schedule";
 import { StudentSessionHomework } from "@/modules/session-homework";
 
 export default async function StudentSessionDetailPage({

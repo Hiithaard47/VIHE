@@ -1,4 +1,4 @@
-import { CourseRosterView } from "@/components/course-workspace/roster";
+import { CourseRosterView } from "@/modules/roster/ui/course-roster-view";
 
 export default async function CourseRosterPage({
   params,

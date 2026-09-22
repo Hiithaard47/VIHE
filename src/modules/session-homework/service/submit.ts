@@ -4,7 +4,7 @@ import {
   storeAssignmentUploads,
   validateAssignmentUploads,
 } from "@/lib/assignment-files";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { isUniqueConstraintError } from "@/lib/flash";
 import { deleteObject, isStorageConfigured } from "@/lib/storage";
 import { sessionTiming } from "@/lib/time";

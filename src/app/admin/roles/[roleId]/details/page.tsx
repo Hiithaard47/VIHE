@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { updateRoleDetails } from "../../actions";
+import { updateRoleDetails } from "@/modules/roles/actions";
 
 export default async function AdminRoleDetailsPage({
   params,

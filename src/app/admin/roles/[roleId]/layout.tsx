@@ -5,7 +5,7 @@ import { FlashBanner } from "@/components/flash-banner";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { deleteRole } from "../actions";
+import { deleteRole } from "@/modules/roles/actions";
 
 export default async function AdminRoleLayout({
   children,

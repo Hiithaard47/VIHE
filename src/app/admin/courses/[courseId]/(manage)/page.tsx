@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { AddSubjectDialog } from "@/components/add-subject-dialog";
+import { AddSubjectDialog } from "@/modules/subjects/ui/add-subject-dialog";
 
 export default async function AdminCourseSubjectsPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = await params;

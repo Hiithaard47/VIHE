@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, defaultSessionCategory, prisma } from "./db";
-import { mondayOf } from "../src/lib/schedule";
+import { mondayOf } from "../src/modules/schedule/service/schedule";
 import { addUtcDays, formatDayHeading, startOfTodayUtc, toDateInputValue } from "../src/lib/time";
 
 /** Previous calendar week's Monday — days in that week are on or before today. */

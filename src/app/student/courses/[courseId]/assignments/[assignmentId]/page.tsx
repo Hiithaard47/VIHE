@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, isPastDueDate } from "@/lib/time";
 import { assignmentStatus, ASSIGNMENT_FILE_ACCEPT } from "@/lib/assignment-files";

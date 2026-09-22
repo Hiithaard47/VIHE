@@ -1,4 +1,4 @@
-import { CourseUploadsView } from "@/components/course-workspace/uploads";
+import { CourseUploadsView } from "@/modules/session-resources/ui/course-uploads-view";
 
 export default async function AdminSubjectUploadsPage({
   params,

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AddTeacherDialog } from "@/components/add-teacher-dialog";
-import { BulkImportDialog } from "@/components/bulk-import-dialog";
+import { AddTeacherDialog } from "@/modules/teachers/ui/add-teacher-dialog";
+import { BulkImportDialog } from "@/modules/bulk-import/ui/bulk-import-dialog";
 import { AdminStatusTabs } from "@/components/admin-status-tabs";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
@@ -9,7 +9,7 @@ import { ADMIN_PAGE_SIZE, adminListHref, containsInsensitive, parseAdminListPage
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { importTeachers } from "@/app/admin/bulk-import-actions";
+import { importTeachers } from "@/modules/bulk-import/actions";
 
 const PATH = "/admin/teachers";
 

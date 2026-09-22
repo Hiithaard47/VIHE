@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { deleteSubject, toggleSubjectActive, updateSubjectDetails } from "./actions";
+import { deleteSubject, toggleSubjectActive, updateSubjectDetails } from "@/modules/subjects/actions";
 
 export default async function AdminSubjectOverview({
   params,

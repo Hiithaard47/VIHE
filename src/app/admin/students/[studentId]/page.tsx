@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/rbac";
-import { updateStudentEnrollments } from "../actions";
+import { updateStudentEnrollments } from "@/modules/students/actions";
 
 type CourseTab = "active" | "completed";
 

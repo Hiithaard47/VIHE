@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, unique } from "./helpers";
 import { createCourse, createSession, createStudent, createTeacher, prisma } from "./db";
-import { DEFAULT_SUBJECT_NAME } from "../src/lib/subjects";
+import { DEFAULT_SUBJECT_NAME } from "../src/modules/subjects/service/subjects";
 import { formatDisplayDate, startOfTodayUtc } from "../src/lib/time";
 
 test.describe("teacher: attendance matrix", () => {

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, unique, waitForFlashAfter } from "./helpers";
 import { createCourse, createTeacher, defaultSessionCategory, prisma } from "./db";
-import { mondayOf } from "../src/lib/schedule";
+import { mondayOf } from "../src/modules/schedule/service/schedule";
 import { addUtcDays, formatDayHeading, startOfTodayUtc, toDateInputValue } from "../src/lib/time";
 
 test.use({ viewport: { width: 390, height: 844 } });

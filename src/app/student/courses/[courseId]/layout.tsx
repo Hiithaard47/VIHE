@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminSubTabs } from "@/components/admin-sub-tabs";
 import { FlashBanner } from "@/components/flash-banner";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { requireStudent } from "@/lib/rbac";
 
 export default async function StudentCourseLayout({

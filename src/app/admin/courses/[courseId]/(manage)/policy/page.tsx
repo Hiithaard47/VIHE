@@ -1,5 +1,5 @@
-import { updateCoursePolicy } from "@/app/courses/actions";
-import { CoursePolicyForm } from "@/components/course-settings-forms";
+import { updateCoursePolicy } from "@/modules/courses/actions";
+import { CoursePolicyForm } from "@/modules/courses/ui/course-settings-forms";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminCoursePolicyPage({ params }: { params: Promise<{ courseId: string }> }) {

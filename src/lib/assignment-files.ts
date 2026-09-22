@@ -1,5 +1,5 @@
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
-import { sanitizeFileName } from "@/lib/session-resources";
+import { sanitizeFileName } from "@/modules/session-resources/service/session-resources";
 
 export { sanitizeFileName };
 

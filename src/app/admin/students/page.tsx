@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AddStudentDialog } from "@/components/add-student-dialog";
-import { BulkImportDialog } from "@/components/bulk-import-dialog";
+import { AddStudentDialog } from "@/modules/students/ui/add-student-dialog";
+import { BulkImportDialog } from "@/modules/bulk-import/ui/bulk-import-dialog";
 import { FlashBanner } from "@/components/flash-banner";
 import { ListPagination } from "@/components/list-pagination";
 import { ListSearch } from "@/components/list-search";
@@ -9,8 +9,8 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
-import { approveApplication, rejectApplication } from "./actions";
-import { importStudents } from "@/app/admin/bulk-import-actions";
+import { approveApplication, rejectApplication } from "@/modules/students/actions";
+import { importStudents } from "@/modules/bulk-import/actions";
 
 const PATH = "/admin/students";
 const MODE_LABELS = { ONLINE: "Online", HYBRID: "Hybrid", ON_SITE: "On-site" } as const;

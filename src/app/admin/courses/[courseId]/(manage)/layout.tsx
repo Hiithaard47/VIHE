@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { PERMISSIONS } from "@/lib/permissions";
 import { AdminCourseChrome } from "@/components/admin-course-chrome";
 import { FlashBanner } from "@/components/flash-banner";
-import { toggleCourseActive } from "../../actions";
+import { toggleCourseActive } from "@/modules/courses/actions";
 
 export default async function AdminCourseLayout({
   children,

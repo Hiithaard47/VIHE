@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
-import { submitApplication } from "./actions";
+import { submitApplication } from "@/modules/apply/actions";
 
 export default async function ApplyPage({
   searchParams,

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";

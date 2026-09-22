@@ -12,7 +12,7 @@ vi.mock("../db/repository", () => ({
   replaceSubmissionFiles: vi.fn(),
 }));
 
-vi.mock("@/lib/enrollment", () => ({
+vi.mock("@/modules/roster", () => ({
   findStudentCourseEnrollment: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ vi.mock("@/lib/assignment-files", () => ({
 }));
 
 import * as db from "../db/repository";
-import { findStudentCourseEnrollment } from "@/lib/enrollment";
+import { findStudentCourseEnrollment } from "@/modules/roster";
 import { isStorageConfigured, deleteObject } from "@/lib/storage";
 import {
   prepareUploadedFiles,

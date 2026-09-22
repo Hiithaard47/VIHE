@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSubjectAssignableToCourse } from "@/lib/subject-access";
+import { isSubjectAssignableToCourse } from "@/modules/subjects/service/subject-access";
 
 describe("subject assignment RBAC helpers", () => {
   it("only assigns active subjects from the selected course", () => {

@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/rbac";
 import { toDateInputValue } from "@/lib/time";
-import { updateStudentDetails } from "../../actions";
+import { updateStudentDetails } from "@/modules/students/actions";
 
 export default async function AdminStudentDetailsPage({
   params,

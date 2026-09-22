@@ -15,7 +15,7 @@ import {
 } from "../service/queries";
 import { loadCourseAttendancePage } from "../service/course-page";
 import { attendanceHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
-import { groupSessionsByCategory, resolveCategoryTab, sessionCategoryTabs } from "@/lib/session-categories";
+import { groupSessionsByCategory, resolveCategoryTab, sessionCategoryTabs } from "@/modules/session-categories/service/session-categories";
 import { formatDisplayDate, startOfTodayUtc } from "@/lib/time";
 import { PrintButton } from "@/components/print-button";
 
