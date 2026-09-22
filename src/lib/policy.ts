@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STATUS_OPTIONS, type StatusValue } from "@/lib/attendance";
+import { STATUS_OPTIONS, type StatusValue } from "@/modules/attendance/service/policy";
 
 const STATUS_VALUES = STATUS_OPTIONS.map((o) => o.value) as [StatusValue, ...StatusValue[]];
 

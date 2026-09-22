@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { STATUS_OPTIONS, type StatusValue } from "@/lib/attendance";
+import { STATUS_OPTIONS, type StatusValue } from "../service/policy";
 
 type StudentRow = {
   id: string;

@@ -7,7 +7,7 @@ import {
   statusLetter,
   type AttendancePolicy,
   type StatusTally,
-} from "@/lib/attendance";
+} from "./policy";
 
 const strict: AttendancePolicy = {
   minAttendancePercent: 75,

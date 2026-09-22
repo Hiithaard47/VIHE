@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { subjectWhere, sessionWhere } from "@/lib/subject-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
-import { createAssignment } from "@/app/teacher/courses/[courseId]/assignments/actions";
+import { createAssignment } from "../actions";
+import { getCourseAssignmentsList, getWritableSubjects } from "../service/queries";
 import { SubjectField } from "@/components/course-workspace-fields";
 import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
@@ -26,21 +25,9 @@ export async function CourseAssignmentsView({
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
 
-  const [assignments, writableSubjects, enrollmentCount] = await Promise.all([
-    prisma.assignment.findMany({
-    where: sessionWhere(courseId, scope),
-    include: {
-      submissions: { select: { studentId: true, marks: true, attemptNumber: true } },
-      subject: { select: { name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    }),
-    prisma.courseSubject.findMany({
-      where: { courseId, ...subjectWhere(scope) },
-      select: { id: true, name: true },
-      orderBy: [{ name: "asc" }, { createdAt: "asc" }],
-    }),
-    prisma.courseEnrollment.count({ where: { courseId } }),
+  const [{ assignments, enrollmentCount }, writableSubjects] = await Promise.all([
+    getCourseAssignmentsList(courseId, scope),
+    getWritableSubjects(courseId, scope),
   ]);
   const showSubjectName = new Set(assignments.map((item) => item.subject.name)).size > 1;
 

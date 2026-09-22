@@ -1,26 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { assertSubjectFileAccess, redirectToStoredFile } from "@/lib/file-access";
+import { getSubmissionFileForDownload } from "@/modules/session-homework";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ fileId: string }> }) {
   const session = await auth();
   if (!session) redirect("/login");
 
   const { fileId } = await params;
-  const file = await prisma.sessionHomeworkSubmissionFile.findUnique({
-    where: { id: fileId },
-    select: {
-      fileName: true,
-      storageKey: true,
-      submission: {
-        select: {
-          studentId: true,
-          homework: { select: { session: { select: { subjectId: true } } } },
-        },
-      },
-    },
-  });
+  const file = await getSubmissionFileForDownload(fileId);
   if (!file) notFound();
 
   await assertSubjectFileAccess(

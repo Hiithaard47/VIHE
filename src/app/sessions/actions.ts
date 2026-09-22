@@ -5,17 +5,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSubjectAccess, requireAnyPermission } from "@/lib/rbac";
 import { canManagePastSessionDates, PERMISSIONS } from "@/lib/permissions";
-import { AttendanceStatus } from "@prisma/client";
 import { flashUrl } from "@/lib/flash";
 import { deleteObject, isStorageConfigured, putObject } from "@/lib/storage";
 import { sanitizeFileName, validateResourceFile } from "@/lib/session-resources";
 import { sessionResourceUploadError } from "@/lib/session-categories";
-import { isAttendanceLocked } from "@/lib/attendance-lock";
 import { parseMeetingTimes } from "@/lib/schedule";
 import { isFutureSessionDate, parseDateInput, startOfTodayUtc } from "@/lib/time";
 import { courseHref, parseCoursePortal, safeWorkspaceReturnTo, sessionHref, type CoursePortal } from "@/lib/course-workspace";
-
-const STATUS_VALUES = new Set(Object.values(AttendanceStatus));
 
 export async function updateSessionDate(sessionId: string, portalArg: CoursePortal, formData: FormData) {
   const portal = parseCoursePortal(portalArg);
@@ -62,48 +58,6 @@ export async function updateSessionDate(sessionId: string, portalArg: CoursePort
   revalidatePath(courseHref(portal, classSession.subject.courseId, "", classSession.subjectId));
   revalidatePath(fallback);
   redirect(flashUrl(path, "success", "Session updated."));
-}
-
-export async function markAttendance(sessionId: string, portalArg: CoursePortal, formData: FormData) {
-  const session = await requireAnyPermission([PERMISSIONS.ATTENDANCE_MARK]);
-
-  const classSession = await prisma.classSession.findUniqueOrThrow({
-    where: { id: sessionId },
-    select: {
-      subjectId: true,
-      date: true,
-      subject: { select: { courseId: true, course: { select: { lockAfterDays: true } } } },
-    },
-  });
-  await requireSubjectAccess(classSession.subjectId, parseCoursePortal(portalArg));
-  if (isAttendanceLocked(classSession.date, classSession.subject.course.lockAfterDays)) {
-    redirect(flashUrl(sessionHref(parseCoursePortal(portalArg), sessionId), "error", "Attendance is locked for this session."));
-  }
-
-  const enrollments = await prisma.courseEnrollment.findMany({
-    where: { courseId: classSession.subject.courseId },
-    select: { studentId: true },
-  });
-
-  const upserts = enrollments.flatMap(({ studentId }) => {
-    const raw = formData.get(`status:${studentId}`);
-    if (typeof raw !== "string" || !STATUS_VALUES.has(raw as AttendanceStatus)) return [];
-    const status = raw as AttendanceStatus;
-
-    return [
-      prisma.attendanceRecord.upsert({
-        where: { sessionId_studentId: { sessionId, studentId } },
-        create: { sessionId, studentId, status, markedById: session.user.id },
-        update: { status, markedById: session.user.id, markedAt: new Date() },
-      }),
-    ];
-  });
-
-  await prisma.$transaction(upserts);
-
-  const path = sessionHref(parseCoursePortal(portalArg), sessionId);
-  revalidatePath(path);
-  redirect(flashUrl(path, "success", "Attendance saved."));
 }
 
 export async function uploadSessionResource(sessionId: string, portalArg: CoursePortal, formData: FormData) {

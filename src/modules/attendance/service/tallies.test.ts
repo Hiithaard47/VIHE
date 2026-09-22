@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { emptyTally } from "@/lib/attendance";
-import { recordInTallies, recordMark, statusAt, tallyFor } from "@/lib/course-attendance";
+import { emptyTally } from "./policy";
+import { recordInTallies, recordMark, statusAt, tallyFor } from "./tallies";
 
 describe("recordInTallies", () => {
   it("keeps each category's marks on its own book", () => {

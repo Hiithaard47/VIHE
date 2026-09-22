@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { sessionWhere } from "@/lib/subject-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
-import { assignCourseHomework, removeSessionHomework } from "@/app/sessions/homework-actions";
+import { assignCourseHomework, removeSessionHomework } from "../actions";
+import { getCourseHomeworkList } from "../service/queries";
 import { courseHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
@@ -24,30 +23,10 @@ export async function CourseHomeworkView({
   }
 
   const listHref = courseHref(portal, courseId, "homework", selectedSubjectId);
-  const [sessions, enrollmentCount] = await Promise.all([
-    prisma.classSession.findMany({
-      where: sessionWhere(courseId, scope),
-      select: {
-        id: true,
-        name: true,
-        date: true,
-        subject: { select: { id: true, name: true } },
-        homework: {
-          select: {
-            id: true,
-            title: true,
-            _count: { select: { submissions: true } },
-          },
-        },
-      },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    }),
-    prisma.courseEnrollment.count({ where: { courseId } }),
-  ]);
-
-  const withHomework = sessions.filter((item) => item.homework);
-  const withoutHomework = sessions.filter((item) => !item.homework);
-  const showSubjectName = new Set(sessions.map((item) => item.subject.name)).size > 1;
+  const { withHomework, withoutHomework, enrollmentCount } = await getCourseHomeworkList(courseId, scope);
+  const showSubjectName = new Set(
+    [...withHomework, ...withoutHomework].map((item) => item.subject.name),
+  ).size > 1;
 
   return (
     <div className="flex flex-col gap-6">

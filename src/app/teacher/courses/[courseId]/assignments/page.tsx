@@ -1,4 +1,4 @@
-import { CourseAssignmentsView } from "@/components/course-workspace/assignments";
+import { CourseAssignmentsView } from "@/modules/assignments/ui/course-assignments-view";
 
 export default async function TeacherAssignmentsPage({
   params,

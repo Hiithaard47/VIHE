@@ -6,7 +6,7 @@ import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, isPastDueDate } from "@/lib/time";
 import { assignmentStatus, ASSIGNMENT_FILE_ACCEPT } from "@/lib/assignment-files";
 import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
-import { submitAssignment } from "../actions";
+import { submitAssignment } from "@/modules/assignments/actions";
 
 export default async function StudentAssignmentDetailPage({
   params,

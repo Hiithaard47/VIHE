@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { assignSessionHomework } from "@/app/sessions/homework-actions";
+import { assignSessionHomework } from "../actions";
 import { openDialog } from "@/lib/dialog";
 import type { CoursePortal } from "@/lib/course-workspace";
 

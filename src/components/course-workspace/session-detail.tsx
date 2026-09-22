@@ -5,13 +5,13 @@ import { canManageSubject, requireSubjectView } from "@/lib/rbac";
 import { FlashBanner } from "@/components/flash-banner";
 import { SessionActionsMenu } from "@/components/session-actions-menu";
 import { hasWorkspaceWrite, canManagePastSessionDates, PERMISSIONS } from "@/lib/permissions";
-import { STATUS_OPTIONS } from "@/lib/attendance";
+import { STATUS_OPTIONS } from "@/modules/attendance/service/policy";
+import { markAttendance } from "@/modules/attendance/actions";
+import { AttendanceForm } from "@/modules/attendance/ui/attendance-form";
 import { formatTime } from "@/lib/schedule";
 import { formatDisplayDate, isFutureSessionDate, relativeTimeFromNow } from "@/lib/time";
 import { SessionResources } from "@/components/session-resources";
-import { SessionHomeworkPanel } from "@/components/session-homework";
-import { markAttendance } from "@/app/sessions/actions";
-import { AttendanceForm } from "@/app/teacher/sessions/[sessionId]/attendance-form";
+import { SessionHomeworkPanel } from "@/modules/session-homework";
 import { courseHref, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 
 export async function SessionDetailView({

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStudent } from "@/lib/rbac";
 import { formatDisplayDate, sessionTiming } from "@/lib/time";
 import { formatTime } from "@/lib/schedule";
-import { StudentSessionHomework } from "@/components/session-homework";
+import { StudentSessionHomework } from "@/modules/session-homework";
 
 export default async function StudentSessionDetailPage({
   params,

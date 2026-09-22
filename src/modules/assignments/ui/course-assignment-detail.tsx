@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { sessionWhere } from "@/lib/subject-scope";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { formatDisplayDate } from "@/lib/time";
 import { assignmentStatus } from "@/lib/assignment-files";
-import { deleteAssignment, gradeSubmission } from "@/app/teacher/courses/[courseId]/assignments/actions";
+import { deleteAssignment, gradeSubmission } from "../actions";
+import { getAssignmentDetail } from "../service/queries";
 import { courseHref, firstTeacherCoursePath, type CoursePortal } from "@/lib/course-workspace";
 import { hasCoursesRead, hasWorkspaceWrite } from "@/lib/permissions";
 
@@ -26,25 +25,7 @@ export async function CourseAssignmentDetailView({
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
 
-  const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, ...sessionWhere(courseId, scope) },
-    include: {
-      files: { orderBy: { createdAt: "asc" } },
-      subject: {
-        select: {
-          course: {
-            select: {
-              enrollments: { include: { student: true }, orderBy: { student: { rollNumber: "asc" } } },
-            },
-          },
-        },
-      },
-      submissions: {
-        include: { files: { orderBy: { createdAt: "asc" } } },
-        orderBy: [{ studentId: "asc" }, { attemptNumber: "desc" }],
-      },
-    },
-  });
+  const assignment = await getAssignmentDetail(assignmentId, courseId, scope);
   if (!assignment) notFound();
 
   const attemptsByStudent = new Map<string, typeof assignment.submissions>();

@@ -1,4 +1,4 @@
-import { CourseAssignmentDetailView } from "@/components/course-workspace/assignment-detail";
+import { CourseAssignmentDetailView } from "@/modules/assignments/ui/course-assignment-detail";
 
 export default async function AdminSubjectAssignmentDetailPage({
   params,

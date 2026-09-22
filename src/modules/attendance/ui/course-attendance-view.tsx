@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { loadCourseWorkspace } from "@/lib/rbac";
 import { hasAttendanceAccess } from "@/lib/permissions";
 import {
@@ -9,14 +8,12 @@ import {
   isAtRisk,
   STATUS_OPTIONS,
   statusLetter,
-} from "@/lib/attendance";
+} from "../service/policy";
 import {
-  loadAttendanceMatrix,
-  loadAttendanceTallies,
-  loadCourseAttendanceCategories,
   statusAt,
   tallyFor,
-} from "@/lib/course-attendance";
+} from "../service/queries";
+import { loadCourseAttendancePage } from "../service/course-page";
 import { attendanceHref, firstTeacherCoursePath, sessionHref, type CoursePortal } from "@/lib/course-workspace";
 import { groupSessionsByCategory, resolveCategoryTab, sessionCategoryTabs } from "@/lib/session-categories";
 import { formatDisplayDate, startOfTodayUtc } from "@/lib/time";
@@ -38,41 +35,12 @@ export async function CourseAttendanceView({
     redirect(firstTeacherCoursePath(courseId, session.user.permissions));
   }
 
-  const subjectId =
-    selectedSubjectId ?? (scope.kind === "ids" && scope.ids.length === 1 ? scope.ids[0] : undefined);
-
-  const [course, subject, teachers] = await Promise.all([
-    prisma.course.findUnique({
-      where: { id: courseId },
-      select: {
-        name: true,
-        lateCountsAsAttended: true,
-        excusedCountsAsAttended: true,
-        enrollments: { include: { student: true }, orderBy: { student: { name: "asc" } } },
-      },
-    }),
-    subjectId
-      ? prisma.courseSubject.findUnique({ where: { id: subjectId }, select: { name: true } })
-      : Promise.resolve(null),
-    prisma.user.findMany({
-      where: {
-        taughtSubjects: {
-          some: subjectId
-            ? { subjectId }
-            : { subject: { courseId, ...(scope.kind === "ids" ? { id: { in: [...scope.ids] } } : { isActive: true }) } },
-        },
-      },
-      orderBy: { name: "asc" },
-      select: { name: true },
-    }),
-  ]);
+  const { course, subject, teachers, categories, tallies, matrix, subjectId } = await loadCourseAttendancePage({
+    courseId,
+    scope,
+    selectedSubjectId,
+  });
   if (!course) notFound();
-
-  const [categories, tallies, matrix] = await Promise.all([
-    loadCourseAttendanceCategories(courseId, scope),
-    loadAttendanceTallies(courseId, scope),
-    loadAttendanceMatrix(courseId, scope),
-  ]);
 
   const rows = course.enrollments
     .map(({ student }) => {

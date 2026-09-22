@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { STATUS_OPTIONS } from "@/lib/attendance";
+import { STATUS_OPTIONS } from "@/modules/attendance/service/policy";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAnyPermission } from "@/lib/rbac";

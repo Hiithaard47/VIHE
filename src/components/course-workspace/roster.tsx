@@ -7,8 +7,8 @@ import {
   attendancePercent,
   categoryAttendancePolicy,
   isAtRisk,
-} from "@/lib/attendance";
-import { loadAttendanceTallies, loadCourseAttendanceCategories, tallyFor } from "@/lib/course-attendance";
+} from "@/modules/attendance/service/policy";
+import { loadAttendanceTallies, loadCourseAttendanceCategories, tallyFor } from "@/modules/attendance/service/queries";
 import { AddPersonDialog } from "@/components/add-person-autocomplete";
 import { enrollStudent, unenrollStudent } from "@/app/teacher/courses/[courseId]/roster/actions";
 import { contactKeywords } from "@/lib/admin-list";

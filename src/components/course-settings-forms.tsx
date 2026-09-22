@@ -1,5 +1,5 @@
 import { LoginMonthsField } from "@/components/login-months-field";
-import { STATUS_OPTIONS } from "@/lib/attendance";
+import { STATUS_OPTIONS } from "@/modules/attendance/service/policy";
 
 export function CourseDetailsForm({
   action,

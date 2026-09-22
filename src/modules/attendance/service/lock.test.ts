@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAttendanceLocked } from "@/lib/attendance-lock";
+import { isAttendanceLocked } from "./lock";
 
 describe("isAttendanceLocked", () => {
   const today = new Date("2026-09-13T00:00:00.000Z");

@@ -1,4 +1,4 @@
-import { CourseHomeworkView } from "@/components/course-workspace/homework";
+import { CourseHomeworkView } from "@/modules/session-homework";
 
 export default async function AdminSubjectHomeworkPage({
   params,

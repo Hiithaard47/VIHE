@@ -1,6 +1,6 @@
 import { UploadFileInput, UploadSubmitButton } from "@/components/upload-submit-button";
-import { AssignSessionHomeworkDialog } from "@/components/assign-session-homework-dialog";
-import { removeSessionHomework, submitSessionHomework } from "@/app/sessions/homework-actions";
+import { AssignSessionHomeworkDialog } from "./assign-dialog";
+import { removeSessionHomework, submitSessionHomework } from "../actions";
 import { formatDisplayDate } from "@/lib/time";
 import type { CoursePortal } from "@/lib/course-workspace";
 

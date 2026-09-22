@@ -1,4 +1,4 @@
-import { CourseAttendanceView } from "@/components/course-workspace/attendance";
+import { CourseAttendanceView } from "@/modules/attendance/ui/course-attendance-view";
 
 export default async function AdminSubjectAttendancePage({
   params,
