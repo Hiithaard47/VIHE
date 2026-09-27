@@ -51,10 +51,7 @@ html {
     color: black !important;
   }
 
-  /* Hide everything except report cards */
-  body > * {
-    display: none !important;
-  }
+  /* REMOVED: The body > * rule that was hiding the Next.js parent layout */
 
   .course-report-cards {
     display: block !important;
@@ -86,27 +83,5 @@ html {
     text-decoration: none !important;
   }
 
-  /* Keep existing attendance print rules */
-  .attendance-print .max-w-full.overflow-x-auto {
-    max-width: none !important;
-    overflow: visible !important;
-  }
-
-  .attendance-print table {
-    font-size: 8pt;
-  }
-
-  .attendance-print th,
-  .attendance-print td {
-    padding: 0.15rem 0.3rem !important;
-  }
-
-  .attendance-print tr {
-    break-inside: avoid;
-  }
-
-  .attendance-print a {
-    color: inherit !important;
-    text-decoration: none !important;
-  }
+  /* Keep existing attendance print rules below... */
 }

@@ -20,7 +20,7 @@ export function AdminCourseChrome({
 }) {
   return (
     <>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 print:hidden">
         <div>
           <Link href="/admin/courses" className="text-sm text-muted hover:text-ink">
             &larr; Courses

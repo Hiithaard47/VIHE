@@ -104,7 +104,7 @@ function StudentReportCard({
   );
 
   return (
-    <article className="course-report-card mx-auto min-h-screen max-w-4xl bg-white p-8 text-black print:break-after-page print:max-w-none print:p-8">
+    <article className="course-report-card mx-auto min-h-screen print:min-h-0 max-w-4xl bg-white p-8 text-black print:break-after-page print:max-w-none print:p-0">
       {/* Header */}
       <div className="mb-6 border-b-2 border-black pb-4">
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -220,13 +220,15 @@ function StudentReportCard({
                   <td className="px-2 py-1">{item.subjectName}</td>
                   <td className="px-2 py-1">{item.title}</td>
                   <td className="px-2 py-1 text-right">{item.maxMarks}</td>
+                  
+                  {/* FIX: Use optional chaining and nullish coalescing */}
                   <td className="px-2 py-1 text-right">
-                    {item.submission && item.submission.marks !== null
-                      ? item.submission.marks
-                      : "—"}
+                    {item.submission?.marks ?? "—"}
                   </td>
+                  
+                  {/* FIX: Check for !item.submission instead of === null */}
                   <td className="px-2 py-1">
-                    {item.submission === null
+                    {!item.submission
                       ? "Not submitted"
                       : item.submission.marks === null
                         ? "Not graded"
@@ -234,7 +236,7 @@ function StudentReportCard({
                   </td>
                 </tr>
               ))}
-              {/* Final totals row */}
+              {/* Final totals row remains the same */}
               <tr className="border-t-2 border-black font-semibold">
                 <td colSpan={2} className="px-2 py-2">
                   Final Course Grade
@@ -261,15 +263,9 @@ export function ReportCardPrintContent({
   studentCalculations: StudentCalculations[];
 }) {
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [mounted, setMounted] = useState(false);
 
+  // We only need one useEffect now, and it runs safely on the client
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
     const checkSelected = () => {
       const element = document.querySelector("[data-selected-students]");
       if (element) {
@@ -295,16 +291,12 @@ export function ReportCardPrintContent({
     });
 
     return () => observer.disconnect();
-  }, [mounted]);
+  }, []);
 
-  if (!mounted) return null;
-
-  // FIX: Only render selected students. Do not fallback to rendering ALL students 
-  // if the array is empty, otherwise deselecting all renders everything in the DOM.
   const studentsToDisplay =
     selectedStudentIds.length > 0
       ? data.students.filter((s) => selectedStudentIds.includes(s.id))
-      : []; 
+      : [];
 
   // Create a map for quick lookup of calculations
   const calculationsMap = new Map(
@@ -320,7 +312,6 @@ export function ReportCardPrintContent({
         studentsToDisplay.map((student) => {
           const calculations = calculationsMap.get(student.id);
           if (!calculations) return null;
-          
           return (
             <StudentReportCard
               key={student.id}
