@@ -42,7 +42,7 @@ html {
 
 @media print {
   @page {
-    size: landscape;
+    size: portrait;
     margin: 0.6cm;
   }
 
@@ -51,6 +51,42 @@ html {
     color: black !important;
   }
 
+  /* Hide everything except report cards */
+  body > * {
+    display: none !important;
+  }
+
+  .course-report-cards {
+    display: block !important;
+  }
+
+  .course-report-card {
+    display: block !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    page-break-after: always;
+  }
+
+  .course-report-card:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .course-report-card table {
+    page-break-inside: auto;
+  }
+
+  .course-report-card tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .course-report-card a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Keep existing attendance print rules */
   .attendance-print .max-w-full.overflow-x-auto {
     max-width: none !important;
     overflow: visible !important;
